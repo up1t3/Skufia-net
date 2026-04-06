@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SKUFIA | Enterprise Command Center</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="crt-overlay"></div>
+    <div class="scanline"></div>
+
+    <!-- Auth Overlay -->
+    <div id="auth-overlay" class="modal" style="display: flex;">
+        <div class="modal-content" style="max-width: 400px; padding: 30px;">
+            <div class="modal-header">
+                <h2 id="auth-title">АВТОРИЗАЦИЯ</h2>
+            </div>
+            
+            <!-- Login Form -->
+            <form id="login-form">
+                <div class="form-group">
+                    <label>ПОЗЫВНОЙ (USERNAME)</label>
+                    <input type="text" id="login-username" required>
+                </div>
+                <div class="form-group">
+                    <label>ПАРОЛЬ ДЛЯ СВЯЗИ</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
+                <button type="submit" class="cyber-btn primary-btn" style="width: 100%;">ВОЙТИ В СЕТЬ</button>
+                <div style="text-align: center; margin-top: 15px;">
+                    Нет доступа? <a href="#" id="toggle-to-register" style="color: var(--accent-color);">Получить ID</a>
+                </div>
+            </form>
+
+            <!-- Register Form (hidden by default) -->
+            <form id="register-form" style="display: none;">
+                <div class="form-group">
+                    <label>ПОЗЫВНОЙ (USERNAME)</label>
+                    <input type="text" id="reg-username" required>
+                </div>
+                <div class="form-group">
+                    <label>ПОЧТА (EMAIL)</label>
+                    <input type="email" id="reg-email" required>
+                </div>
+                <div class="form-group">
+                    <label>ПАРОЛЬ (ЗАПОМНИ!)</label>
+                    <input type="password" id="reg-password" required>
+                </div>
+                <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
+                <button type="submit" class="cyber-btn primary-btn" style="width: 100%;">АКТИВИРОВАТЬ АККАУНТ</button>
+                <div style="text-align: center; margin-top: 15px;">
+                    Уже есть ID? <a href="#" id="toggle-to-login" style="color: var(--accent-color);">Авторизация</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="global-alert-banner" class="hidden"></div>
+    <div class="app-container">
+        <!-- Mobile Header / Top Bar -->
+        <header class="system-header">
+            <div class="logo">SKUFIA <span class="version">v2.0_ENTERPRISE</span></div>
+            <div class="system-stats">
+                <span class="stat-item">СЕКТОР: <span class="highlight">RU-CENTRAL</span></span>
+                <span class="stat-item">СТАТУС: <span class="status-online">ONLINE</span></span>
+                <button id="mobile-menu-toggle" class="mobile-only">☰</button>
+            </div>
+        </header>
+
+        <div class="main-interface">
+            <!-- Navigation Panel -->
+            <aside class="side-panel" id="side-panel">
+                <div class="panel-title">УПРАВЛЕНИЕ СИСТЕМОЙ</div>
+                
+                <nav class="nav-menu">
+                    <button class="nav-btn active" data-view="home">🏠 ГЛАВНАЯ</button>
+                    <button class="nav-btn" data-view="forum">🌐 ФОРУМ</button>
+                    <button class="nav-btn" data-view="wiki">📚 БАЗА ЗНАНИЙ</button>
+                    <button class="nav-btn" data-view="trade">💰 БИРЖА СКУФОВ</button>
+                    <button class="nav-btn" data-view="registry">🆔 РЕЕСТР</button>
+                    <button class="nav-btn" data-view="events">📅 СОБЫТИЯ</button>
+                    <button class="nav-btn" data-view="messages">💬 ВНУТРЕННИЙ ЧАТ</button>
+                    <button class="nav-btn" data-view="dashboard">👤 ЛИЧНЫЙ КАБИНЕТ</button>
+                    <div class="nav-divider"></div>
+                    <button class="nav-btn" data-view="settings">⚙️ КОНФИГ</button>
+                    <button class="nav-btn" id="logout-btn" style="color: #ff3333; border-color: #ff3333;">🚪 ВЫЙТИ ИЗ СЕТИ</button>
+                </nav>
+
+                <div class="user-profile-card">
+                    <div class="avatar-placeholder"></div>
+                    <div class="user-info">
+                        <div class="username">Оператор: Гость</div>
+                        <div class="rank">Новичок в майке</div>
+                    </div>
+                </div>
+
+                <div class="panel-title" style="margin-top: 20px;">СИСТЕМНЫЙ ЛОГ</div>
+                 <div class="system-logs" id="system-logs">
+                    <div>[INFO] Система инициализирована...</div>
+                    <div>[WARN] Низкий уровень кофе в системе...</div>
+                </div>
+            </aside>
+
+            <!-- Main Viewport -->
+            <main class="viewport" id="viewport">
+                <!-- HOME VIEW -->
+                <div class="view active" id="view-home">
+                    <div class="hero-section">
+                        <h1 class="glitch">SKUFIA <span class="sub-text">ECOSYSTEM</span></h1>
+                        <p class="subtitle">Единый узел управления для цифровой инфраструктуры скуфов</p>
+                        
+                        <div class="enterprise-grid">
+                            <div class="ent-card" onclick="document.querySelector('[data-view=forum]').click()">
+                                <div class="card-icon">🌐</div>
+                                <h3>Форум</h3>
+                                <p>Обсуждение приоритетов и жизненных стратегий.</p>
+                            </div>
+                            <div class="ent-card" onclick="document.querySelector('[data-view=wiki]').click()">
+                                <div class="card-icon">📚</div>
+                                <h3>Wiki</h3>
+                                <p>Архив коллективного разума и инструкций.</p>
+                            </div>
+                            <div class="ent-card" onclick="document.querySelector('[data-view=trade]').click()">
+                                <div class="card-icon">💰</div>
+                                <h3>Биржа</h3>
+                                <p>Обмен винтажным железом и артефактами.</p>
+                            </div>
+                            <div class="ent-card" onclick="document.querySelector('[data-view=messages]').click()">
+                                <div class="card-icon">💬</div>
+                                <h3>Чат (Skufia-Net)</h3>
+                                <p>Мгновенный обмен сообщениями и приватные каналы.</p>
+                            </div>
+                            <div class="ent-card" onclick="document.querySelector('[data-view=registry]').click()">
+                                <div class="card-icon">🆔</div>
+                                <h3>Реестр</h3>
+                                <p>Верификация статуса и иерархия рангов.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORUM VIEW -->
+                <div class="view" id="view-forum">
+                    <h2 class="view-title">🌐 ГЛОБАЛЬНЫЙ ФОРУМ</h2>
+                    <div class="action-bar">
+                        <button class="btn-primary">+ Создать тему</button>
+                    </div>
+                    <div class="content-list" id="forum-list">
+                        <div class="skeleton">Загрузка данных из сети...</div>
+                    </div>
+                </div>
+
+                <!-- WIKI VIEW -->
+                <div class="view" id="view-wiki">
+                    <h2 class="view-title">📚 БАЗА ЗНАНИЙ</h2>
+                    <div class="wiki-layout">
+                        <div class="wiki-sidebar">
+                            <h4>Категории</strong>
+                            <ul><li>Железо 90-х</li><li>Бытовой комфорт</li><li>Философия скуфства</li></ul>
+                        </div>
+                        <div class="wiki-content">Выберите раздел для чтения документации.</div>
+                    </div>
+                </div>
+
+                <!-- TRADE VIEW -->
+                <div class="view" id="view-trade">
+                    <h2 class="view-title">💰 БИРЖА СКУФОВ</h2>
+                    <div class="action-bar">
+                        <button class="btn-primary" id="btn-market-new" onclick="toggleMarketForm()">+ ПРЕДЛОЖИТЬ ЛОТ</button>
+                        <select id="market-filter-cat" class="input-text" style="width: auto;" onchange="loadMarket()">
+                            <option value="Все">Все тематики</option>
+                            <option value="Электроника">Электроника</option>
+                            <option value="Снаряжение">Снаряжение</option>
+                            <option value="Услуги">Услуги</option>
+                            <option value="Разное">Разное</option>
+                        </select>
+                        <select id="market-filter-loc" class="input-text" style="width: auto;" onchange="loadMarket()">
+                            <option value="Везде">Вся сеть (Везде)</option>
+                            <option value="Москва">Москва</option>
+                            <option value="Скуфград">Скуфград</option>
+                            <option value="Питер">Питер</option>
+                            <option value="Завод">Завод</option>
+                        </select>
+                    </div>
+                    <div class="form-panel" id="market-form-panel" style="display: none;">
+                        <input type="text" id="market-title" class="input-text" placeholder="Название лота (Например: Монитор 17 ЭЛТ)" />
+                        <input type="text" id="market-price" class="input-text" placeholder="Цена (Например: 500р / Обмен на пиво)" />
+                        <select id="market-cat" class="input-text">
+                            <option value="Разное">Разное</option>
+                            <option value="Электроника">Электроника</option>
+                            <option value="Снаряжение">Снаряжение</option>
+                            <option value="Услуги">Услуги</option>
+                        </select>
+                        <select id="market-loc" class="input-text">
+                            <option value="Вся сеть">Вся сеть</option>
+                            <option value="Москва">Москва</option>
+                            <option value="Скуфград">Скуфград</option>
+                            <option value="Питер">Питер</option>
+                            <option value="Завод">Завод</option>
+                        </select>
+                        <textarea id="market-desc" class="input-textarea" placeholder="Описание лота"></textarea>
+                        <button class="btn-primary" onclick="submitMarketListing()">ОПУБЛИКОВАТЬ</button>
+                    </div>
+                    <div class="market-grid" id="market-list">
+                        <div class="skeleton">Получение котировок...</div>
+                    </div>
+                </div>
+
+                <!-- REGISTRY VIEW -->
+                <div class="view" id="view-registry">
+                    <h2 class="view-title">🆔 РЕЕСТР ОПЕРАТОРОВ</h2>
+                    <table class="data-table" id="registry-table">
+                        <thead><tr><th>ID</th><th>АВАТАР</th><th>ПОЗЫВНОЙ</th><th>ДОПУСК (РАНГ)</th><th>КАРМА</th><th>ДЕЙСТВИЯ</th></tr></thead>
+                        <tbody id="registry-list"><tr><td colspan="6" class="skeleton">Синхронизация данных...</td></tr></tbody>
+                    </table>
+                </div>
+
+                <!-- EVENTS VIEW -->
+                <div class="view" id="view-events">
+                    <h2 class="view-title">📅 КАЛЕНДАРЬ СОБЫТИЙ</h2>
+                    <div class="action-bar">
+                        <button class="btn-primary" id="btn-events-new" onclick="toggleEventForm()">+ НОВОЕ СОБЫТИЕ</button>
+                    </div>
+                    <div class="form-panel" id="event-form-panel" style="display: none;">
+                        <input type="text" id="event-title" class="input-text" placeholder="Название события (Например: Скуф-мит 2026)" />
+                        <input type="datetime-local" id="event-date" class="input-text" />
+                        <input type="text" id="event-location" class="input-text" placeholder="Место (Например: Гараж Михалыча)" />
+                        <textarea id="event-desc" class="input-textarea" placeholder="Описание активности"></textarea>
+                        <button class="btn-primary" onclick="submitEvent()">АНОНСИРОВАТЬ</button>
+                    </div>
+                    <div class="events-grid" id="events-list">
+                        <div class="skeleton">Получение координат...</div>
+                    </div>
+                </div>
+
+                <!-- AVATAR SELECTION MODAL -->
+            <div id="avatar-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>ВЫБОР ОПЕРАТИВНИКА (AVATAR)</h3>
+                        <span class="close-btn" onclick="closeAvatarModal()">&times;</span>
+                    </div>
+                    <div class="avatar-grid" id="avatar-selector-grid">
+                        <!-- 35 Premium Avatars injected here -->
+                    </div>
+                    <div class="custom-avatar-input">
+                        <label>ИЛИ СВОЙ URL:</label>
+                        <input type="text" id="custom-avatar-url" class="cyber-input" placeholder="https://...">
+                        <button class="cyber-btn-small" onclick="useCustomAvatar()">ПРИМЕНИТЬ</button>
+                    </div>
+                </div>
+            </div>
+
+                <!-- DASHBOARD VIEW -->
+                <div class="view" id="view-dashboard">
+                    <h2 class="view-title">👤 ЛИЧНЫЙ КАБИНЕТ</h2>
+                    <div class="profile-header">
+                    <div class="avatar-container" onclick="openAvatarModal()">
+                        <img id="dash-avatar" src="https://api.dicebear.com/7.x/pixel-art/svg?seed=S" alt="avatar">
+                        <div class="avatar-overlay">СМЕНИТЬ</div>
+                    </div>
+                    <div class="profile-info">
+                        <div class="id-row">REG_ID: <span id="dash-id" class="id-tag">---</span></div>
+                        <h2 id="dash-username-display">Скуф_Админ</h2>
+                        <div class="rank-row">СТАТУС: <span id="dash-rank" class="rank-badge">ВЕТЕРАН</span></div>
+                        <div class="karma-row">КАРМА: <span id="dash-karma" class="stat-value">9000</span></div>
+                    </div>
+                </div>
+
+                <div class="profile-details">
+                    <div class="input-group">
+                        <label>ПОЗЫВНОЙ (CALLSIGN)</label>
+                        <input type="text" id="dash-callsign-input" class="cyber-input" placeholder="Введите новый позывной">
+                    </div>
+                    <div class="input-group">
+                        <label>БИОГРАФИЯ (BIO)</label>
+                        <textarea id="dash-bio" class="cyber-textarea" placeholder="Расскажите о своих подвигах в 2007-м..."></textarea>
+                    </div>
+                    <button class="cyber-btn" onclick="saveProfile()">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
+                </div>
+                </div>
+
+                <!-- SETTINGS VIEW -->
+                <div class="view" id="view-settings">
+                    <h2 class="view-title">⚙️ КОНФИГ СИСТЕМЫ</h2>
+                    <div class="settings-list">
+                        <div class="setting-row"><span>Язык:</span> <span class="highlight">Русский (RU)</span></div>
+                        <div class="setting-row"><span>CRT Эффект:</span> <input type="checkbox" checked></div>
+                    </div>
+                </div>
+
+                <!-- MESSAGES VIEW (Skufia-Net) -->
+                <div class="view" id="view-messages">
+                    <h2 class="view-title">📡 SKUFIA-NET // SECURE_HUB</h2>
+                    <div class="chat-layout">
+                        <div class="chat-sidebar">
+                            <div class="sidebar-header">КОНТАКТЫ / ГРУППЫ</div>
+                            <div id="chat-rooms-list" class="sidebar-list">
+                                <div class="skeleton">Синхронизация...</div>
+                            </div>
+                            <div class="sidebar-actions">
+                                <button class="cyber-btn-small" onclick="createNewRoom()">+ СОЗДАТЬ КАНАЛ</button>
+                            </div>
+                        </div>
+                        <div class="chat-main">
+                            <div id="chat-header" class="chat-info">
+                                <button class="mobile-back-btn" onclick="closeChatMobile()">←</button>
+                                <span id="chat-header-title">Выберите оператора для связи...</span>
+                            </div>
+                            <div id="chat-history" class="chat-messages">
+                                <div class="chat-placeholder">Ожидание входящего сигнала...</div>
+                            </div>
+                            <div id="typing-indicator" class="typing-indicator" style="display:none;">Ожидание сигнала...</div>
+                            <div id="reply-preview-container" class="reply-preview-container" style="display:none;">
+                                <div id="reply-preview-text">Ответ на...</div>
+                                <div class="close-btn" onclick="cancelReply()">✕</div>
+                            </div>
+                            <div class="chat-input-row">
+                                <input type="file" id="chat-file-input" style="display:none;" accept="*/*">
+                                <button id="chat-attach-btn" class="cyber-button attach-btn" title="Прикрепить файл (до 5 МБ)" onclick="document.getElementById('chat-file-input').click()">📎</button>
+                                <input type="text" id="chat-input" placeholder="Введите команду или сообщение..." autocomplete="off">
+                                <button id="send-chat-btn" class="cyber-button">SEND</button>
+                            </div>
+                            <div id="chat-file-preview" class="chat-file-preview" style="display:none;">
+                                <span id="chat-file-name"></span>
+                                <button class="file-remove-btn" onclick="clearChatFile()">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer class="system-footer">
+            <div class="footer-left">CONN: SECURE // PROTOCOL: SKUF_NET_v2</div>
+            <div class="footer-right">© 2000-2026 SKUFIA ENTERPRISE SYSTEMS</div>
+        </footer>
+    </div>
+    
+
+
+    <script src="app.js"></script>
+</body>
+</html>

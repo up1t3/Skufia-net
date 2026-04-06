@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: skufia-api
+    ports:
+      - "8007:8007"
+    volumes:
+      - ./backend:/app
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: skufia-web
+    ports:
+      - "5551:80"
+    volumes:
+      - ./frontend/app.js:/usr/share/nginx/html/app.js
+      - ./frontend/style.css:/usr/share/nginx/html/style.css
+      - ./frontend/index.html:/usr/share/nginx/html/index.html
+      - ./frontend/nginx_full.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
+    restart: always

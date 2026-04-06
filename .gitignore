@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.db
+.pytest_cache/
+.coverage
+test-results/
+uploads/
+.venv/
+*.log
+proxy_log.txt
+error.txt
