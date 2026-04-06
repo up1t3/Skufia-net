@@ -415,7 +415,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "file_url": msg.file_url,
         "reply_to_id": msg.reply_to_id,
         "is_edited": False,
-        "timestamp": datetime.now(datetime.UTC).strftime('%H:%M'),
+        "timestamp": datetime.utcnow().strftime('%H:%M'),
         "room_id": room_id
     }
     

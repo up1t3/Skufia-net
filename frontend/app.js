@@ -792,7 +792,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                }
                 if (state.chat.currentRoomId === msg.room_id) {
                     renderChatMessage(msg);
                 }
