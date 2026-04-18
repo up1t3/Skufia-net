@@ -420,26 +420,120 @@ document.addEventListener('DOMContentLoaded', () => {
                 const div = document.createElement('div');
                 div.className = 'market-card interactive';
                 
+                // Cover image
+                let coverImageHtml = '';
+                if (item.images && item.images.length > 0) {
+                    coverImageHtml = `<img src="${API_BASE_URL}${item.images[0]}" class="market-card-cover" alt="cover">`;
+                } else {
+                    coverImageHtml = `<div class="market-card-cover placeholder">NO IMAGE</div>`;
+                }
+
+                // Status Badge
+                let statusBadgeHtml = '';
+                if (item.status === 'sold') {
+                    statusBadgeHtml = `<span class="status-badge sold">ПРОДАНО</span>`;
+                } else if (item.status === 'reserved') {
+                    statusBadgeHtml = `<span class="status-badge reserved">В РЕЗЕРВЕ</span>`;
+                } else {
+                    statusBadgeHtml = `<span class="status-badge active">АКТИВЕН</span>`;
+                }
+
+                // Favorite Heart
+                const isFav = item.is_favorite ? 'favorited' : '';
+                const favHtml = `<span class="favorite-btn ${isFav}" onclick="toggleFavorite(event, ${item.id})">❤️</span>`;
+
                 let deleteButtonHTML = '';
                 if (item.seller_id === state.user.id) {
-                    deleteButtonHTML = `<button class="btn-danger" style="margin-top: 5px; font-size: 10px;" onclick="deleteMarketListing(${item.id})">УДАЛИТЬ ЛОТ</button>`;
+                    deleteButtonHTML = `<button class="btn-danger" style="margin-top: 5px; font-size: 10px; width: 100%" onclick="event.stopPropagation(); deleteMarketListing(${item.id})">УДАЛИТЬ ЛОТ</button>`;
                 }
-                
+
                 div.innerHTML = `
-                    <div class="market-header">Лот #${item.id} <span style="float: right;">${item.category} / ${item.location}</span></div>
-                    <div class="market-body">
-                        <h4>${item.title}</h4>
-                        <div class="market-price">ЦЕНА: <span class="highlight">${item.price}</span></div>
-                        <p style="font-size: 11px; margin-top: 5px; color: var(--text-dim);">${item.description || ''}</p>
+                    <div class="market-card-image-container">
+                        ${coverImageHtml}
+                        ${statusBadgeHtml}
+                        ${favHtml}
+                        <div class="views-count">👁 ${item.views_count || 0}</div>
                     </div>
-                    <button class="cyber-btn-small" onclick="addLog('Buy request sent for ${item.title}', 'info')">КУПИТЬ</button>
-                    ${deleteButtonHTML}
-                    <div class="market-footer">Продавец: ${item.seller}</div>
+                    <div class="market-body" style="padding: 10px;">
+                        <div class="market-price" style="font-size: 16px; font-weight: bold; color: var(--accent-amber); margin-bottom: 5px;">${item.price}</div>
+                        <h4 style="margin-bottom: 5px; font-size: 14px;">${item.title}</h4>
+                        <div style="font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between;">
+                            <span>${item.location}</span>
+                            <span>${new Date(item.created_at || Date.now()).toLocaleDateString()}</span>
+                        </div>
+                        ${deleteButtonHTML}
+                    </div>
                 `;
+
+                div.onclick = () => openListingModal(item.id);
                 container.appendChild(div);
             });
         } catch (e) {
             container.innerHTML = '<div class="system-msg">ERROR: Не удалось синхронизировать данные биржи.</div>';
+        }
+    }
+
+    window.toggleFavorite = async function(event, itemId) {
+        event.stopPropagation();
+        try {
+            const res = await apiRequest(`/market/${itemId}/favorite`, 'POST');
+            const target = event.currentTarget;
+            if (res.status === 'added') {
+                target.classList.add('favorited');
+                addLog('Лот добавлен в избранное', 'info');
+            } else {
+                target.classList.remove('favorited');
+                addLog('Лот удален из избранного', 'info');
+            }
+        } catch (e) { console.error("Favorite toggle failed", e); }
+    }
+
+    window.openListingModal = async function(itemId) {
+        try {
+            const item = await apiRequest(`/market/${itemId}`);
+
+            document.getElementById('listing-detail-title').textContent = item.title;
+            document.getElementById('listing-detail-price').textContent = item.price;
+            document.getElementById('listing-detail-desc').textContent = item.description || 'Нет описания.';
+
+            let statusText = 'АКТИВЕН';
+            if (item.status === 'sold') statusText = 'ПРОДАНО';
+            if (item.status === 'reserved') statusText = 'В РЕЗЕРВЕ';
+            document.getElementById('listing-detail-status').textContent = `Статус: ${statusText}`;
+
+            const gallery = document.getElementById('listing-detail-gallery');
+            gallery.innerHTML = '';
+            if (item.images && item.images.length > 0) {
+                item.images.forEach(url => {
+                    const img = document.createElement('img');
+                    img.src = `${API_BASE_URL}${url}`;
+                    img.style.width = '100px';
+                    img.style.height = '100px';
+                    img.style.objectFit = 'cover';
+                    img.style.border = '1px solid var(--border-metal)';
+                    img.style.cursor = 'pointer';
+                    img.onclick = () => window.open(`${API_BASE_URL}${url}`, '_blank');
+                    gallery.appendChild(img);
+                });
+            } else {
+                gallery.innerHTML = '<div style="color: var(--text-dim); font-style: italic;">Нет фотографий</div>';
+            }
+
+            document.getElementById('listing-detail-message-btn').onclick = () => {
+                document.getElementById('listing-detail-modal').style.display = 'none';
+                startPrivateChat(item.seller_id);
+            };
+
+            const favBtn = document.getElementById('listing-detail-fav-btn');
+            favBtn.textContent = item.is_favorite ? 'УБРАТЬ ИЗ ИЗБРАННОГО' : '❤️ В ИЗБРАННОЕ';
+            favBtn.onclick = async (e) => {
+                await window.toggleFavorite(e, item.id);
+                favBtn.textContent = favBtn.classList.contains('favorited') ? 'УБРАТЬ ИЗ ИЗБРАННОГО' : '❤️ В ИЗБРАННОЕ';
+            };
+
+            document.getElementById('listing-detail-modal').style.display = 'flex';
+        } catch(e) {
+            addLog('Не удалось загрузить детали лота', 'error');
         }
     }
 
@@ -468,6 +562,97 @@ document.addEventListener('DOMContentLoaded', () => {
         if (panel) panel.style.display = panel.style.display === 'none' ? 'flex' : 'none';
     }
 
+    let uploadedImageUrls = [];
+
+    // --- Market Image Upload ---
+    window.uploadMarketImages = async function(files) {
+        if (!files || files.length === 0) return;
+
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+
+        try {
+            const token = state.user.token;
+            const headers = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const resp = await fetch(`${API_BASE_URL}/market/upload`, {
+                method: 'POST',
+                headers,
+                body: formData
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({detail:'Upload failed'}));
+                throw new Error(err.detail || 'Upload failed');
+            }
+
+            const data = await resp.json();
+            const urls = data.urls || [];
+
+            uploadedImageUrls.push(...urls);
+            renderMarketPhotoPreview();
+            addLog(`Загружено ${urls.length} фото`, 'success');
+        } catch (e) {
+            addLog(`Ошибка загрузки фото: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
+        }
+    }
+
+    function renderMarketPhotoPreview() {
+        const previewContainer = document.getElementById('market-photo-preview');
+        if (!previewContainer) return;
+        previewContainer.innerHTML = '';
+
+        uploadedImageUrls.forEach((url, idx) => {
+            const thumbWrap = document.createElement('div');
+            thumbWrap.style.position = 'relative';
+            thumbWrap.style.width = '60px';
+            thumbWrap.style.height = '60px';
+
+            const img = document.createElement('img');
+            img.src = `${API_BASE_URL}${url}`;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.border = '1px solid var(--border-metal)';
+
+            const delBtn = document.createElement('button');
+            delBtn.innerHTML = '&times;';
+            delBtn.style.position = 'absolute';
+            delBtn.style.top = '-5px';
+            delBtn.style.right = '-5px';
+            delBtn.style.background = '#ff3333';
+            delBtn.style.color = '#fff';
+            delBtn.style.border = 'none';
+            delBtn.style.borderRadius = '50%';
+            delBtn.style.width = '18px';
+            delBtn.style.height = '18px';
+            delBtn.style.cursor = 'pointer';
+            delBtn.style.fontSize = '12px';
+            delBtn.style.lineHeight = '18px';
+            delBtn.style.textAlign = 'center';
+            delBtn.onclick = () => {
+                uploadedImageUrls.splice(idx, 1);
+                renderMarketPhotoPreview();
+            };
+
+            thumbWrap.appendChild(img);
+            thumbWrap.appendChild(delBtn);
+            previewContainer.appendChild(thumbWrap);
+        });
+    }
+
+    // Attach listener to file input
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.id === 'market-photos') {
+            if (e.target.files) {
+                window.uploadMarketImages(e.target.files);
+            }
+        }
+    });
+
     // @ts-ignore
     window.submitMarketListing = async function() {
         const titleElem = document.getElementById('market-title');
@@ -492,7 +677,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!title || !price) { addLog('Validation Error: Заполните название и цену', 'error'); return; }
         
         try {
-            await apiRequest('/market', 'POST', { title, price, description, category, location });
+            await apiRequest('/market', 'POST', {
+                title,
+                price,
+                description,
+                category,
+                location,
+                images: uploadedImageUrls
+            });
             addLog('Лот успешно опубликован', 'success');
             // @ts-ignore
             titleElem.value = '';
@@ -500,6 +692,8 @@ document.addEventListener('DOMContentLoaded', () => {
             priceElem.value = '';
             // @ts-ignore
             descElem.value = '';
+            uploadedImageUrls = [];
+            renderMarketPhotoPreview();
             const panel = document.getElementById('market-form-panel');
             if (panel) panel.style.display = 'none';
             loadMarket();
