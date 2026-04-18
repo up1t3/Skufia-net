@@ -203,6 +203,14 @@
                             <option value="Завод">Завод</option>
                         </select>
                         <textarea id="market-desc" class="input-textarea" placeholder="Описание лота"></textarea>
+
+                        <!-- NEW PHOTO UPLOAD -->
+                        <div class="market-photo-upload" style="margin-bottom: 10px;">
+                            <input type="file" id="market-photos" multiple accept="image/*" style="display:none">
+                            <button class="cyber-btn-small" onclick="document.getElementById('market-photos').click()" style="margin-bottom: 10px;">ДОБАВИТЬ ФОТО</button>
+                            <div id="market-photo-preview" style="display: flex; gap: 10px; flex-wrap: wrap;"></div>
+                        </div>
+
                         <button class="btn-primary" onclick="submitMarketListing()">ОПУБЛИКОВАТЬ</button>
                     </div>
                     <div class="market-grid" id="market-list">
@@ -234,6 +242,28 @@
                     </div>
                     <div class="events-grid" id="events-list">
                         <div class="skeleton">Получение координат...</div>
+                    </div>
+                </div>
+
+                <!-- LISTING DETAIL MODAL -->
+                <div id="listing-detail-modal" class="modal" style="display: none;">
+                    <div class="modal-content" style="max-width: 600px;">
+                        <div class="modal-header">
+                            <h3 id="listing-detail-title">Детали лота</h3>
+                            <span class="close-btn" onclick="document.getElementById('listing-detail-modal').style.display='none'">&times;</span>
+                        </div>
+                        <div class="listing-detail-body">
+                            <div id="listing-detail-gallery" class="listing-gallery"></div>
+                            <div class="listing-meta">
+                                <div class="listing-price" id="listing-detail-price"></div>
+                                <div class="listing-status" id="listing-detail-status"></div>
+                            </div>
+                            <p id="listing-detail-desc" class="listing-description"></p>
+                            <div class="listing-actions" style="display: flex; gap: 10px; margin-top: 20px;">
+                                <button class="cyber-btn primary-btn" id="listing-detail-message-btn">💬 НАПИСАТЬ ПРОДАВЦУ</button>
+                                <button class="cyber-btn" id="listing-detail-fav-btn">❤️ В ИЗБРАННОЕ</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
