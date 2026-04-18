@@ -319,7 +319,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const div = document.createElement('div');
                 div.className = 'forum-item';
                 div.style.cursor = 'pointer';
-                div.innerHTML = `<strong>${topic.title}</strong> <span class="msg-meta">by ${topic.author}</span>`;
+                const strong = document.createElement('strong');
+                strong.textContent = topic.title;
+                const span = document.createElement('span');
+                span.className = 'msg-meta';
+                span.textContent = `by ${topic.author}`;
+                div.appendChild(strong);
+                div.appendChild(document.createTextNode(' '));
+                div.appendChild(span);
                 div.onclick = () => loadTopicPosts(topic.id, topic.title);
                 container.appendChild(div);
             });
@@ -328,20 +335,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadTopicPosts(topicId, title) {
         const container = document.getElementById('forum-list');
-        container.innerHTML = `<div class="system-msg">Accessing thread: ${title}...</div>`;
+        container.innerHTML = '';
+        const sysMsg = document.createElement('div');
+        sysMsg.className = 'system-msg';
+        sysMsg.textContent = `Accessing thread: ${title}...`;
+        container.appendChild(sysMsg);
         try {
             const posts = await apiRequest(`/topics/${topicId}/posts`);
-            container.innerHTML = `<h4>${title}</h4><div class="back-link" onclick="loadForum()"><< Вернуться к списку</div>`;
+            container.innerHTML = '';
+            const h4 = document.createElement('h4');
+            h4.textContent = title;
+            const backLink = document.createElement('div');
+            backLink.className = 'back-link';
+            backLink.textContent = '<< Вернуться к списку';
+            backLink.onclick = loadForum;
+            container.appendChild(h4);
+            container.appendChild(backLink);
             posts.forEach(post => {
                 const div = document.createElement('div');
                 div.className = 'post-item';
-                div.innerHTML = `
-                    <div class="post-content">${post.content}</div>
-                    <div class="msg-meta">
-                        by ${post.author} | 👍 <span id="likes-${post.id}">${post.likes}</span>
-                        <button class="small-btn" onclick="likePost(${post.id})">Поддержать</button>
-                    </div>
-                `;
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'post-content';
+                contentDiv.textContent = post.content;
+
+                const metaDiv = document.createElement('div');
+                metaDiv.className = 'msg-meta';
+                metaDiv.textContent = `by ${post.author} | 👍 `;
+
+                const likesSpan = document.createElement('span');
+                likesSpan.id = `likes-${post.id}`;
+                likesSpan.textContent = post.likes;
+
+                const btn = document.createElement('button');
+                btn.className = 'small-btn';
+                btn.textContent = 'Поддержать';
+                btn.onclick = () => likePost(post.id);
+
+                metaDiv.appendChild(likesSpan);
+                metaDiv.appendChild(document.createTextNode(' '));
+                metaDiv.appendChild(btn);
+
+                div.appendChild(contentDiv);
+                div.appendChild(metaDiv);
                 container.appendChild(div);
             });
         } catch (e) { container.innerHTML = '<div class="system-msg">ERROR: Connection lost to this thread.</div>'; }
@@ -372,14 +407,39 @@ document.addEventListener('DOMContentLoaded', () => {
             articles.forEach(art => {
                 const div = document.createElement('div');
                 div.className = 'wiki-card';
-                div.innerHTML = `
-                    <h3>${art.title}</h3>
-                    <div class="msg-meta">👍 <span id="wiki-likes-${art.id}">${art.likes || 0}</span> 
-                    <button class="small-btn" onclick="likeWiki(${art.id})">Одобрить</button>
-                    </div>
-                    <p class="wiki-excerpt">${art.content ? art.content.substring(0, 150) + '...' : 'Контент засекречен'}</p>
-                    <button class="cyber-btn-small" onclick="loadWikiArticle(${art.id})">ОТКРЫТЬ ДАННЫЕ</button>
-                `;
+                const h3 = document.createElement('h3');
+                h3.textContent = art.title;
+
+                const metaDiv = document.createElement('div');
+                metaDiv.className = 'msg-meta';
+                metaDiv.textContent = '👍 ';
+
+                const likesSpan = document.createElement('span');
+                likesSpan.id = `wiki-likes-${art.id}`;
+                likesSpan.textContent = art.likes || 0;
+
+                const likeBtn = document.createElement('button');
+                likeBtn.className = 'small-btn';
+                likeBtn.textContent = 'Одобрить';
+                likeBtn.onclick = () => likeWiki(art.id);
+
+                metaDiv.appendChild(likesSpan);
+                metaDiv.appendChild(document.createTextNode(' '));
+                metaDiv.appendChild(likeBtn);
+
+                const p = document.createElement('p');
+                p.className = 'wiki-excerpt';
+                p.textContent = art.content ? art.content.substring(0, 150) + '...' : 'Контент засекречен';
+
+                const openBtn = document.createElement('button');
+                openBtn.className = 'cyber-btn-small';
+                openBtn.textContent = 'ОТКРЫТЬ ДАННЫЕ';
+                openBtn.onclick = () => loadWikiArticle(art.id);
+
+                div.appendChild(h3);
+                div.appendChild(metaDiv);
+                div.appendChild(p);
+                div.appendChild(openBtn);
                 container.appendChild(div);
             });
         } catch (e) {
@@ -447,23 +507,60 @@ document.addEventListener('DOMContentLoaded', () => {
                     deleteButtonHTML = `<button class="btn-danger" style="margin-top: 5px; font-size: 10px; width: 100%" onclick="event.stopPropagation(); deleteMarketListing(${item.id})">УДАЛИТЬ ЛОТ</button>`;
                 }
 
-                div.innerHTML = `
-                    <div class="market-card-image-container">
-                        ${coverImageHtml}
-                        ${statusBadgeHtml}
-                        ${favHtml}
-                        <div class="views-count">👁 ${item.views_count || 0}</div>
-                    </div>
-                    <div class="market-body" style="padding: 10px;">
-                        <div class="market-price" style="font-size: 16px; font-weight: bold; color: var(--accent-amber); margin-bottom: 5px;">${item.price}</div>
-                        <h4 style="margin-bottom: 5px; font-size: 14px;">${item.title}</h4>
-                        <div style="font-size: 11px; color: var(--text-dim); display: flex; justify-content: space-between;">
-                            <span>${item.location}</span>
-                            <span>${new Date(item.created_at || Date.now()).toLocaleDateString()}</span>
-                        </div>
-                        ${deleteButtonHTML}
-                    </div>
-                `;
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'market-card-image-container';
+                imgContainer.innerHTML = coverImageHtml + statusBadgeHtml + favHtml; // Safe: no user text in these HTML strings
+                const viewsDiv = document.createElement('div');
+                viewsDiv.className = 'views-count';
+                viewsDiv.textContent = `👁 ${item.views_count || 0}`;
+                imgContainer.appendChild(viewsDiv);
+
+                const bodyDiv = document.createElement('div');
+                bodyDiv.className = 'market-body';
+                bodyDiv.style.padding = '10px';
+
+                const priceDiv = document.createElement('div');
+                priceDiv.className = 'market-price';
+                priceDiv.style.fontSize = '16px';
+                priceDiv.style.fontWeight = 'bold';
+                priceDiv.style.color = 'var(--accent-amber)';
+                priceDiv.style.marginBottom = '5px';
+                priceDiv.textContent = item.price;
+
+                const h4 = document.createElement('h4');
+                h4.style.marginBottom = '5px';
+                h4.style.fontSize = '14px';
+                h4.textContent = item.title;
+
+                const metaDiv = document.createElement('div');
+                metaDiv.style.fontSize = '11px';
+                metaDiv.style.color = 'var(--text-dim)';
+                metaDiv.style.display = 'flex';
+                metaDiv.style.justifyContent = 'space-between';
+
+                const locSpan = document.createElement('span');
+                locSpan.textContent = item.location;
+
+                const dateSpan = document.createElement('span');
+                dateSpan.textContent = new Date(item.created_at || Date.now()).toLocaleDateString();
+
+                metaDiv.appendChild(locSpan);
+                metaDiv.appendChild(dateSpan);
+
+                bodyDiv.appendChild(priceDiv);
+                bodyDiv.appendChild(h4);
+                bodyDiv.appendChild(metaDiv);
+
+                if (deleteButtonHTML) {
+                    const delContainer = document.createElement('div');
+                    delContainer.innerHTML = deleteButtonHTML; // Safe HTML
+                    while (delContainer.firstChild) {
+                        bodyDiv.appendChild(delContainer.firstChild);
+                    }
+                }
+
+                div.appendChild(imgContainer);
+                div.appendChild(bodyDiv);
 
                 div.onclick = () => openListingModal(item.id);
                 container.appendChild(div);
@@ -715,14 +812,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 applyAvatarDisplay(avatar, u.avatar_url);
                 avatarCell.appendChild(avatar);
                 
-                row.innerHTML = `
-                    <td><span class="id-tag">${u.id || '---'}</span></td>
-                    <td></td>
-                    <td class="highlight">${u.username}</td>
-                    <td><span class="rank-badge">${u.rank}</span></td>
-                    <td class="stat-value">${u.karma}</td>
-                    <td><button class="cyber-btn-small" onclick="startPrivateChat(${u.id})">СЕКРЕТНЫЙ ЧАТ</button></td>
-                `;
+                const td1 = document.createElement('td');
+                const spanId = document.createElement('span');
+                spanId.className = 'id-tag';
+                spanId.textContent = u.id || '---';
+                td1.appendChild(spanId);
+
+                const td2 = document.createElement('td');
+
+                const td3 = document.createElement('td');
+                td3.className = 'highlight';
+                td3.textContent = u.username;
+
+                const td4 = document.createElement('td');
+                const spanRank = document.createElement('span');
+                spanRank.className = 'rank-badge';
+                spanRank.textContent = u.rank;
+                td4.appendChild(spanRank);
+
+                const td5 = document.createElement('td');
+                td5.className = 'stat-value';
+                td5.textContent = u.karma;
+
+                const td6 = document.createElement('td');
+                const chatBtn = document.createElement('button');
+                chatBtn.className = 'cyber-btn-small';
+                chatBtn.textContent = 'СЕКРЕТНЫЙ ЧАТ';
+                chatBtn.onclick = () => startPrivateChat(u.id);
+                td6.appendChild(chatBtn);
+
+                row.appendChild(td1);
+                row.appendChild(td2);
+                row.appendChild(td3);
+                row.appendChild(td4);
+                row.appendChild(td5);
+                row.appendChild(td6);
                 row.cells[1].appendChild(avatar);
                 tableBody.appendChild(row);
             });
@@ -766,14 +890,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 eventCard.className = 'event-card interactive';
                 // @ts-ignore
                 const safeDate = e.date ? new Date(e.date).toLocaleDateString() : 'Unknown';
-                eventCard.innerHTML = `
-                <div class="event-date">${safeDate}</div>
-                <div class="event-content">
-                    <h4>${e.title}</h4>
-                    <p>📍 ${e.location || 'Секретная локация'}</p>
-                </div>
-                <div class="event-action">> ДЕТАЛИ</div>
-            `;
+                const dateDiv = document.createElement('div');
+                dateDiv.className = 'event-date';
+                dateDiv.textContent = safeDate;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'event-content';
+
+                const h4 = document.createElement('h4');
+                h4.textContent = e.title;
+
+                const p = document.createElement('p');
+                p.textContent = `📍 ${e.location || 'Секретная локация'}`;
+
+                contentDiv.appendChild(h4);
+                contentDiv.appendChild(p);
+
+                const actionDiv = document.createElement('div');
+                actionDiv.className = 'event-action';
+                actionDiv.textContent = '> ДЕТАЛИ';
+
+                eventCard.appendChild(dateDiv);
+                eventCard.appendChild(contentDiv);
+                eventCard.appendChild(actionDiv);
             eventCard.addEventListener('click', () => showEventDetails(e));
             container.appendChild(eventCard);
         });
@@ -1052,16 +1191,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? (room.other_user_avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${room.name}`)
                     : `https://api.dicebear.com/7.x/shapes/svg?seed=${room.name}`;
 
-                div.innerHTML = `
-                    <div class="sidebar-item-avatar">
-                        <img src="${avatarUrl}" alt="AV" style="width:100%;height:100%;object-fit:cover;">
-                    </div>
-                    <div class="sidebar-item-info">
-                        <div class="sidebar-item-name">${room.name}</div>
-                        <div class="sidebar-item-last-msg">${room.last_message || 'Нет сообщений'}</div>
-                    </div>
-                    <span class="status-dot ${room.is_online ? 'online' : ''}"></span>
-                `;
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'sidebar-item-avatar';
+                const img = document.createElement('img');
+                img.src = avatarUrl;
+                img.alt = 'AV';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                avatarDiv.appendChild(img);
+
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'sidebar-item-info';
+
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'sidebar-item-name';
+                nameDiv.textContent = room.name;
+
+                const lastMsgDiv = document.createElement('div');
+                lastMsgDiv.className = 'sidebar-item-last-msg';
+                lastMsgDiv.textContent = room.last_message || 'Нет сообщений';
+
+                infoDiv.appendChild(nameDiv);
+                infoDiv.appendChild(lastMsgDiv);
+
+                const statusSpan = document.createElement('span');
+                statusSpan.className = `status-dot ${room.is_online ? 'online' : ''}`;
+
+                div.appendChild(avatarDiv);
+                div.appendChild(infoDiv);
+                div.appendChild(statusSpan);
                 div.onclick = () => selectChatRoom(room.id, room.name, room.room_type, room.other_user_id);
                 list.appendChild(div);
             });
@@ -1083,17 +1242,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const history = document.getElementById('chat-history');
         
         if (header) {
-            header.innerHTML = `
-                <div class="chat-user-header">
-                    <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" class="chat-user-avatar">
-                    <div class="chat-user-info">
-                        <div style="font-size:14px;">${roomName.toUpperCase()}</div>
-                    </div>
-                </div>
-                <div class="encryption-badge" id="chat-encryption-status">
-                    <span>📡 НЕЗАЩИЩЕННЫЙ КАНАЛ</span>
-                </div>
-            `;
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'chat-user-header';
+
+            const img = document.createElement('img');
+            img.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}`;
+            img.className = 'chat-user-avatar';
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'chat-user-info';
+
+            const nameDiv = document.createElement('div');
+            nameDiv.style.fontSize = '14px';
+            nameDiv.textContent = roomName.toUpperCase();
+
+            infoDiv.appendChild(nameDiv);
+            headerDiv.appendChild(img);
+            headerDiv.appendChild(infoDiv);
+
+            const badgeDiv = document.createElement('div');
+            badgeDiv.className = 'encryption-badge';
+            badgeDiv.id = 'chat-encryption-status';
+
+            const span = document.createElement('span');
+            span.textContent = '📡 НЕЗАЩИЩЕННЫЙ КАНАЛ';
+
+            badgeDiv.appendChild(span);
+
+            header.innerHTML = '';
+            header.appendChild(headerDiv);
+            header.appendChild(badgeDiv);
         }
 
         // --- E2EE INITIALIZATION ---
@@ -1190,19 +1368,51 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const isEditedHtml = msg.is_edited ? '<span class="is-edited">(изменено)</span>' : '';
 
-        div.innerHTML = `
-            <div class="msg-header">
-                ${msg.sender}
-                ${msg.is_secure || msg.iv ? '<span class="msg-secure-icon">🔒</span>' : ''}
-                ${isEditedHtml}
-            </div>
-            ${replyHtml}
-            <div class="msg-text">${msg.text || msg.content || ''}</div>
-            ${fileHtml}
-            <div class="msg-footer">
-                <span class="msg-time">${timeStr}</span>
-            </div>
-        `;
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'msg-header';
+        headerDiv.textContent = msg.sender + ' ';
+
+        if (msg.is_secure || msg.iv) {
+            const secureSpan = document.createElement('span');
+            secureSpan.className = 'msg-secure-icon';
+            secureSpan.textContent = '🔒';
+            headerDiv.appendChild(secureSpan);
+        }
+        if (msg.is_edited) {
+            const editedSpan = document.createElement('span');
+            editedSpan.className = 'is-edited';
+            editedSpan.textContent = '(изменено)';
+            headerDiv.appendChild(editedSpan);
+        }
+
+        const textDiv = document.createElement('div');
+        textDiv.className = 'msg-text';
+        textDiv.textContent = msg.text || msg.content || '';
+
+        const footerDiv = document.createElement('div');
+        footerDiv.className = 'msg-footer';
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'msg-time';
+        timeSpan.textContent = timeStr;
+        footerDiv.appendChild(timeSpan);
+
+        div.appendChild(headerDiv);
+        if (replyHtml) {
+            const replyContainer = document.createElement('div');
+            replyContainer.innerHTML = replyHtml; // Assuming this is safe, otherwise can be handled further
+            while (replyContainer.firstChild) {
+                div.appendChild(replyContainer.firstChild);
+            }
+        }
+        div.appendChild(textDiv);
+        if (fileHtml) {
+            const fileContainer = document.createElement('div');
+            fileContainer.innerHTML = fileHtml; // Assuming safe URL
+            while (fileContainer.firstChild) {
+                div.appendChild(fileContainer.firstChild);
+            }
+        }
+        div.appendChild(footerDiv);
         
         // Context menu logic
         div.oncontextmenu = (e) => {
@@ -1215,10 +1425,23 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // @ts-ignore
             let cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
-            menu.innerHTML = `<div onclick="setReply(${msg.id}, \`${cleanText}\`)">Ответить</div>`;
+            menu.innerHTML = '';
+            const replyDiv = document.createElement('div');
+            replyDiv.textContent = 'Ответить';
+            replyDiv.onclick = () => setReply(msg.id, cleanText);
+            menu.appendChild(replyDiv);
+
             if (isMe) {
-                menu.innerHTML += `<div onclick="setEdit(${msg.id}, \`${cleanText}\`)">Редактировать</div>`;
-                menu.innerHTML += `<div class="delete-ctx" onclick="deleteMessage(${msg.id})">Удалить</div>`;
+                const editDiv = document.createElement('div');
+                editDiv.textContent = 'Редактировать';
+                editDiv.onclick = () => setEdit(msg.id, cleanText);
+                menu.appendChild(editDiv);
+
+                const deleteDiv = document.createElement('div');
+                deleteDiv.className = 'delete-ctx';
+                deleteDiv.textContent = 'Удалить';
+                deleteDiv.onclick = () => deleteMessage(msg.id);
+                menu.appendChild(deleteDiv);
             }
             document.body.appendChild(menu);
             setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
