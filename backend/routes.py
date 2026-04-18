@@ -549,6 +549,24 @@ async def delete_message(message_id: int, current_user: User = Depends(get_curre
         
     return {"status": "success"}
 
+@router.get('/chat/rooms/{room_id}/members')
+def get_room_members(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+        
+    me = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    if not me:
+        return {"invite_code": None, "my_role": None, "members": []}
+        
+    members_db = db.query(ChatRoomMember, User).join(User, ChatRoomMember.user_id == User.id).filter(ChatRoomMember.room_id == room_id).all()
+    
+    return {
+        "invite_code": room.invite_code,
+        "my_role": me.role,
+        "members": [{"user_id": u.id, "display_name": get_display_name(u), "role": m.role} for m, u in members_db]
+    }
+
 # --- GLOBAL NOTIFICATIONS MODULE ---
 
 @router.get('/notifications/all', response_model=List[dict])
