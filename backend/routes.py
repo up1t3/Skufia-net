@@ -96,7 +96,7 @@ def update_karma(db: Session, user_id: int, amount: int = 10):
 
 # --- WIKI MODULE ---
 @router.get('/wiki', response_model=List[dict])
-def get_wiki(db: Session = Depends(get_db)):
+def get_wiki(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     articles = db.query(WikiArticle).all()
     articles_data = []
     for a in articles:
@@ -112,7 +112,7 @@ def get_wiki(db: Session = Depends(get_db)):
     return articles_data
 
 @router.get('/wiki/{article_id}', response_model=dict)
-def get_wiki_detail(article_id: int, db: Session = Depends(get_db)):
+def get_wiki_detail(article_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetches full article data from the Cyber-Industrial archives."""
     article = db.query(WikiArticle).filter(WikiArticle.id == article_id).first()
     if not article:
@@ -149,7 +149,7 @@ def create_article(article: WikiCreate, current_user: User = Depends(get_current
 
 # --- FORUM MODULE ---
 @router.get('/topics', response_model=List[dict])
-def list_topics(db: Session = Depends(get_db)):
+def list_topics(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Lists all active transmissions (topics) in the forum"""
     topics = db.query(Topic).order_by(Topic.created_at.desc()).all()
     return [{"id": t.id, "title": t.title, "author": get_display_name(t.author), "created_at": t.created_at} for t in topics]
@@ -165,7 +165,7 @@ def create_topic(topic: TopicCreate, current_user: User = Depends(get_current_us
     return {"id": db_topic.id, "status": "Carrier signal established. Topic live."}
 
 @router.get('/topics/{topic_id}/posts')
-def get_posts(topic_id: int, db: Session = Depends(get_db)):
+def get_posts(topic_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Retrieves all posts for a forum topic with like counts"""
     posts = db.query(Post).filter(Post.topic_id == topic_id).all()
     posts_data = []
@@ -204,7 +204,7 @@ def like_post(post_id: int, current_user: User = Depends(get_current_user), db: 
 
 # --- REGISTRY MODULE ---
 @router.get('/registry')
-def get_registry(db: Session = Depends(get_db)):
+def get_registry(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profiles = db.query(Profile).all()
     return [{"id": p.user_id, "username": p.user.username, "display_name": get_display_name(p.user), "rank": p.rank, "karma": p.karma, "avatar_url": p.avatar_url} for p in profiles]
 
@@ -242,7 +242,6 @@ def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_curr
     
     if data.nickname is not None: profile.nickname = data.nickname
     if data.bio is not None: profile.bio = data.bio
-    if data.rank is not None: profile.rank = data.rank
     if data.avatar_url is not None: profile.avatar_url = data.avatar_url
     
     db.commit()
@@ -285,13 +284,13 @@ def link_telegram(data: TelegramLink, current_user: User = Depends(get_current_u
     return {"status": f"Account successfully linked to Telegram ID: {data.telegram_id}"}
     
 @router.get('/users/list')
-def list_users(db: Session = Depends(get_db)):
+def list_users(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Returns a list of all operators for the Secure Channel"""
     users = db.query(User).all()
     return [{"id": u.id, "username": get_display_name(u), "public_key": u.public_key} for u in users]
 
 @router.get('/users/{user_id}/key')
-def get_user_key(user_id: int, db: Session = Depends(get_db)):
+def get_user_key(user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Retrieves the public key for an operative to initiate E2EE"""
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -358,7 +357,7 @@ def get_room_history(room_id: int, current_user: User = Depends(get_current_user
     ]
 
 @router.get('/users/search/{query}')
-def search_users(query: str, db: Session = Depends(get_db)):
+def search_users(query: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Finds operators by nickname for direct channel initialization"""
     users = db.query(User).filter(User.username.ilike(f"%{query}%")).all()
     return [{"id": u.id, "username": get_display_name(u), "is_online": u.profile.is_online if u.profile else False} for u in users]
@@ -378,7 +377,9 @@ async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: U
     if len(contents) > MAX_AUDIO_SIZE:
         raise HTTPException(status_code=413, detail="Файл превышает лимит 10 МБ")
 
-    unique_name = f"{uuid.uuid4().hex}.webm"
+    safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))
+    ext = os.path.splitext(safe_filename)[1] or '.webm'
+    unique_name = f"{uuid.uuid4().hex}{ext}"
     save_path = os.path.join('uploads', 'voice', unique_name)
 
     with open(save_path, 'wb') as f:
@@ -393,14 +394,15 @@ async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: Us
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="Файл превышает лимит 5 МБ")
     
-    ext = os.path.splitext(file.filename or '')[1] or '.bin'
+    safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))
+    ext = os.path.splitext(safe_filename)[1] or '.bin'
     unique_name = f"{uuid.uuid4().hex}{ext}"
     save_path = os.path.join('uploads', unique_name)
     
     with open(save_path, 'wb') as f:
         f.write(contents)
     
-    return {"file_url": f"/uploads/{unique_name}", "original_name": file.filename, "size": len(contents)}
+    return {"file_url": f"/uploads/{unique_name}", "original_name": safe_filename, "size": len(contents)}
 
 @router.post('/chat/rooms/{room_id}/send')
 async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -570,7 +572,7 @@ def get_room_members(room_id: int, current_user: User = Depends(get_current_user
 # --- GLOBAL NOTIFICATIONS MODULE ---
 
 @router.get('/notifications/all', response_model=List[dict])
-def get_global_notifications(db: Session = Depends(get_db)):
+def get_global_notifications(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Retrieves all active system-wide alerts"""
     notifs = db.query(GlobalNotification).filter(GlobalNotification.is_active == True).all()
     return [{"id": n.id, "message": n.message, "level": n.level, "created_at": n.created_at} for n in notifs]
@@ -578,6 +580,8 @@ def get_global_notifications(db: Session = Depends(get_db)):
 @router.post('/notifications/broadcast')
 def broadcast_notification(notif: NotificationCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Broadcasts a system-wide alert to all operators (Admin only logic implied)"""
+    if not current_user.profile or current_user.profile.rank != 'admin':
+        raise HTTPException(status_code=403, detail="Not authorized")
     db_notif = GlobalNotification(**notif.model_dump())
     db.add(db_notif)
     db.commit()
@@ -592,7 +596,7 @@ class MarketCreate(BaseModel):
     location: str = "Вся сеть"
 
 @router.get('/market', response_model=List[dict])
-def get_market_listings(category: str = None, location: str = None, db: Session = Depends(get_db)):
+def get_market_listings(category: str = None, location: str = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     query = db.query(MarketListing).filter(MarketListing.is_active == True)
     if category and category != "Все":
         query = query.filter(MarketListing.category == category)
@@ -633,7 +637,7 @@ def delete_market_listing(item_id: int, current_user: User = Depends(get_current
     item = db.query(MarketListing).filter(MarketListing.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Lot not found")
-    if item.seller_id != current_user.id and current_user.rank != "admin":
+    if item.seller_id != current_user.id and (not current_user.profile or current_user.profile.rank != "admin"):
         raise HTTPException(status_code=403, detail="Not authorized to delete this lot")
     
     db.delete(item)
@@ -641,7 +645,7 @@ def delete_market_listing(item_id: int, current_user: User = Depends(get_current
     return {"status": "success"}
 
 @router.get('/market/recommended')
-def get_recommended_listings(db: Session = Depends(get_db)):
+def get_recommended_listings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     # Заглушка рекомендательной системы (Пока возвращает 3 самых новых)
     # В будущем здесь будет FTS5 или векторный поиск
     listings = db.query(MarketListing).filter(MarketListing.is_active == True).order_by(MarketListing.created_at.desc()).limit(3).all()
@@ -664,7 +668,7 @@ class EventCreate(BaseModel):
     description: str = ""
 
 @router.get('/events', response_model=List[dict])
-def get_events(db: Session = Depends(get_db)):
+def get_events(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     events = db.query(Event).order_by(Event.event_date.asc()).all()
     return [{"id": e.id, "title": e.title, "date": e.event_date.isoformat(), "location": e.location, "description": e.description} for e in events]
 
@@ -778,14 +782,20 @@ def join_room(invite_code: str, current_user: User = Depends(get_current_user), 
 
 @router.delete('/chat/rooms/{room_id}/members/{target_user_id}')
 def kick_member(room_id: int, target_user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Check if current user is authorized to kick the member
     admin_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    is_room_admin = admin_member and admin_member.role == 'admin'
+    is_global_admin = current_user.profile and current_user.profile.rank == 'admin'
 
-    if not admin_member or admin_member.role != 'admin':
+    if not is_room_admin and not is_global_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
 
     target_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == target_user_id).first()
     if not target_member:
         raise HTTPException(status_code=404, detail="Member not found")
+
+    if target_member.role == 'admin' and target_user_id != current_user.id and not is_global_admin:
+        raise HTTPException(status_code=403, detail="Cannot kick another admin")
 
     db.delete(target_member)
     db.commit()

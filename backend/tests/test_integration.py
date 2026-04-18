@@ -59,8 +59,8 @@ def auth_headers(client, setup_db):
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
-def test_get_wiki_public(client):
-    response = client.get("/api/wiki")
+def test_get_wiki_public(client, auth_headers):
+    response = client.get("/api/wiki", headers=auth_headers)
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
@@ -90,7 +90,7 @@ def test_create_and_get_topic(client, auth_headers):
     topic_id = response.json()["id"]
 
     # Test reading topics
-    response = client.get("/api/topics")
+    response = client.get("/api/topics", headers=auth_headers)
     assert response.status_code == 200
     topics = response.json()
     assert isinstance(topics, list)
@@ -103,14 +103,14 @@ def test_create_and_get_topic(client, auth_headers):
     assert response.status_code == 200
 
     # Test reading posts
-    response = client.get(f"/api/topics/{topic_id}/posts")
+    response = client.get(f"/api/topics/{topic_id}/posts", headers=auth_headers)
     assert response.status_code == 200
     posts = response.json()
     assert isinstance(posts, list)
     assert len(posts) > 0
 
-def test_registry(client):
-    response = client.get("/api/registry")
+def test_registry(client, auth_headers):
+    response = client.get("/api/registry", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
