@@ -54,6 +54,21 @@ def run_migrations():
             print("MIGRATION: Added 'is_edited' column to messages table.")
 
         
+
+        # Check and add chat_rooms.invite_code
+        cursor.execute("PRAGMA table_info(chat_rooms)")
+        room_cols = [row[1] for row in cursor.fetchall()]
+        if 'invite_code' not in room_cols:
+            cursor.execute("ALTER TABLE chat_rooms ADD COLUMN invite_code TEXT")
+            print("MIGRATION: Added 'invite_code' column to chat_rooms table.")
+
+        # Check and add chat_room_members.role
+        cursor.execute("PRAGMA table_info(chat_room_members)")
+        member_cols = [row[1] for row in cursor.fetchall()]
+        if 'role' not in member_cols:
+            cursor.execute("ALTER TABLE chat_room_members ADD COLUMN role TEXT DEFAULT 'member'")
+            print("MIGRATION: Added 'role' column to chat_room_members table.")
+
         # Check and add profiles.nickname
         cursor.execute("PRAGMA table_info(profiles)")
         profile_cols = [row[1] for row in cursor.fetchall()]
