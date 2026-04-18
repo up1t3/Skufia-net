@@ -118,7 +118,7 @@ def seed_rich_data():
         ("Игромания: Наследие", "Видеомания с Логвиновым и Кузьменко. Наклейки, диск, и запах свежего журнала.")
     ]
     for title, content in wiki_data:
-        db.add(WikiArticle(title=title, content=content, author_id=user_objs['Admin_Zero'].id))
+        db.add(WikiArticle(title=title, content=content, author_id=user_objs['Admin_Skuf'].id))
 
     # 5. Market Listings
     market_items = [
@@ -128,7 +128,7 @@ def seed_rich_data():
         ("Коврик для мыши SteelSeries", "Для про-геймеров.", 600),
     ]
     for title, desc, price in market_items:
-        db.add(MarketListing(title=title, description=desc, price=price, seller_id=random.choice(usernames)))
+        db.add(MarketListing(title=title, description=desc, price=price, seller_id=user_objs[random.choice(usernames)].id))
 
     db.commit()
     db.close()

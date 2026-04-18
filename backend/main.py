@@ -203,10 +203,22 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     await manager.connect(user_id, websocket)
     try:
         while True:
-            # We don't necessarily need to receive messages here if we use REST for sending,
-            # but we keep the connection open for receiving broadcasts.
-            data = await websocket.receive_text()
-            # Handle client-side heartbeat or specific WS-only commands if needed
+            # We receive messages here for WebRTC signaling relay and other real-time events
+            text_data = await websocket.receive_text()
+            try:
+                data = json.loads(text_data)
+                if data.get('type') == 'rtc_signal':
+                    target_id = data.get('target')
+                    if target_id:
+                        relay_msg = {
+                            "type": "rtc_signal",
+                            "sender_id": user_id,
+                            "signal_type": data.get('signal_type'),
+                            "payload": data.get('payload')
+                        }
+                        await manager.send_personal_message(relay_msg, target_id)
+            except json.JSONDecodeError:
+                pass
     except WebSocketDisconnect:
         manager.disconnect(user_id)
 

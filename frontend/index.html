@@ -6,9 +6,12 @@
     <title>SKUFIA | Enterprise Command Center</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0e14">
 </head>
-<body>
+<body data-theme="telegram">
     <div class="crt-overlay"></div>
     <div class="scanline"></div>
 
@@ -56,6 +59,34 @@
                     Уже есть ID? <a href="#" id="toggle-to-login" style="color: var(--accent-color);">Авторизация</a>
                 </div>
             </form>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; padding: 25px;">
+            <div class="modal-header">
+                <h2>НАСТРОЙКИ ПРОФИЛЯ</h2>
+                <button class="close-btn" onclick="document.getElementById('settings-modal').style.display='none'">×</button>
+            </div>
+            <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Изменить Аватар</label>
+                    <input type="file" id="settings-avatar-upload" accept="image/*" style="font-size: 13px; margin-top: 5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Тема Оформления</label>
+                    <select id="settings-theme-select" class="cyber-input" style="width: 100%; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main); padding: 8px; border-radius: 4px; margin-top: 5px;">
+                        <option value="cyber">Skufia Cyber (Neon)</option>
+                        <option value="telegram">Telegram Dark</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Синхронизация Контактов</label>
+                    <button id="sync-contacts-btn" class="cyber-btn secondary-btn" style="width: 100%; margin-top: 5px;">ПОДТЯНУТЬ КОНТАКТЫ</button>
+                    <small style="color: var(--text-secondary); display: block; margin-top: 5px;">Импорт абонентов из телефонной книги</small>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -320,6 +351,14 @@
                     <div class="settings-list">
                         <div class="setting-row"><span>Язык:</span> <span class="highlight">Русский (RU)</span></div>
                         <div class="setting-row"><span>CRT Эффект:</span> <input type="checkbox" checked></div>
+                        <div class="setting-row">
+                            <span>Тема оформления:</span>
+                            <select id="theme-selector" class="input-text" style="width: auto;" onchange="changeTheme(this.value)">
+                                <option value="telegram">Telegram Modern</option>
+                                <option value="neon">Neon Glassmorphism</option>
+                                <option value="retro">Cyber Retro (Classic)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -328,32 +367,95 @@
                     <h2 class="view-title">📡 SKUFIA-NET // SECURE_HUB</h2>
                     <div class="chat-layout">
                         <div class="chat-sidebar">
-                            <div class="sidebar-header">КОНТАКТЫ / ГРУППЫ</div>
+                            <!-- Premium Sidebar Header -->
+                            <div class="sidebar-header">
+                                <div class="sidebar-header-top">
+                                    <span class="sidebar-title">Messenger</span>
+                                    <div class="sidebar-actions-icons">
+                                        <button class="icon-btn search-toggle" title="Поиск Contacts">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                        </button>
+                                        <button class="icon-btn settings-btn" title="Настройки">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8 1 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="sidebar-search">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <input type="text" id="contact-search" placeholder="Search" autocomplete="off">
+                                </div>
+                            </div>
                             <div id="chat-rooms-list" class="sidebar-list">
                                 <div class="skeleton">Синхронизация...</div>
                             </div>
                             <div class="sidebar-actions">
                                 <button class="cyber-btn-small" onclick="createNewRoom()">+ СОЗДАТЬ КАНАЛ</button>
+                                <button class="cyber-btn-small" id="open-settings-btn" style="margin-top: 10px;">⚙️ НАСТРОЙКИ</button>
+                                <button class="cyber-btn-small" id="install-pwa-btn" style="display: none; margin-top: 10px; border-color: var(--accent-color);">📲 СКАЧАТЬ APP</button>
                             </div>
                         </div>
                         <div class="chat-main">
+                            <!-- Premium Chat Header -->
                             <div id="chat-header" class="chat-info">
-                                <button class="mobile-back-btn" onclick="closeChatMobile()">←</button>
-                                <span id="chat-header-title">Выберите оператора для связи...</span>
+                                <button class="mobile-back-btn" onclick="closeChatMobile()">
+                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                                </button>
+                                <div class="chat-header-profile">
+                                    <div class="header-avatar" id="header-avatar">?</div>
+                                    <div class="header-text-block">
+                                        <div id="chat-header-title">Выберите оператора...</div>
+                                        <div class="header-status">
+                                            <span class="status-dot"></span> <span id="chat-header-status">Ожидание</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="chat-header-actions">
+                                    <button class="icon-btn" title="Аудиозвонок" onclick="if(window.RTCManagerInstance && state && state.chat.currentRoomId) window.RTCManagerInstance.startCall(state.chat.currentRoomId);">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                    </button>
+                                    <button class="icon-btn" title="Видеозвонок" onclick="if(window.RTCManagerInstance && state && state.chat.currentRoomId) window.RTCManagerInstance.startCall(state.chat.currentRoomId);">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                                    </button>
+                                    <button class="icon-btn" title="Опции">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
+                                    </button>
+                                </div>
                             </div>
-                            <div id="chat-history" class="chat-messages">
+                            
+                            <!-- Chat Messages Area -->
+                            <div id="chat-history" class="chat-messages premium-scroll">
                                 <div class="chat-placeholder">Ожидание входящего сигнала...</div>
                             </div>
                             <div id="typing-indicator" class="typing-indicator" style="display:none;">Ожидание сигнала...</div>
+                            
                             <div id="reply-preview-container" class="reply-preview-container" style="display:none;">
                                 <div id="reply-preview-text">Ответ на...</div>
                                 <div class="close-btn" onclick="cancelReply()">✕</div>
                             </div>
-                            <div class="chat-input-row">
+                            
+                            <!-- Chat Input Wrapper -->
+                            <div class="chat-input-row premium-input-wrapper">
                                 <input type="file" id="chat-file-input" style="display:none;" accept="*/*">
-                                <button id="chat-attach-btn" class="cyber-button attach-btn" title="Прикрепить файл (до 5 МБ)" onclick="document.getElementById('chat-file-input').click()">📎</button>
-                                <input type="text" id="chat-input" placeholder="Введите команду или сообщение..." autocomplete="off">
-                                <button id="send-chat-btn" class="cyber-button">SEND</button>
+                                <div class="chat-capsule">
+                                    <button id="chat-attach-btn" class="capsule-btn attach-btn" title="Вложение" onclick="document.getElementById('chat-file-input').click()">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    </button>
+                                    
+                                    <input type="text" id="chat-input" placeholder="Write a message..." autocomplete="off">
+                                    
+                                    <button class="capsule-btn emoji-btn" title="Emoji">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                                    </button>
+                                    
+                                    <div class="action-buttons">
+                                        <button class="capsule-btn mic-btn" id="voice-record-btn" title="Голосовое сообщение">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                        </button>
+                                        <button id="send-chat-btn" class="send-circle-btn" title="Отправить">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div id="chat-file-preview" class="chat-file-preview" style="display:none;">
                                 <span id="chat-file-name"></span>
@@ -373,6 +475,7 @@
     
 
 
+    <script src="rtcManager.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

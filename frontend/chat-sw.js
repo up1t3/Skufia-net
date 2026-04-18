@@ -1,12 +1,12 @@
 const CACHE_NAME = 'skufia-chat-v2';
 const ASSETS_TO_CACHE = [
-    '/chat.html',
-    '/chat.css',
+    '/',
+    '/index.html',
     '/style.css',
-    '/chat.js',
-    '/manifest-chat.json',
-    '/favicon.png'
+    '/app.js',
+    '/manifest.json'
 ];
+
 
 self.addEventListener('install', (event) => {
     event.waitUntil(

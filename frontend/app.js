@@ -27,6 +27,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     window.applyAvatarDisplay = applyAvatarDisplay;
 
+    // --- Theme Management ---
+    function changeTheme(themeName) {
+        document.body.setAttribute('data-theme', themeName);
+        localStorage.setItem('skufia_theme', themeName);
+    }
+    window.changeTheme = changeTheme;
+
+    // Initialize Theme
+    const savedTheme = localStorage.getItem('skufia_theme') || 'telegram';
+    changeTheme(savedTheme);
+    const themeSelector = document.getElementById('theme-selector');
+    if (themeSelector) {
+        themeSelector.value = savedTheme;
+    }
+
     // --- Configuration ---
     // Bypass local proxy and hit backend directly on port 8007
     const API_BASE_URL = 'http://localhost:8007/api';
@@ -1096,6 +1111,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- SKUFIA-NET CHAT HUB ---
+    // Make it available globally for RTCManager
+    window.sendSocketEvent = function(type, payload) {
+        if(state.chat.socket && state.chat.socket.readyState === WebSocket.OPEN) {
+            state.chat.socket.send(JSON.stringify({ type: type, ...payload }));
+        }
+    };
+
     function connectWebSocket() {
         if (state.chat.socket) return;
         
@@ -1108,7 +1130,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         state.chat.socket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
-            if (data.type === 'new_message') {
+            if (data.type === 'rtc_signal') {
+                if(window.RTCManagerInstance) {
+                    window.RTCManagerInstance.handleIncomingSignal(data.signal_type, data.payload, data.sender_id);
+                }
+            } else if (data.type === 'new_message') {
                 const msg = data;
                 
                 // --- E2EE DECRYPTION ---
@@ -1186,6 +1212,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rooms.forEach(room => {
                 const div = document.createElement('div');
                 div.className = `sidebar-item ${state.chat.currentRoomId === room.id ? 'active' : ''}`;
+                div.dataset.name = (room.name || '').toLowerCase();
                 
                 const avatarUrl = room.room_type === 'private' 
                     ? (room.other_user_avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${room.name}`)
@@ -1633,6 +1660,139 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // [PERF-204] Local Debounced Contact Search
+    const searchInput = document.getElementById('contact-search');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const term = e.target.value.toLowerCase().trim();
+                const items = document.querySelectorAll('#chat-rooms-list .sidebar-item');
+                items.forEach(item => {
+                    const name = item.dataset.name || '';
+                    item.style.display = name.includes(term) ? 'flex' : 'none';
+                });
+            }, 300); // 300ms debounce
+        });
+    }
+
+    // [AUDIO-202] Voice Recorder Service
+    class VoiceRecorderService {
+        constructor() {
+            this.btn = document.getElementById('voice-record-btn');
+            this.mediaRecorder = null;
+            this.audioChunks = [];
+            this.isRecording = false;
+            if(this.btn) {
+                this.btn.addEventListener('mousedown', () => this.start());
+                this.btn.addEventListener('mouseup', () => this.stop());
+                this.btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.start(); }, {passive: false});
+                this.btn.addEventListener('touchend', (e) => { e.preventDefault(); this.stop(); });
+                this.btn.addEventListener('mouseleave', () => { if(this.isRecording) this.stop(); });
+            }
+        }
+        
+        async start() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                this.audioChunks = [];
+                this.mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) this.audioChunks.push(event.data);
+                };
+                this.mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+                    this.audioChunks = [];
+                    stream.getTracks().forEach(t => t.stop());
+                    this.btn.style.color = '';
+                    this.btn.classList.remove('recording');
+                    if (audioBlob.size > 1000) { // check minimum size
+                        this.uploadAudio(audioBlob);
+                    }
+                };
+                this.mediaRecorder.start();
+                this.isRecording = true;
+                this.btn.classList.add('recording');
+                this.btn.style.color = 'var(--accent-color)';
+                addLog('Запись голосового сообщения...', 'info');
+            } catch(e) {
+                addLog('Микрофон недоступен: ' + e.message, 'error');
+            }
+        }
+        
+        stop() {
+            if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                this.mediaRecorder.stop();
+                this.isRecording = false;
+            }
+        }
+        
+        async uploadAudio(blob) {
+            const formData = new FormData();
+            formData.append('file', blob, 'voice_msg.webm');
+            try {
+                const headers = {};
+                if (state.user.token) headers['Authorization'] = `Bearer ${state.user.token}`;
+                const resp = await fetch(`${API_BASE_URL}/api/chat/upload_audio`, {
+                    method: 'POST',
+                    headers,
+                    body: formData
+                });
+                if (!resp.ok) throw new Error('Upload failed');
+                const data = await resp.json();
+                
+                const msgInput = document.getElementById('chat-input');
+                const originalVal = msgInput.value;
+                state.pendingFile = { url: data.audio_url, name: 'Voice Message' };
+                msgInput.value = '🎤 Голосовое сообщение';
+                await sendChatMsg();
+                msgInput.value = originalVal;
+            } catch(e) {
+                addLog('Ошибка отправки голосового сообщения', 'error');
+            }
+        }
+    }
+
+    // [UX-201] Emoji Picker Engine
+    class EmojiPickerEngine {
+        constructor() {
+            this.btn = document.querySelector('.emoji-btn');
+            this.input = document.getElementById('chat-input');
+            if(!this.btn || !this.input) return;
+            
+            this.picker = document.createElement('div');
+            this.picker.className = 'emoji-picker premium-scroll';
+            this.picker.style.display = 'none';
+            
+            const emojis = ['😀','😂','🥰','😎','🤔','😡','👍','👎','❤️','🔥','🎉','👀','💯','🤡','🥺','💀','🤓','🧠','🍺','🍕'];
+            emojis.forEach(emo => {
+                const span = document.createElement('span');
+                span.textContent = emo;
+                span.onclick = () => {
+                    this.input.value += emo;
+                    this.picker.style.display = 'none';
+                    this.input.focus();
+                };
+                this.picker.appendChild(span);
+            });
+            
+            // Append relative to the input row
+            const row = document.querySelector('.chat-input-row');
+            if(row) row.appendChild(this.picker);
+            
+            this.btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.picker.style.display = this.picker.style.display === 'none' ? 'flex' : 'none';
+            });
+            
+            document.addEventListener('click', () => {
+                if(this.picker) this.picker.style.display = 'none';
+            });
+            this.picker.addEventListener('click', e => e.stopPropagation());
+        }
+    }
+
     // --- SYSTEM BOOT & ALERTS ---
     async function bootSystem() {
         if (!state.user.token) {
@@ -1642,6 +1802,10 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             document.getElementById('auth-overlay').style.display = 'none';
         }
+
+        // Initialize Phase 2 Engines
+        new VoiceRecorderService();
+        new EmojiPickerEngine();
 
         addLog('Initializing Skufia Enterprise OS...', 'info');
         await ensureKeys();
@@ -1654,8 +1818,38 @@ document.addEventListener('DOMContentLoaded', () => {
             switchView('home');
             loadDashboard();
             connectWebSocket(); // Establish real-time link
+            
+            // Phase 5: PWA Service Worker Registration
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('chat-sw.js').then(reg => {
+                    addLog('Service Worker Connected (PWA Active)', 'system');
+                }).catch(err => {
+                    console.error('SW registration failed:', err);
+                });
+            }
         }, 2000);
     }
+
+    // Phase 5: Install Prompt Logic
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const installBtn = document.getElementById('install-pwa-btn');
+        if (installBtn) {
+            installBtn.style.display = 'flex';
+            installBtn.addEventListener('click', async (clickEvent) => {
+                clickEvent.preventDefault();
+                installBtn.style.display = 'none';
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    addLog('PWA Installation Accepted', 'success');
+                }
+                deferredPrompt = null;
+            });
+        }
+    });
 
     async function syncGlobalAlerts() {
         const banner = document.getElementById('global-alert-banner');
@@ -1788,6 +1982,73 @@ document.addEventListener('DOMContentLoaded', () => {
     bootSystem();
     syncGlobalAlerts();
     setInterval(syncGlobalAlerts, 30000);
+
+    // --- PHASE 6 & 7: SETTINGS AND CONTACT SYNC UX ---
+    const settingsModal = document.getElementById('settings-modal');
+    const openSettingsBtn = document.getElementById('open-settings-btn');
+    if (openSettingsBtn && settingsModal) {
+        openSettingsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            settingsModal.style.display = 'flex';
+        });
+    }
+
+    const themeSelect = document.getElementById('settings-theme-select');
+    if (themeSelect) {
+        themeSelect.addEventListener('change', (e) => {
+            document.body.setAttribute('data-theme', e.target.value);
+            localStorage.setItem('skufia_theme', e.target.value);
+        });
+        // Restore theme on boot
+        const savedTheme = localStorage.getItem('skufia_theme');
+        if (savedTheme) {
+            document.body.setAttribute('data-theme', savedTheme);
+            themeSelect.value = savedTheme;
+        }
+    }
+
+    const syncContactsBtn = document.getElementById('sync-contacts-btn');
+    if (syncContactsBtn) {
+        syncContactsBtn.addEventListener('click', async () => {
+            syncContactsBtn.textContent = 'ИДЕТ ПОИСК...';
+            try {
+                if ('contacts' in navigator && 'ContactsManager' in window) {
+                    const props = ['name', 'tel'];
+                    const opts = { multiple: true };
+                    const contacts = await navigator.contacts.select(props, opts);
+                    
+                    if (contacts && contacts.length > 0) {
+                        const payload = contacts.map(c => ({ name: c.name[0], phone: c.tel ? c.tel[0] : '' }));
+                        const resp = await fetch(`${API_BASE_URL}/api/contacts/sync`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.user.token}` },
+                            body: JSON.stringify({ contacts: payload })
+                        });
+                        if (resp.ok) {
+                            addLog(`Успешно подтянуто абонентов: ${contacts.length}`, 'success');
+                            loadChatRooms(); // refresh sidebar 
+                        } else throw new Error();
+                    } else {
+                        addLog('Контакты не выбраны', 'info');
+                    }
+                } else {
+                    addLog('Contact Picker API не поддерживается на вашем устройстве. Backend Sync Mode активирован.', 'info');
+                    // Fallback to manual sync trigger on backend
+                    const resp = await fetch(`${API_BASE_URL}/api/contacts/sync`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.user.token}` },
+                        body: JSON.stringify({ contacts: [] })
+                    });
+                    if (resp.ok) addLog('Backend Sync завершен', 'success');
+                }
+            } catch (err) {
+                addLog('Ошибка синхронизации контактов', 'error');
+            } finally {
+                syncContactsBtn.textContent = 'ПОДТЯНУТЬ КОНТАКТЫ';
+                settingsModal.style.display = 'none';
+            }
+        });
+    }
 
     // --- GLOBAL EXPOSURE ---
     window.loadForum = loadForum;
