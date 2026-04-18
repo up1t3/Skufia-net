@@ -5,9 +5,10 @@ from datetime import datetime
 import os
 
 # Database URL - using PostgreSQL as per blueprint
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./skufia.db')
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/skufia.db')
 
-engine = create_engine(DATABASE_URL)
+# Add check_same_thread=False for SQLite
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

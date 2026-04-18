@@ -7,6 +7,8 @@ services:
       - "8007:8007"
     volumes:
       - ./backend:/app
+      - skufia_uploads:/app/uploads
+      - skufia_db:/app/data
     restart: always
 
   frontend:
@@ -16,10 +18,12 @@ services:
     ports:
       - "5551:80"
     volumes:
-      - ./frontend/app.js:/usr/share/nginx/html/app.js
-      - ./frontend/style.css:/usr/share/nginx/html/style.css
-      - ./frontend/index.html:/usr/share/nginx/html/index.html
+      - ./frontend:/usr/share/nginx/html:ro
       - ./frontend/nginx_full.conf:/etc/nginx/nginx.conf
     depends_on:
       - backend
     restart: always
+
+volumes:
+  skufia_uploads:
+  skufia_db:
