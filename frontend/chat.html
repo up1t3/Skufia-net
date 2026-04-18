@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Skufia Chat</title>
+    <link rel="manifest" href="/manifest-chat.json">
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- Load shared styles for variables -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Load chat specific styles -->
+    <link rel="stylesheet" href="chat.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="chat-app">
+    <div class="chat-layout">
+        <!-- Pane 1: Main Navigation (Desktop only, hidden on mobile) -->
+        <nav class="chat-nav" id="chat-nav">
+            <div class="nav-brand">
+                <img src="favicon.png" alt="Skufia Logo" class="nav-logo">
+            </div>
+            <ul class="nav-links">
+                <li class="active" title="All Chats"><span class="icon">💬</span></li>
+                <li title="Contacts"><span class="icon">👥</span></li>
+                <li title="Settings"><span class="icon">⚙️</span></li>
+                <li title="Back to Portal"><a href="index.html" class="icon" style="text-decoration: none; color: inherit;">🚪</a></li>
+            </ul>
+        </nav>
+
+        <!-- Pane 2: Chat List -->
+        <aside class="chat-sidebar" id="chat-sidebar">
+            <div class="sidebar-header">
+                <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
+                <h2>Chats</h2>
+                <button class="new-chat-btn">✏️</button>
+            </div>
+            <div class="search-bar">
+                <input type="text" placeholder="Search...">
+            </div>
+            <div class="chat-list" id="chat-list">
+                <!-- Chat list items will be generated here -->
+                <div class="chat-item active">
+                    <div class="chat-avatar">G</div>
+                    <div class="chat-preview">
+                        <div class="chat-name">Global Terminal</div>
+                        <div class="chat-last-msg">System: Connection established.</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Pane 3: Main Chat Area -->
+        <main class="chat-main" id="chat-main">
+            <div class="chat-header">
+                <button class="back-btn" id="back-btn">←</button>
+                <div class="current-chat-info">
+                    <div class="chat-avatar">G</div>
+                    <div class="chat-title">Global Terminal</div>
+                </div>
+                <div class="chat-actions">
+                    <button>📞</button>
+                    <button>🔍</button>
+                </div>
+            </div>
+
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will be injected here -->
+                <div class="message system">
+                    <div class="message-content">Skufia-Net Chat Initialized. End-to-end encryption active.</div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <button class="attach-btn" id="attach-btn" title="Attach file">📎</button>
+                <input type="file" id="file-input" style="display: none;">
+
+                <div class="input-wrapper">
+                    <textarea id="message-input" placeholder="Message..." rows="1"></textarea>
+                </div>
+
+                <button class="send-btn" id="send-btn" title="Send text">➤</button>
+                <button class="mic-btn" id="mic-btn" title="Hold to record voice">🎤</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals / Overlays -->
+    <div class="recording-overlay" id="recording-overlay">
+        <div class="recording-indicator">
+            <div class="pulse-ring"></div>
+            <span>Recording...</span>
+            <div class="recording-time" id="recording-time">0:00</div>
+            <div class="recording-hint">Release to send</div>
+        </div>
+    </div>
+
+    <script src="chat.js"></script>
+</body>
+</html>
