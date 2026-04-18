@@ -61,6 +61,19 @@ def run_migrations():
             cursor.execute("ALTER TABLE profiles ADD COLUMN nickname VARCHAR")
             print("MIGRATION: Added 'nickname' column to profiles table.")
         
+        # Check and add market_listings new columns
+        cursor.execute("PRAGMA table_info(market_listings)")
+        market_listings_cols = [row[1] for row in cursor.fetchall()]
+        if 'status' not in market_listings_cols:
+            cursor.execute("ALTER TABLE market_listings ADD COLUMN status VARCHAR DEFAULT 'active'")
+            print("MIGRATION: Added 'status' column to market_listings table.")
+        if 'views_count' not in market_listings_cols:
+            cursor.execute("ALTER TABLE market_listings ADD COLUMN views_count INTEGER DEFAULT 0")
+            print("MIGRATION: Added 'views_count' column to market_listings table.")
+        if 'updated_at' not in market_listings_cols:
+            cursor.execute("ALTER TABLE market_listings ADD COLUMN updated_at DATETIME")
+            print("MIGRATION: Added 'updated_at' column to market_listings table.")
+
         conn.commit()
         conn.close()
     except Exception as e:

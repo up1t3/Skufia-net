@@ -101,8 +101,27 @@ class MarketListing(Base):
     location = Column(String, nullable=True, default='Вся сеть')
     seller_id = Column(Integer, ForeignKey('users.id'))
     seller = relationship("User")
+    status = Column(String, default='active')
+    views_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+
+class ListingImage(Base):
+    __tablename__ = 'listing_images'
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey('market_listings.id', ondelete='CASCADE'))
+    image_url = Column(String, nullable=False)
+    position = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    listing = relationship('MarketListing', backref='images')
+
+class ListingFavorite(Base):
+    __tablename__ = 'listing_favorites'
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey('market_listings.id', ondelete='CASCADE'))
+    user_id = Column(Integer, ForeignKey('users.id'))
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 class Event(Base):
     __tablename__ = 'events'
