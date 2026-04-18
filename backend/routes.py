@@ -369,6 +369,22 @@ class ChatContent(BaseModel):
     file_url: Optional[str] = None
 
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10 MB
+
+@router.post('/chat/upload_audio')
+async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user)):
+    """Upload a voice message file (max 10 MB)"""
+    contents = await file.read()
+    if len(contents) > MAX_AUDIO_SIZE:
+        raise HTTPException(status_code=413, detail="Файл превышает лимит 10 МБ")
+
+    unique_name = f"{uuid.uuid4().hex}.webm"
+    save_path = os.path.join('uploads', 'voice', unique_name)
+
+    with open(save_path, 'wb') as f:
+        f.write(contents)
+
+    return {"audio_url": f"/uploads/voice/{unique_name}"}
 
 @router.post('/chat/upload')
 async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user)):

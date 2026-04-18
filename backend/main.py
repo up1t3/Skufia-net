@@ -106,6 +106,7 @@ app = FastAPI(
 
 # Ensure uploads directory exists
 os.makedirs("uploads", exist_ok=True)
+os.makedirs(os.path.join("uploads", "voice"), exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # --- CORS Configuration ---
