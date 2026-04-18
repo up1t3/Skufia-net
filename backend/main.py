@@ -60,6 +60,20 @@ def run_migrations():
         if 'nickname' not in profile_cols:
             cursor.execute("ALTER TABLE profiles ADD COLUMN nickname VARCHAR")
             print("MIGRATION: Added 'nickname' column to profiles table.")
+            
+        # Check and add chat_rooms.invite_code
+        cursor.execute("PRAGMA table_info(chat_rooms)")
+        room_cols = [row[1] for row in cursor.fetchall()]
+        if 'invite_code' not in room_cols:
+            cursor.execute("ALTER TABLE chat_rooms ADD COLUMN invite_code TEXT UNIQUE")
+            print("MIGRATION: Added 'invite_code' column to chat_rooms table.")
+            
+        # Check and add chat_room_members.role
+        cursor.execute("PRAGMA table_info(chat_room_members)")
+        member_cols = [row[1] for row in cursor.fetchall()]
+        if 'role' not in member_cols:
+            cursor.execute("ALTER TABLE chat_room_members ADD COLUMN role TEXT DEFAULT 'member'")
+            print("MIGRATION: Added 'role' column to chat_room_members table.")
         
         conn.commit()
         conn.close()

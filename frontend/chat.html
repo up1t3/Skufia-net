@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Skufia Messenger</title>
+    
+    <!-- PWA Setup -->
+    <link rel="manifest" href="/manifest-chat.json">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/favicon.ico">
+    
+    <!-- Telegram-like standalone CSS -->
+    <link rel="stylesheet" href="chat.css">
+</head>
+<body class="telegram-layout">
+    
+    <!-- App Container -->
+    <div class="chat-app-container">
+        
+        <!-- Left Sidebar: Chat List -->
+        <aside class="chat-sidebar">
+            <header class="sidebar-header">
+                <button id="menu-btn" class="icon-btn">☰</button>
+                <div class="search-bar">
+                    <input type="text" placeholder="Поиск (включая Биржу)...">
+                </div>
+            </header>
+            
+            <div class="chat-list" id="chat-list">
+                <!-- Chat previews will be rendered here -->
+                <div class="chat-preview skeleton-loader">Загрузка...</div>
+            </div>
+            
+            <button id="fab-new-chat" class="fab-btn">✏️</button>
+        </aside>
+
+        <!-- Main View: Active Dialog -->
+        <main class="chat-main" id="chat-main">
+            <header class="chat-header">
+                <div class="chat-title-info">
+                    <h2 id="active-chat-name">Выберите чат</h2>
+                    <span id="active-chat-status" class="status-indicator"></span>
+                </div>
+                <div class="chat-actions">
+                    <button id="chat-options-btn" class="icon-btn">⋮</button>
+                </div>
+            </header>
+            
+            <div class="message-feed" id="message-feed">
+                <!-- Messages render here -->
+                <div class="welcome-placeholder">
+                    Отправляйте зашифрованные сообщения, фото и голосовые 🔒
+                </div>
+            </div>
+            
+            <footer class="chat-composer">
+                <button class="attach-btn icon-btn">📎</button>
+                <textarea id="message-input" placeholder="Введите сообщение..." rows="1"></textarea>
+                <button id="voice-record-btn" class="icon-btn record-pulse">🎤</button>
+                <button id="send-msg-btn" class="icon-btn send-btn" style="display:none;">📤</button>
+            </footer>
+        </main>
+        
+        <!-- Right Sidebar (Profile/Group Info) -->
+        <aside class="chat-info-panel" id="chat-info-panel" style="display:none;">
+            <h3>Информация</h3>
+            <div id="group-invite-section">
+                <!-- Invite links rendering for admins -->
+            </div>
+            <div class="members-list" id="group-members">
+            </div>
+        </aside>
+    </div>
+
+    <!-- Logic -->
+    <script src="chat.js"></script>
+    <script>
+        // Register Service Worker for Offline PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/chat-sw.js').then(reg => {
+                    console.log('Chat ServiceWorker registered!', reg.scope);
+                }).catch(err => {
+                    console.error('ServiceWorker setup failed: ', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>

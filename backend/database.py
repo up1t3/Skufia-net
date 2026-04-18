@@ -70,6 +70,7 @@ class ChatRoom(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     room_type = Column(String, default='private') # private, group, channel
+    invite_code = Column(String, unique=True, nullable=True) # Unique join link
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class ChatRoomMember(Base):
@@ -77,6 +78,7 @@ class ChatRoomMember(Base):
     id = Column(Integer, primary_key=True, index=True)
     room_id = Column(Integer, ForeignKey('chat_rooms.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
+    role = Column(String, default='member') # admin, member, banned
     joined_at = Column(DateTime, default=datetime.utcnow)
 
 # --- ENTERPRISE MODULES ---
