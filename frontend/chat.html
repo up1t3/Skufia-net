@@ -37,6 +37,7 @@
                 <button class="mobile-menu-btn" id="mobile-menu-btn">☰</button>
                 <h2>Chats</h2>
                 <button class="new-chat-btn">✏️</button>
+                <button id="create-group-btn" class="new-chat-btn" title="Create Group">👥+</button>
             </div>
             <div class="search-bar">
                 <input type="text" placeholder="Search...">
@@ -86,9 +87,43 @@
                 <button class="mic-btn" id="mic-btn" title="Hold to record voice">🎤</button>
             </div>
         </main>
+
+        <!-- Pane 4: Chat Info Panel (Right Sidebar) -->
+        <aside class="chat-info-panel" id="chat-info-panel" style="display: none;">
+            <div class="sidebar-header">
+                <h2>Group Info</h2>
+            </div>
+            <div class="info-section" id="invite-section" style="display: none;">
+                <h3>Invite Link</h3>
+                <div class="invite-container">
+                    <input type="text" id="invite-code-display" readonly>
+                    <button id="copy-invite-btn" title="Copy Link">📋</button>
+                </div>
+            </div>
+            <div class="info-section">
+                <h3>Members</h3>
+                <div id="group-members">
+                    <!-- Members will be listed here -->
+                </div>
+            </div>
+        </aside>
     </div>
 
     <!-- Modals / Overlays -->
+
+    <div id="create-group-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Создать группу</h2>
+                <button class="close-modal-btn" onclick="document.getElementById('create-group-modal').style.display='none'">✖</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="group-name-input" placeholder="Group Name...">
+                <button id="submit-group-btn" class="submit-btn">Create Group</button>
+            </div>
+        </div>
+    </div>
+
     <div class="recording-overlay" id="recording-overlay">
         <div class="recording-indicator">
             <div class="pulse-ring"></div>

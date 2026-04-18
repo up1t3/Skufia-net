@@ -21,6 +21,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const micBtn = document.getElementById('mic-btn');
     const recordingOverlay = document.getElementById('recording-overlay');
     const recordingTimeDisplay = document.getElementById('recording-time');
+    // Group UI Elements
+    const createGroupBtn = document.getElementById('create-group-btn');
+    const createGroupModal = document.getElementById('create-group-modal');
+    const submitGroupBtn = document.getElementById('submit-group-btn');
+    const groupNameInput = document.getElementById('group-name-input');
+
+    if (createGroupBtn) {
+        createGroupBtn.addEventListener('click', () => {
+            if (createGroupModal) {
+                createGroupModal.style.display = 'flex';
+            }
+        });
+    }
+
+    if (submitGroupBtn) {
+        submitGroupBtn.addEventListener('click', async () => {
+            const name = groupNameInput.value.trim();
+            if (!name) return;
+            try {
+                const res = await fetch('/api/chat/rooms/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({name: name, room_type: 'group'})
+                });
+                if (res.ok) {
+                    createGroupModal.style.display = 'none';
+                    groupNameInput.value = '';
+                    alert('Group created successfully!');
+                    // Optionally refresh chat list here
+                } else {
+                    alert('Failed to create group');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+    }
+
 
     let ws = null;
     let mediaRecorder = null;
@@ -41,6 +82,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // On mobile, show chat main area
             if (window.innerWidth <= 768) {
                 chatLayout.classList.add('chat-open');
+            }
+            // Track room id, default to 1 if not set
+            let currentRoomId = item.dataset.roomId || 1;
+            if (typeof loadRoomMembers === 'function') {
+                loadRoomMembers(currentRoomId);
             }
         });
     });
@@ -93,7 +139,97 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 4. WebSocket Setup (Basic outline)
-    function connectWebSocket() {
+
+    // Member Loading and UI Update
+    const chatInfoPanel = document.getElementById('chat-info-panel');
+    const groupMembersDiv = document.getElementById('group-members');
+    const inviteSection = document.getElementById('invite-section');
+    const inviteCodeDisplay = document.getElementById('invite-code-display');
+    const copyInviteBtn = document.getElementById('copy-invite-btn');
+
+    async function loadRoomMembers(roomId) {
+        try {
+            const res = await fetch(`/api/chat/rooms/${roomId}/members`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                chatInfoPanel.style.display = 'flex'; // show the panel
+
+                // Invite Link
+                if (data.invite_code) {
+                    inviteSection.style.display = 'block';
+                    inviteCodeDisplay.value = `skuf-net.local/join/${data.invite_code}`;
+                    copyInviteBtn.onclick = () => {
+                        navigator.clipboard.writeText(`skuf-net.local/join/${data.invite_code}`);
+                        const oldText = copyInviteBtn.textContent;
+                        copyInviteBtn.textContent = '✅';
+                        setTimeout(() => copyInviteBtn.textContent = oldText, 2000);
+                    };
+                } else {
+                    inviteSection.style.display = 'none';
+                }
+
+                // Render members
+                groupMembersDiv.innerHTML = ''; // safe, we create elements below
+                const myRole = data.my_role;
+
+                data.members.forEach(member => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'member-item';
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'member-name';
+                    nameSpan.textContent = member.display_name;
+
+                    const roleSpan = document.createElement('span');
+                    roleSpan.className = 'member-role';
+                    roleSpan.textContent = `(${member.role})`;
+                    nameSpan.appendChild(roleSpan);
+
+                    itemDiv.appendChild(nameSpan);
+
+                    // Kick button logic
+                    if (myRole === 'admin' && member.user_id !== parseJwt(localStorage.getItem('token'))?.user_id) {
+                        const kickBtn = document.createElement('button');
+                        kickBtn.className = 'kick-btn';
+                        kickBtn.textContent = 'Kick ❌';
+                        kickBtn.onclick = async () => {
+                            if (confirm(`Kick ${member.display_name}?`)) {
+                                await fetch(`/api/chat/rooms/${roomId}/members/${member.user_id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                                });
+                                loadRoomMembers(roomId);
+                            }
+                        };
+                        itemDiv.appendChild(kickBtn);
+                    }
+                    groupMembersDiv.appendChild(itemDiv);
+                });
+            } else {
+                chatInfoPanel.style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Error loading members:', err);
+            chatInfoPanel.style.display = 'none';
+        }
+    }
+
+    // Helper for parsing token to get current user_id
+    function parseJwt (token) {
+        if (!token) return null;
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    }
+function connectWebSocket() {
         const token = localStorage.getItem('token');
         if (!token) {
             console.warn("No token found for WebSocket");
@@ -139,13 +275,63 @@ document.addEventListener('DOMContentLoaded', () => {
             audioEl.src = data.url;
             contentDiv.appendChild(audioEl);
         } else {
-            contentDiv.textContent = data.content || data.text;
+            const text = data.content || data.text;
+            if (!text) {
+                 contentDiv.textContent = text;
+            } else {
+                // Parse for skuf-net.local/join/XXXX
+                const regex = /(skuf-net\.local\/join\/[a-zA-Z0-9]+)/g;
+                let lastIndex = 0;
+                let match;
+                while ((match = regex.exec(text)) !== null) {
+                    // text before match
+                    if (match.index > lastIndex) {
+                        contentDiv.appendChild(document.createTextNode(text.substring(lastIndex, match.index)));
+                    }
+                    // Button
+                    const code = match[0].split('/').pop();
+                    const btn = document.createElement('button');
+                    btn.className = 'join-btn';
+                    btn.dataset.code = code;
+                    btn.textContent = match[0];
+                    contentDiv.appendChild(btn);
+
+                    lastIndex = regex.lastIndex;
+                }
+                // text after last match
+                if (lastIndex < text.length) {
+                    contentDiv.appendChild(document.createTextNode(text.substring(lastIndex)));
+                }
+            }
         }
 
         msgDiv.appendChild(contentDiv);
         chatMessages.appendChild(msgDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+
+    // Global listener for join buttons
+    document.addEventListener('click', async (e) => {
+        if (e.target.classList.contains('join-btn')) {
+            const code = e.target.dataset.code;
+            try {
+                const res = await fetch(`/api/chat/join/${code}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`Joined room successfully!`);
+                    // optionally reload rooms
+                } else {
+                    alert('Failed to join room. Link may be invalid.');
+                }
+            } catch (err) {
+                console.error('Join room error:', err);
+            }
+        }
+    });
+
 
     function handleIncomingMessage(data) {
         // Example handling
