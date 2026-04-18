@@ -407,6 +407,11 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     """Enhanced messaging with real-time broadcasting via WebSocket"""
     from main import manager
     
+    # SECURITY PATCH: Verify the user is actually a member of this chat room
+    membership = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    if not membership and room_id != 0: # room_id 0 could be a global chat if exists, but assuming all are in DB
+        raise HTTPException(status_code=403, detail="Вы не состоите в этой комнате")
+
     db_msg = Message(
         sender_id=current_user.id, 
         receiver_id=None, 
@@ -479,10 +484,18 @@ async def delete_message(message_id: int, current_user: User = Depends(get_curre
     msg = db.query(Message).filter(Message.id == message_id).first()
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
-    if msg.sender_id != current_user.id and current_user.rank != 'admin':
+        
+    room_id = msg.room_id
+    
+    # Check ownership
+    is_owner = (msg.sender_id == current_user.id)
+    # Check if user is group admin
+    membership = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    is_group_admin = (membership and membership.role == 'admin')
+    
+    if not is_owner and not is_group_admin:
         raise HTTPException(status_code=403, detail="Not authorized to delete this message")
     
-    room_id = msg.room_id
     db.delete(msg)
     db.commit()
     
