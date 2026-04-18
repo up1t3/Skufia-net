@@ -257,8 +257,8 @@ function connectWebSocket() {
         };
     }
 
-    // Fallback: don't auto connect if just UI testing, but good to have ready.
-    // connectWebSocket();
+    // Auto connect for production
+    connectWebSocket();
 
     // 5. Messaging Logic
     function appendMessage(data, type = 'sent') {
