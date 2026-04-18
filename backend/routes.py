@@ -444,6 +444,43 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
         uids = [m.user_id for m in members]
         await manager.broadcast(payload, user_ids=uids)
+        
+    # --- Скуф-GPT (Бот "База") Заглушка ---
+    if msg.content and msg.content.strip().startswith('@baza '):
+        user_query = msg.content.strip()[6:]
+        bot_response = f"Ты спросил: '{user_query}', но я сейчас на перекуре. Приходи на Фазе 4, братишка! 🍺"
+        
+        # Системный пользователь (ID=0 или None, будем использовать None для красоты, либо создадим отдельного юзера)
+        # Пока просто отправляем как sender_id=0, но лучше найти юзера 'baza'
+        bot_user = db.query(User).filter(User.username == 'baza').first()
+        bot_id = bot_user.id if bot_user else 1 # Fallback to user 1 if baza doesn't exist
+        
+        bot_msg = Message(
+            sender_id=bot_id, 
+            receiver_id=None, 
+            room_id=room_id, 
+            content=bot_response,
+            reply_to_id=db_msg.id
+        )
+        db.add(bot_msg)
+        db.commit()
+        db.refresh(bot_msg)
+        
+        bot_payload = {
+            "type": "new_message",
+            "message_id": bot_msg.id,
+            "sender": "🤖 Скуф-GPT (База)",
+            "sender_id": bot_id,
+            "content": bot_response,
+            "iv": "",
+            "file_url": None,
+            "reply_to_id": db_msg.id,
+            "is_edited": False,
+            "timestamp": datetime.utcnow().strftime('%H:%M'),
+            "room_id": room_id
+        }
+        if room_id:
+            await manager.broadcast(bot_payload, user_ids=uids)
     
     return {"status": "Message transmitted and broadcasted"}
 
@@ -584,6 +621,22 @@ def delete_market_listing(item_id: int, current_user: User = Depends(get_current
     db.delete(item)
     db.commit()
     return {"status": "success"}
+
+@router.get('/market/recommended')
+def get_recommended_listings(db: Session = Depends(get_db)):
+    # Заглушка рекомендательной системы (Пока возвращает 3 самых новых)
+    # В будущем здесь будет FTS5 или векторный поиск
+    listings = db.query(MarketListing).filter(MarketListing.is_active == True).order_by(MarketListing.created_at.desc()).limit(3).all()
+    return [{
+        "id": m.id, 
+        "title": m.title, 
+        "price": m.price, 
+        "description": m.description, 
+        "category": m.category,
+        "location": m.location,
+        "seller": get_display_name(m.seller),
+        "seller_id": m.seller_id
+    } for m in listings]
 
 # --- EVENTS MODULE ---
 class EventCreate(BaseModel):
