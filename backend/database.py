@@ -151,6 +151,8 @@ class Message(Base):
     
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True)
     is_edited = Column(Boolean, default=False)
+    is_deleted_for_all = Column(Boolean, default=False)
+    ttl_seconds = Column(Integer, nullable=True)
     
     sender = relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     receiver = relationship('User', foreign_keys=[receiver_id], backref='received_messages')
