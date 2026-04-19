@@ -209,6 +209,25 @@ def get_registry(current_user: User = Depends(get_current_user), db: Session = D
     profiles = db.query(Profile).all()
     return [{"id": p.user_id, "username": p.user.username, "display_name": get_display_name(p.user), "rank": p.rank, "karma": p.karma, "avatar_url": p.avatar_url} for p in profiles]
 
+
+@router.get('/profile')
+def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    return {
+        "user_id": current_user.id,
+        "username": current_user.username,
+        "nickname": profile.nickname,
+        "email": current_user.email,
+        "rank": profile.rank,
+        "karma": profile.karma,
+        "bio": profile.bio,
+        "avatar_url": profile.avatar_url,
+        "is_online": profile.is_online
+    }
+
 @router.get('/me')
 def get_my_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
@@ -766,6 +785,18 @@ def get_room_members(room_id: int, current_user: User = Depends(get_current_user
     }
 
 # --- GLOBAL NOTIFICATIONS MODULE ---
+
+
+@router.get('/notifications')
+def get_notifications(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    notifs = db.query(GlobalNotification).filter(GlobalNotification.is_active == True).order_by(GlobalNotification.created_at.desc()).limit(50).all()
+    return [{
+        "id": n.id,
+        "message": n.message,
+        "level": n.level,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+        "is_active": n.is_active
+    } for n in notifs]
 
 @router.get('/notifications/all', response_model=List[dict])
 def get_global_notifications(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
