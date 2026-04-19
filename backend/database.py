@@ -156,6 +156,15 @@ class Message(Base):
     receiver = relationship('User', foreign_keys=[receiver_id], backref='received_messages')
     room = relationship('ChatRoom', foreign_keys=[room_id], backref='messages')
 
+class FCMToken(Base):
+    __tablename__ = 'fcm_tokens'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    token = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship('User', backref='fcm_tokens')
+
 class GlobalNotification(Base):
     __tablename__ = 'global_notifications'
     id = Column(Integer, primary_key=True, index=True)
