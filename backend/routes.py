@@ -48,6 +48,7 @@ class MessageCreate(BaseModel):
 class RoomCreate(BaseModel):
     name: str
     room_type: str = 'group' # private, group, channel
+    target_user_id: Optional[int] = None
 
 class NotificationCreate(BaseModel):
     message: str
@@ -316,22 +317,83 @@ def update_my_key(data: KeyUpdate, current_user: User = Depends(get_current_user
 def list_rooms(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Lists all rooms the current operator is part of"""
     memberships = db.query(ChatRoomMember).filter(ChatRoomMember.user_id == current_user.id).all()
-    room_ids = [m.room_id for m in memberships]
-    rooms = db.query(ChatRoom).filter(ChatRoom.id.in_(room_ids)).all()
-    return [{"id": r.id, "name": r.name, "type": r.room_type} for r in rooms]
+    
+    rooms_data = []
+    for m in memberships:
+        room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
+        if not room: continue
+        
+        room_data = {
+            "id": room.id, 
+            "name": room.name, 
+            "type": room.room_type, 
+            "my_role": m.role,
+            "avatar_url": None,
+            "other_user_id": None
+        }
+        
+        if room.room_type == 'private':
+            # Resolve the other user's identity dynamically
+            other_m = db.query(ChatRoomMember).filter(
+                ChatRoomMember.room_id == room.id, 
+                ChatRoomMember.user_id != current_user.id
+            ).first()
+            
+            if other_m:
+                other_u = db.query(User).filter(User.id == other_m.user_id).first()
+                if other_u:
+                    room_data["name"] = get_display_name(other_u)
+                    room_data["other_user_id"] = other_u.id
+                    if other_u.profile and other_u.profile.avatar_url:
+                        room_data["avatar_url"] = other_u.profile.avatar_url
+                        
+        rooms_data.append(room_data)
+        
+    return rooms_data
 
 @router.post('/chat/rooms')
 def create_room(room: RoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Creates a new chat room and adds the creator as a member"""
-    db_room = ChatRoom(name=room.name, room_type=room.room_type)
-    db.add(db_room)
-    db.commit()
-    db.refresh(db_room)
-    
-    db_member = ChatRoomMember(room_id=db_room.id, user_id=current_user.id)
-    db.add(db_member)
-    db.commit()
-    return {"id": db_room.id, "status": "Encryption tunnel established. Room live."}
+    if room.room_type == 'private':
+        if not room.target_user_id:
+            raise HTTPException(status_code=400, detail="ID собеседника обязателен для личного чата")
+        
+        if room.target_user_id == current_user.id:
+            raise HTTPException(status_code=400, detail="Нельзя создать чат с самим собой")
+            
+        # Check if they already have a private chat
+        existing_rooms_for_user = db.query(ChatRoomMember.room_id).filter(ChatRoomMember.user_id == current_user.id).subquery()
+        common_room = db.query(ChatRoomMember).join(ChatRoom).filter(
+            ChatRoomMember.user_id == room.target_user_id,
+            ChatRoom.room_type == 'private',
+            ChatRoomMember.room_id.in_(existing_rooms_for_user)
+        ).first()
+
+        if common_room:
+            # Rehydrate the room
+            return {"id": common_room.room_id, "status": "Уже существует", "is_existing": True}
+            
+        # Name is meaningless for private, but we set it
+        db_room = ChatRoom(name="Private Chat", room_type='private')
+        db.add(db_room)
+        db.commit()
+        db.refresh(db_room)
+        
+        # Add both members
+        db.add(ChatRoomMember(room_id=db_room.id, user_id=current_user.id, role='member'))
+        db.add(ChatRoomMember(room_id=db_room.id, user_id=room.target_user_id, role='member'))
+        db.commit()
+        return {"id": db_room.id, "status": "Личный чат создан"}
+    else:
+        db_room = ChatRoom(name=room.name, room_type=room.room_type)
+        db.add(db_room)
+        db.commit()
+        db.refresh(db_room)
+        
+        db_member = ChatRoomMember(room_id=db_room.id, user_id=current_user.id, role='admin')
+        db.add(db_member)
+        db.commit()
+        return {"id": db_room.id, "status": "Канал/группа созданы. Вы назначены администратором."}
 
 @router.get('/chat/rooms/{room_id}/history')
 def get_room_history(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -493,6 +555,15 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     membership = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
     if not membership and room_id != 0: # room_id 0 could be a global chat if exists, but assuming all are in DB
         raise HTTPException(status_code=403, detail="Вы не состоите в этой комнате")
+        
+    if membership and membership.role == 'banned':
+        raise HTTPException(status_code=403, detail="Вы заблокированы в этом чате")
+        
+    # CHANNEL RESTRICTION: Only admins can post
+    if room_id != 0:
+        room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+        if room and room.room_type == 'channel' and membership.role != 'admin':
+            raise HTTPException(status_code=403, detail="Писать сообщения в этот канал могут только администраторы")
 
     db_msg = Message(
         sender_id=current_user.id, 

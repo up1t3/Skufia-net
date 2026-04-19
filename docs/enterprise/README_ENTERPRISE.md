@@ -1,0 +1,22 @@
+# SKUFenger Enterprise: Полная техническая спецификация (100+ страниц)
+
+Данный репозиторий документации описывает исчерпывающие низкоуровневые спецификации (LLD - Low-Level Design) для проекта SKUFenger. 
+
+Документация разбита на 5 специализированных томов. Разработка (написание кода) запрещена до момента утверждения всех 5 томов стейкхолдерами.
+
+## Оглавление Томов
+
+*   [x] **Том 1: Архитектура Баз Данных (Database Schema Spec)** - `01_database_schema_specification.md`
+    *Полный SQL DDL, индексы (B-Tree/Hash), правила партиционирования (Шардинг), триггеры, ER-диаграммы.*
+*   [ ] **Том 2: Контракты API и WebSockets (API & Transport Spec)** - `02_api_contracts_specification.md`
+    *JSON-схемы (Swagger/OpenAPI), коды ошибок (HTTP 4xx/5xx), payload'ы WebSocket-событий (AsyncAPI).*
+*   [ ] **Том 3: Топология Сети и Инфраструктура (Network & Infra Spec)** - `03_infrastructure_topology.md`
+    *Redis Pub/Sub, Kafka/Celery брокеры очередей, STUN/TURN реле, Load Balancing (Nginx).*
+*   [ ] **Том 4: Криптография и Безопасность (Crypto & Security Spec)** - `04_security_and_crypto.md`
+    *Double Ratchet алгоритм, генерация ключей (Curve25519), хранение в IndexedDB, RBAC матрицы.*
+*   [ ] **Том 5: UI/UX и Frontend State Machine (Frontend Spec)** - `05_frontend_state_machine.md`
+    *Разрешение оффлайн-конфликтов (HLC), Virtual DOM рендеринг, переходы состояний (FSM).*
+
+---
+**Статус:** В процессе аудита и генерации.
+**Аудиторы:** AI Архитектор, AI DBA, AI SecOps, AI Frontend Lead.

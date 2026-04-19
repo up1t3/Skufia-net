@@ -1125,6 +1125,8 @@ document.addEventListener('DOMContentLoaded', () => {
         state.chat.socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
 
         state.chat.socket.onopen = () => {
+            const globalInd = document.getElementById('global-status-indicator');
+            if (globalInd) globalInd.classList.add('online');
             addLog('WebSocket Connection Established: Skufia-Net Online', 'success');
         };
 
@@ -1157,6 +1159,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (msg.sender !== state.user.username) {
                     playSound('alert');
                 }
+                
+                // Update sidebar snippet
+                loadChatRooms();
             } else if (data.type === 'edit_message') {
                 const el = document.getElementById(`msg-${data.message_id}`);
                 if (el) {
@@ -1195,6 +1200,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         state.chat.socket.onclose = () => {
+            const globalInd = document.getElementById('global-status-indicator');
+            if (globalInd) globalInd.classList.remove('online');
             state.chat.socket = null;
             addLog('WebSocket Link Severed. Retrying...', 'error');
             setTimeout(connectWebSocket, 5000);
@@ -1214,19 +1221,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 div.className = `sidebar-item ${state.chat.currentRoomId === room.id ? 'active' : ''}`;
                 div.dataset.name = (room.name || '').toLowerCase();
                 
-                const avatarUrl = room.room_type === 'private' 
-                    ? (room.other_user_avatar || `https://api.dicebear.com/7.x/identicon/svg?seed=${room.name}`)
-                    : `https://api.dicebear.com/7.x/shapes/svg?seed=${room.name}`;
-
                 const avatarDiv = document.createElement('div');
                 avatarDiv.className = 'sidebar-item-avatar';
-                const img = document.createElement('img');
-                img.src = avatarUrl;
-                img.alt = 'AV';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                avatarDiv.appendChild(img);
+                
+                if (room.avatar_url) {
+                    const img = document.createElement('img');
+                    img.src = room.avatar_url;
+                    img.alt = 'AV';
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    avatarDiv.appendChild(img);
+                } else {
+                    const initial = room.name ? room.name.charAt(0).toUpperCase() : '?';
+                    avatarDiv.textContent = initial;
+                    avatarDiv.classList.add('dynamic-avatar');
+                    const charCode = initial.charCodeAt(0) || 0;
+                    const hue = (charCode * 137) % 360;
+                    avatarDiv.style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 30%))`;
+                    avatarDiv.style.color = '#fff';
+                    avatarDiv.style.display = 'flex';
+                    avatarDiv.style.alignItems = 'center';
+                    avatarDiv.style.justifyContent = 'center';
+                    avatarDiv.style.fontSize = '20px';
+                    avatarDiv.style.fontWeight = 'bold';
+                    avatarDiv.style.textShadow = '0 1px 3px rgba(0,0,0,0.5)';
+                }
 
                 const infoDiv = document.createElement('div');
                 infoDiv.className = 'sidebar-item-info';
@@ -1244,11 +1264,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const statusSpan = document.createElement('span');
                 statusSpan.className = `status-dot ${room.is_online ? 'online' : ''}`;
+                statusSpan.style.display = 'none'; // User requested to hide this green dot
 
                 div.appendChild(avatarDiv);
                 div.appendChild(infoDiv);
                 div.appendChild(statusSpan);
-                div.onclick = () => selectChatRoom(room.id, room.name, room.room_type, room.other_user_id);
+                div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
                 list.appendChild(div);
             });
         } catch (e) { addLog('Failed to load chat channels', 'error'); }
@@ -1259,14 +1280,29 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} roomName 
      * @param {string} [type]
      * @param {number} [receiverId]
+     * @param {string} [myRole]
      */
-    async function selectChatRoom(roomId, roomName, type, receiverId) {
+    async function selectChatRoom(roomId, roomName, type, receiverId, myRole) {
         state.chat.currentRoomId = roomId;
         state.chat.currentRoomName = roomName;
         state.chat.currentReceiverId = receiverId || null;
         
         const header = document.getElementById('chat-header');
         const history = document.getElementById('chat-history');
+        const inputArea = document.querySelector('.chat-input-area');
+        
+        if (inputArea) {
+            if (type === 'channel' && myRole !== 'admin') {
+                inputArea.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim); font-style:italic; background:var(--bg-black); border-top:1px solid #333; width:100%;">Только администраторы могут писать в этот канал</div>`;
+            } else {
+                inputArea.innerHTML = `
+                    <button class="attach-btn" onclick="document.getElementById('file-input').click()">📎</button>
+                    <input type="file" id="file-input" style="display:none" onchange="uploadFileAndSend()">
+                    <input type="text" id="chat-input" placeholder="Введите сообщение..." onkeypress="handleChatInput(event)">
+                    <button class="send-btn" onclick="sendChatMessage()">ОТПРАВИТЬ</button>
+                `;
+            }
+        }
         
         if (header) {
             const headerDiv = document.createElement('div');
@@ -1563,15 +1599,100 @@ document.addEventListener('DOMContentLoaded', () => {
     window.clearChatFile = clearChatFile;
 
     // @ts-ignore
-    window.createNewRoom = async function() {
-        const name = prompt("Введите название канала:");
+    window.openFabHub = function() {
+        document.getElementById('fab-hub-modal').style.display = 'flex';
+        const contactList = document.getElementById('fab-contacts-list');
+        contactList.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка...</div>';
+        
+        apiRequest('/users/list').then(users => {
+            state.contacts = users.filter(u => u.id !== state.user.id);
+            window['filterFabContacts']();
+        }).catch(e => {
+            contactList.innerHTML = '<div style="text-align:center; padding:15px; color:red;">Ошибка загрузки</div>';
+        });
+    };
+
+    // @ts-ignore
+    window.filterFabContacts = function() {
+        const query = (document.getElementById('fab-contact-search')?.value || '').toLowerCase();
+        const contactList = document.getElementById('fab-contacts-list');
+        contactList.innerHTML = '';
+        
+        const filtered = (state.contacts || []).filter(u => 
+            (u.username || '').toLowerCase().includes(query)
+        );
+        
+        if (filtered.length === 0) {
+            contactList.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Нет контактов</div>';
+            return;
+        }
+        
+        filtered.forEach(u => {
+            const div = document.createElement('div');
+            div.className = 'sidebar-item';
+            div.style.cursor = 'pointer';
+            
+            const initial = (u.username).charAt(0).toUpperCase();
+            const charCode = initial.charCodeAt(0) || 0;
+            const hue = (charCode * 137) % 360;
+            
+            div.innerHTML = `
+                <div class="sidebar-item-avatar dynamic-avatar" style="background: linear-gradient(135deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 30%)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px;">
+                    ${initial}
+                </div>
+                <div class="sidebar-item-info">
+                    <div class="sidebar-item-name">${u.username}</div>
+                    <div class="sidebar-item-last-msg">Скуфенгер</div>
+                </div>
+            `;
+            div.onclick = async () => {
+                document.getElementById('fab-hub-modal').style.display = 'none';
+                try {
+                    const room = await apiRequest('/chat/rooms', 'POST', { name: "Private", room_type: 'private', target_user_id: u.id });
+                    addLog(room.is_existing ? "Чат уже существует" : "Личный чат создан", 'success');
+                    loadChatRooms();
+                } catch(e) {
+                    addLog('Ошибка создания чата', 'error');
+                }
+            };
+            contactList.appendChild(div);
+        });
+    };
+
+    // @ts-ignore
+    window.openCreateRoomModal = function(type) {
+        const modal = document.getElementById('create-room-modal');
+        const title = document.getElementById('create-room-title');
+        const label = document.getElementById('create-room-label');
+        const typeInput = document.getElementById('create-room-type');
+        const input = document.getElementById('create-room-input');
+        
+        title.textContent = type === 'channel' ? 'СОЗДАТЬ КАНАЛ' : 'СОЗДАТЬ ГРУППУ';
+        label.textContent = type === 'channel' ? 'Название канала' : 'Название группы';
+        if (typeInput) typeInput.value = type;
+        if (input) input.value = '';
+        
+        modal.style.display = 'flex';
+        if (input) input.focus();
+    };
+
+    // @ts-ignore
+    window.confirmCreateRoom = async function() {
+        const input = document.getElementById('create-room-input');
+        const typeInput = document.getElementById('create-room-type');
+        const name = input ? input.value.trim() : '';
+        const rType = typeInput ? typeInput.value : 'group';
+        
         if (!name) return;
+        
         try {
-            const room = await apiRequest('/chat/rooms', 'POST', { name, room_type: 'group' });
-            addLog(`New channel created: ${name}`, 'success');
+            document.getElementById('create-room-modal').style.display = 'none';
+            const payload = { name, room_type: rType };
+            const room = await apiRequest('/chat/rooms', 'POST', payload);
+            addLog(`Создано: ${name}`, 'success');
             loadChatRooms();
-        } catch (e) { addLog('Channel creation failed', 'error'); }
-    }
+        } catch (e) { addLog('Ошибка создания', 'error'); }
+    };
 
     // Expose selectChatRoom to global if needed by inline scripts
     window['selectChatRoom'] = selectChatRoom;
@@ -1815,7 +1936,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             addLog('System Online. Welcome, Operator.', 'success');
             // --- Initialization ---
-            switchView('home');
+            if (new URLSearchParams(window.location.search).get('app') !== 'skufenger') {
+                switchView('home');
+            } else {
+                switchView('messages');
+            }
             loadDashboard();
             connectWebSocket(); // Establish real-time link
             
@@ -2049,6 +2174,45 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    // --- STANDALONE MODE FOR SKUFENGER ---
+    if (new URLSearchParams(window.location.search).get('app') === 'skufenger') {
+        const sidePanel = document.querySelector('.side-panel');
+        const header = document.querySelector('.system-header');
+        const footer = document.querySelector('.system-footer');
+        const appContainer = document.querySelector('.app-container');
+        const viewport = document.querySelector('.viewport');
+        const mainInterface = document.querySelector('.main-interface');
+        const title = document.getElementById('skufenger-heading');
+        const viewMessages = document.getElementById('view-messages');
+        const chatLayout = viewMessages ? viewMessages.querySelector('.chat-layout') : null;
+        
+        if (sidePanel) sidePanel.style.display = 'none';
+        if (header) header.style.display = 'none';
+        if (footer) footer.style.display = 'none';
+        if (title) title.style.display = 'none';
+
+        if (appContainer) {
+            appContainer.style.cssText = 'padding:0;margin:0;height:100vh;display:flex;flex-direction:column;overflow:hidden;';
+        }
+        if (mainInterface) {
+            mainInterface.style.cssText = 'flex:1;height:100vh;gap:0;overflow:hidden;';
+        }
+        if (viewport) {
+            viewport.style.cssText = 'flex:1;padding:0;border:none;border-radius:0;height:100%;overflow:hidden;display:flex;flex-direction:column;';
+        }
+        if (viewMessages) {
+            viewMessages.style.cssText = 'display:flex;flex-direction:column;flex:1;height:100%;min-height:0;overflow:hidden;';
+        }
+        if (chatLayout) {
+            chatLayout.style.cssText = 'display:flex;flex:1;height:100%;min-height:0;overflow:hidden;border:none;border-radius:0;';
+        }
+
+        // Force the chat view right away
+        switchView('messages');
+
+        // Set document title
+        document.title = 'SKUFenger';
+    }
 
     // --- GLOBAL EXPOSURE ---
     window.loadForum = loadForum;
@@ -2061,4 +2225,135 @@ document.addEventListener('DOMContentLoaded', () => {
     window.likeWiki = likeWiki;
     window.switchView = switchView;
     window.selectChatRoom = selectChatRoom;
+    window.openSkufenger = function() {
+        window.open(window.location.pathname + '?app=skufenger', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
+    };
+
+    // --- CONTACT SEARCH FILTER ---
+    const contactSearchInput = document.getElementById('contact-search');
+    if (contactSearchInput) {
+        contactSearchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const items = document.querySelectorAll('#chat-rooms-list .sidebar-item');
+            items.forEach(item => {
+                const nameEl = item.querySelector('.sidebar-item-name');
+                const name = nameEl ? nameEl.textContent.toLowerCase() : '';
+                item.style.display = name.includes(query) ? '' : 'none';
+            });
+        });
+    }
+
+    // --- CALL GATEWAY (audio/video) ---
+    window.skufengerCall = function(isVideo) {
+        if (!state.chat.currentRoomId) {
+            addLog('Сначала выберите контакт для звонка', 'error');
+            return;
+        }
+        const targetId = state.chat.currentReceiverId || state.chat.currentRoomId;
+        if (!window.RTCManagerInstance) {
+            addLog('RTC модуль не инициализирован', 'error');
+            return;
+        }
+        addLog(`Инициация ${isVideo ? 'видео' : 'аудио'} звонка...`, 'info');
+        window.RTCManagerInstance.startCall(targetId, isVideo);
+    };
+
+    // --- CHAT OPTIONS DROPDOWN ---
+    window.toggleChatOptions = function() {
+        const dd = document.getElementById('chat-options-dropdown');
+        if (!dd) return;
+        const isOpen = dd.style.display !== 'none';
+        dd.style.display = isOpen ? 'none' : 'block';
+    };
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dd = document.getElementById('chat-options-dropdown');
+        const wrapper = e.target.closest('.chat-options-wrapper');
+        if (dd && !wrapper) {
+            dd.style.display = 'none';
+        }
+    });
+
+    // --- CHAT OPTION ACTIONS ---
+    window.chatOptionAction = function(action) {
+        const dd = document.getElementById('chat-options-dropdown');
+        if (dd) dd.style.display = 'none';
+
+        switch(action) {
+            case 'mute': {
+                const roomId = state.chat.currentRoomId;
+                if (!roomId) { addLog('Сначала выберите чат', 'error'); return; }
+                const mutedRooms = JSON.parse(localStorage.getItem('skuf_muted_rooms') || '[]');
+                const idx = mutedRooms.indexOf(roomId);
+                if (idx === -1) {
+                    mutedRooms.push(roomId);
+                    addLog('🔕 Уведомления чата отключены', 'info');
+                } else {
+                    mutedRooms.splice(idx, 1);
+                    addLog('🔔 Уведомления чата включены', 'info');
+                }
+                localStorage.setItem('skuf_muted_rooms', JSON.stringify(mutedRooms));
+                break;
+            }
+            case 'search': {
+                const chatHistory = document.getElementById('chat-history');
+                if (!chatHistory) return;
+                const term = prompt('Поиск по сообщениям:');
+                if (!term || !term.trim()) return;
+                const messages = chatHistory.querySelectorAll('.chat-msg');
+                let found = 0;
+                messages.forEach(msg => {
+                    const bodyEl = msg.querySelector('.msg-body');
+                    if (!bodyEl) return;
+                    const text = bodyEl.textContent || '';
+                    if (text.toLowerCase().includes(term.toLowerCase())) {
+                        msg.style.outline = '2px solid var(--accent-cyan)';
+                        msg.style.outlineOffset = '2px';
+                        if (!found) msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        found++;
+                    } else {
+                        msg.style.outline = 'none';
+                    }
+                });
+                addLog(`🔍 Найдено совпадений: ${found}`, found ? 'info' : 'error');
+                break;
+            }
+            case 'wallpaper': {
+                const chatHistory = document.getElementById('chat-history');
+                if (!chatHistory) return;
+                const wallpapers = [
+                    'linear-gradient(135deg, rgba(10,14,20,0.95), rgba(20,30,50,0.95))',
+                    'linear-gradient(135deg, rgba(30,10,30,0.95), rgba(15,15,35,0.95))',
+                    'linear-gradient(135deg, rgba(10,25,20,0.95), rgba(15,20,35,0.95))',
+                    'linear-gradient(135deg, rgba(25,20,10,0.95), rgba(20,15,25,0.95))',
+                    'none'
+                ];
+                const current = localStorage.getItem('skuf_wallpaper_idx') || '0';
+                const next = (parseInt(current) + 1) % wallpapers.length;
+                chatHistory.style.background = wallpapers[next];
+                localStorage.setItem('skuf_wallpaper_idx', String(next));
+                addLog('🎨 Фон чата обновлён', 'info');
+                break;
+            }
+            case 'clear': {
+                if (!state.chat.currentRoomId) { addLog('Сначала выберите чат', 'error'); return; }
+                if (!confirm('Очистить историю сообщений? Это действие необратимо.')) return;
+                const chatHistory = document.getElementById('chat-history');
+                if (chatHistory) {
+                    chatHistory.innerHTML = '<div class="chat-placeholder">История очищена</div>';
+                }
+                addLog('🗑️ История чата очищена', 'info');
+                break;
+            }
+            case 'encryption': {
+                const badge = document.getElementById('chat-encryption-status');
+                const isE2EE = badge && badge.textContent.includes('E2EE');
+                alert(isE2EE
+                    ? '🔒 Этот чат защищён сквозным шифрованием (E2EE).\nКлючи сессии генерируются локально и не передаются на сервер.'
+                    : '⚠️ Шифрование не активно.\nВыберите приватный чат для активации E2EE.');
+                break;
+            }
+        }
+    };
 });
