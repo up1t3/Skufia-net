@@ -6,6 +6,9 @@ passlib[bcrypt]
 bcrypt==4.0.1
 python-multipart
 websockets
+blurhash
+Pillow
 celery
-requests
 redis
+requests
+numpy
