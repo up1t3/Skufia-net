@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Virtual Scroller Test</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: sans-serif; }
+        #chat-container {
+            width: 400px;
+            height: 600px;
+            border: 1px solid #ccc;
+            overflow-y: auto;
+            position: relative;
+        }
+        .message {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            box-sizing: border-box;
+            background: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Virtual Scroller Test</h1>
+    <div id="info">DOM Nodes in wrapper: <span id="node-count">0</span></div>
+    <div id="chat-container"></div>
+    <script src="/virtual-scroller.js"></script>
+    <script>
+        const container = document.getElementById('chat-container');
+        const countSpan = document.getElementById('node-count');
+
+        // Generate 100,000 items
+        const items = [];
+        for (let i = 0; i < 100000; i++) {
+            items.push({ id: i, text: `Message ${i}` });
+        }
+
+        const scroller = new VirtualScroller(container, {
+            items: items,
+            estimatedItemHeight: 40,
+            bufferCount: 5,
+            renderItem: (item, index) => {
+                const div = document.createElement('div');
+                div.className = 'message';
+                // Randomly assign a height to simulate dynamic content
+                const height = 40 + (index % 3) * 20;
+                div.style.minHeight = `${height}px`;
+                div.textContent = `${item.text} (Height: ${height}px)`;
+                return div;
+            }
+        });
+
+        setInterval(() => {
+            const wrapper = container.querySelector('.virtual-scroller-content');
+            if (wrapper) {
+                countSpan.textContent = wrapper.children.length;
+            }
+        }, 100);
+    </script>
+</body>
+</html>
