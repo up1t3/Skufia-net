@@ -2378,7 +2378,6 @@ function toggleSidebarSearch(show) {
         searchHeader.style.display = "none";
         if (searchInput) {
             searchInput.value = "";
-            // Trigger input event to clear search results if they exist
             searchInput.dispatchEvent(new Event("input"));
         }
     }
