@@ -1,5 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Index
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.types import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from datetime import datetime
 import os
@@ -80,6 +82,7 @@ class ChatRoomMember(Base):
     room_id = Column(Integer, ForeignKey('chat_rooms.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
     role = Column(String, default='member') # admin, member, banned
+    unread_count = Column(Integer, default=0)
     joined_at = Column(DateTime, default=datetime.utcnow)
 
 # --- ENTERPRISE MODULES ---
@@ -151,10 +154,17 @@ class Message(Base):
     
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True)
     is_edited = Column(Boolean, default=False)
+    is_deleted_for_all = Column(Boolean, default=False)
+    ttl_seconds = Column(Integer, nullable=True)
+    reactions = Column(JSON().with_variant(JSONB, 'postgresql'), default={})
     
     sender = relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     receiver = relationship('User', foreign_keys=[receiver_id], backref='received_messages')
     room = relationship('ChatRoom', foreign_keys=[room_id], backref='messages')
+
+    __table_args__ = (
+        Index('idx_messages_reactions_gin', 'reactions', postgresql_using='gin'),
+    )
 
 class GlobalNotification(Base):
     __tablename__ = 'global_notifications'
@@ -179,4 +189,9 @@ class WikiLike(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 def init_db():
+    # Import models explicitly here if not imported elsewhere,
+    # but push_tokens will be imported globally.
     Base.metadata.create_all(bind=engine)
+
+# Import new models so they get registered with Base
+from models import PushTokens
