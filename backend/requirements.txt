@@ -13,3 +13,4 @@ celery
 redis
 requests
 numpy
+aioboto3
