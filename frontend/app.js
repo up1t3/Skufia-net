@@ -2384,3 +2384,15 @@ document.addEventListener('DOMContentLoaded', () => {
          } 
  }  
  
+ / /   S e t t i n g s   A v a t a r   P r e v i e w 
+ w i n d o w . p r e v i e w A v a t a r   =   f u n c t i o n ( i n p u t )   { 
+         i f   ( i n p u t . f i l e s   & &   i n p u t . f i l e s [ 0 ] )   { 
+                 v a r   r e a d e r   =   n e w   F i l e R e a d e r ( ) ; 
+                 r e a d e r . o n l o a d   =   f u n c t i o n ( e )   { 
+                         d o c u m e n t . g e t E l e m e n t B y I d ( " s e t t i n g s - a v a t a r - p r e v i e w " ) . s r c   =   e . t a r g e t . r e s u l t ; 
+                 } ; 
+                 r e a d e r . r e a d A s D a t a U R L ( i n p u t . f i l e s [ 0 ] ) ; 
+         } 
+ } ; 
+  
+ 
