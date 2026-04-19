@@ -9,6 +9,8 @@ from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, List
 import json
 import asyncio
+from broadcaster import Broadcast
+import os
 from auth import decode_token, router as auth_router
 try:
     from telegram_bot import run_bot
@@ -154,6 +156,8 @@ os.makedirs("uploads", exist_ok=True)
 os.makedirs(os.path.join("uploads", "voice"), exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+broadcast = Broadcast(os.environ.get("REDIS_URL", "redis://localhost:6379"))
+
 # --- CORS Configuration ---
 setup_metrics(app)
 
@@ -207,18 +211,15 @@ class ConnectionManager:
         db.close()
 
     async def send_personal_message(self, message: dict, user_id: int):
-        if user_id in self.active_connections:
-            await self.active_connections[user_id].send_text(json.dumps(message))
+        await broadcast.publish(channel=f"channel:{user_id}", message=json.dumps(message))
 
     async def broadcast(self, message: dict, user_ids: List[int] = None):
         msg_str = json.dumps(message)
         if user_ids:
             for uid in user_ids:
-                if uid in self.active_connections:
-                    await self.active_connections[uid].send_text(msg_str)
+                await broadcast.publish(channel=f"channel:{uid}", message=msg_str)
         else:
-            for connection in self.active_connections.values():
-                await connection.send_text(msg_str)
+            await broadcast.publish(channel="channel:global", message=msg_str)
 
 manager = ConnectionManager()
 
@@ -235,30 +236,56 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
         return
 
     await manager.connect(user_id, websocket)
+
+    async def receiver():
+        try:
+            while True:
+                # We receive messages here for WebRTC signaling relay and other real-time events
+                text_data = await websocket.receive_text()
+                try:
+                    data = json.loads(text_data)
+                    if data.get('type') == 'rtc_signal':
+                        target_id = data.get('target')
+                        if target_id:
+                            relay_msg = {
+                                "type": "rtc_signal",
+                                "sender_id": user_id,
+                                "signal_type": data.get('signal_type'),
+                                "payload": data.get('payload')
+                            }
+                            await manager.send_personal_message(relay_msg, target_id)
+                except json.JSONDecodeError:
+                    pass
+        except WebSocketDisconnect:
+            pass
+
+    async def sender(channel):
+        async with broadcast.subscribe(channel) as subscriber:
+            async for event in subscriber:
+                try:
+                    await websocket.send_text(event.message)
+                except Exception:
+                    break
+
+    task_receiver = asyncio.create_task(receiver())
+    task_sender_user = asyncio.create_task(sender(f"channel:{user_id}"))
+    task_sender_global = asyncio.create_task(sender("channel:global"))
+
     try:
-        while True:
-            # We receive messages here for WebRTC signaling relay and other real-time events
-            text_data = await websocket.receive_text()
-            try:
-                data = json.loads(text_data)
-                if data.get('type') == 'rtc_signal':
-                    target_id = data.get('target')
-                    if target_id:
-                        relay_msg = {
-                            "type": "rtc_signal",
-                            "sender_id": user_id,
-                            "signal_type": data.get('signal_type'),
-                            "payload": data.get('payload')
-                        }
-                        await manager.send_personal_message(relay_msg, target_id)
-            except json.JSONDecodeError:
-                pass
-    except WebSocketDisconnect:
+        done, pending = await asyncio.wait(
+            [task_receiver, task_sender_user, task_sender_global],
+            return_when=asyncio.FIRST_COMPLETED
+        )
+        for task in pending:
+            task.cancel()
+    finally:
         manager.disconnect(user_id)
 
 @app.on_event("startup")
 async def startup_event():
+    await broadcast.connect()
     print("Initializing Skufia Ecosystem... Checking for data seeds...")
+
     seed_everything.seed_data()
     print("System seeded successfully.")
     if run_bot:
@@ -270,6 +297,12 @@ app.include_router(main_router, tags=["API"])
 @app.get("/", tags=["Health"])
 async def root():
     return {"status": "online", "message": "Welcome to Skufia API"}
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await broadcast.disconnect()
+
 
 if __name__ == "__main__":
     import uvicorn
