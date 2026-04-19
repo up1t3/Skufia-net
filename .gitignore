@@ -11,3 +11,5 @@ uploads/
 proxy_log.txt
 error.txt
 frontend/node_modules/
+node_modules/
+backend/mediasoup-worker/node_modules/
