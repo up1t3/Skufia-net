@@ -15,6 +15,8 @@ try:
 except ImportError:
     run_bot = None
 
+from monitoring import setup_metrics, ACTIVE_WEBSOCKETS
+
 # --- Database Migration (add missing columns to existing DB) ---
 def run_migrations():
     """Add columns that may be missing from older schema versions."""
@@ -53,7 +55,15 @@ def run_migrations():
             cursor.execute("ALTER TABLE messages ADD COLUMN is_edited BOOLEAN DEFAULT 0")
             print("MIGRATION: Added 'is_edited' column to messages table.")
 
-        
+        # Check and add messages.is_deleted_for_all
+        if 'is_deleted_for_all' not in msg_cols:
+            cursor.execute("ALTER TABLE messages ADD COLUMN is_deleted_for_all BOOLEAN DEFAULT 0")
+            print("MIGRATION: Added 'is_deleted_for_all' column to messages table.")
+
+        # Check and add messages.ttl_seconds
+        if 'ttl_seconds' not in msg_cols:
+            cursor.execute("ALTER TABLE messages ADD COLUMN ttl_seconds INTEGER")
+            print("MIGRATION: Added 'ttl_seconds' column to messages table.")
 
         # Check and add chat_rooms.invite_code
         cursor.execute("PRAGMA table_info(chat_rooms)")
@@ -125,6 +135,8 @@ os.makedirs(os.path.join("uploads", "voice"), exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # --- CORS Configuration ---
+setup_metrics(app)
+
 # Allow requests from frontend (port 5551) and localhost
 app.add_middleware(
     CORSMiddleware,
@@ -153,6 +165,7 @@ class ConnectionManager:
     async def connect(self, user_id: int, websocket: WebSocket):
         await websocket.accept()
         self.active_connections[user_id] = websocket
+        ACTIVE_WEBSOCKETS.inc()
         # Update online status
         db = SessionLocal()
         profile = db.query(Profile).filter(Profile.user_id == user_id).first()
@@ -164,6 +177,7 @@ class ConnectionManager:
     def disconnect(self, user_id: int):
         if user_id in self.active_connections:
             del self.active_connections[user_id]
+            ACTIVE_WEBSOCKETS.dec()
         # Update offline status
         db = SessionLocal()
         profile = db.query(Profile).filter(Profile.user_id == user_id).first()
