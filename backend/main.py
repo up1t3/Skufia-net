@@ -65,6 +65,11 @@ def run_migrations():
             cursor.execute("ALTER TABLE messages ADD COLUMN ttl_seconds INTEGER")
             print("MIGRATION: Added 'ttl_seconds' column to messages table.")
 
+        # Check and add messages.reactions
+        if 'reactions' not in msg_cols:
+            cursor.execute("ALTER TABLE messages ADD COLUMN reactions JSON DEFAULT '{}'")
+            print("MIGRATION: Added 'reactions' column to messages table.")
+
         # Check and add chat_rooms.invite_code
         cursor.execute("PRAGMA table_info(chat_rooms)")
         room_cols = [row[1] for row in cursor.fetchall()]
@@ -78,6 +83,21 @@ def run_migrations():
         if 'role' not in member_cols:
             cursor.execute("ALTER TABLE chat_room_members ADD COLUMN role TEXT DEFAULT 'member'")
             print("MIGRATION: Added 'role' column to chat_room_members table.")
+
+        if 'unread_count' not in member_cols:
+            cursor.execute("ALTER TABLE chat_room_members ADD COLUMN unread_count INTEGER DEFAULT 0")
+            print("MIGRATION: Added 'unread_count' column to chat_room_members table.")
+
+        # Ensure push_tokens table exists for raw SQLite access before Base.metadata.create_all
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS push_tokens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            token VARCHAR NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        """)
 
         # Check and add profiles.nickname
         cursor.execute("PRAGMA table_info(profiles)")
