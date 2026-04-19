@@ -1298,7 +1298,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputArea.innerHTML = `
                     <button class="attach-btn" onclick="document.getElementById('file-input').click()">📎</button>
                     <input type="file" id="file-input" style="display:none" onchange="uploadFileAndSend()">
-                    <input type="text" id="chat-input" placeholder="Введите сообщение..." onkeypress="handleChatInput(event)">
+                    <textarea id="chat-input" rows="1" placeholder="Введите сообщение..." oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.sendChatMessage(); }"></textarea>
                     <button class="send-btn" onclick="sendChatMessage()">ОТПРАВИТЬ</button>
                 `;
             }
@@ -1328,7 +1328,7 @@ document.addEventListener('DOMContentLoaded', () => {
             badgeDiv.id = 'chat-encryption-status';
 
             const span = document.createElement('span');
-            span.textContent = '📡 НЕЗАЩИЩЕННЫЙ КАНАЛ';
+            span.textContent = '';
 
             badgeDiv.appendChild(span);
 
@@ -1683,19 +1683,98 @@ document.addEventListener('DOMContentLoaded', () => {
     window.confirmCreateRoom = async function() {
         const input = document.getElementById('create-room-input');
         const typeInput = document.getElementById('create-room-type');
+        const pubToggle = document.getElementById('create-room-public');
         const name = input ? input.value.trim() : '';
         const rType = typeInput ? typeInput.value : 'group';
+        const isPublic = pubToggle ? pubToggle.checked : false;
         
         if (!name) return;
         
         try {
             document.getElementById('create-room-modal').style.display = 'none';
-            const payload = { name, room_type: rType };
+            const payload = { name, room_type: rType, is_public: isPublic };
             const room = await apiRequest('/chat/rooms', 'POST', payload);
             addLog(`Создано: ${name}`, 'success');
             loadChatRooms();
         } catch (e) { addLog('Ошибка создания', 'error'); }
     };
+
+    // --- ADD MEMBER LOGIC ---
+    let addMemberSelectedIds = new Set();
+    window.openAddMemberModal = function() {
+        const modal = document.getElementById('add-member-modal');
+        if (!modal || !state.chat.currentRoomId) return;
+        addMemberSelectedIds.clear();
+        document.getElementById('add-member-search').value = '';
+        window.filterAddMemberContacts(); // Will render un-filtered
+        modal.style.display = 'flex';
+        if(window.toggleChatOptions) window.toggleChatOptions(); // close dropdown
+    };
+
+    window.filterAddMemberContacts = function() {
+        const query = (document.getElementById('add-member-search').value || '').toLowerCase();
+        const list = document.getElementById('add-member-list');
+        if (!list) return;
+        
+        list.innerHTML = '';
+        const contacts = state.contacts || [];
+        const filtered = contacts.filter(c => 
+            (c.name && c.name.toLowerCase().includes(query)) ||
+            (c.phone && c.phone.includes(query)) ||
+            (c.username && c.username.toLowerCase().includes(query))
+        );
+
+        if (filtered.length === 0) {
+            list.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim);">Ничего не найдено</div>`;
+            return;
+        }
+
+        filtered.forEach(c => {
+            const div = document.createElement('div');
+            div.className = 'sidebar-item contact-item';
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.justifyContent = 'space-between';
+            div.style.padding = '8px';
+            div.style.borderBottom = '1px solid var(--border-metal)';
+            
+            const isSelected = addMemberSelectedIds.has(c.id);
+            
+            div.innerHTML = `
+                <div style="display:flex; alignItems:center; gap:10px;">
+                    <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${c.name || 'User'}" style="width:30px; height:30px; border-radius:50%; background:var(--bg-panel);">
+                    <div>
+                        <div style="font-size:13px; font-weight:500;">${c.name || c.username || 'Unknown'}</div>
+                        <div style="font-size:11px; color:var(--text-dim);">${c.phone || ''}</div>
+                    </div>
+                </div>
+                <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
+            `;
+            
+            div.onclick = () => {
+                const cb = div.querySelector('input[type="checkbox"]');
+                cb.checked = !cb.checked;
+                if(cb.checked) addMemberSelectedIds.add(c.id);
+                else addMemberSelectedIds.delete(c.id);
+            };
+            
+            list.appendChild(div);
+        });
+    };
+
+    window.submitAddMembers = async function() {
+        if (!state.chat.currentRoomId || addMemberSelectedIds.size === 0) return;
+        
+        const userIds = Array.from(addMemberSelectedIds);
+        try {
+            await apiRequest(`/chat/rooms/${state.chat.currentRoomId}/members`, 'POST', { user_ids: userIds });
+            addLog(`Добавлено участников: ${userIds.length}`, 'success');
+            document.getElementById('add-member-modal').style.display = 'none';
+        } catch (e) {
+            addLog('Ошибка при добавлении участников', 'error');
+        }
+    };
+    // -------------------------
 
     // Expose selectChatRoom to global if needed by inline scripts
     window['selectChatRoom'] = selectChatRoom;

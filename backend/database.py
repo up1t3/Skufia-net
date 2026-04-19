@@ -84,6 +84,7 @@ class ChatRoom(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     room_type = Column(String, default='private') # private, group, channel
+    is_public = Column(Boolean, default=False) # True = public, False = invite-only
     invite_code = Column(String, unique=True, nullable=True) # Unique join link
     created_at = Column(DateTime, default=datetime.utcnow)
 

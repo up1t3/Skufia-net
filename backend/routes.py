@@ -48,7 +48,11 @@ class MessageCreate(BaseModel):
 class RoomCreate(BaseModel):
     name: str
     room_type: str = 'group' # private, group, channel
+    is_public: bool = False
     target_user_id: Optional[int] = None
+
+class RoomMembersAdd(BaseModel):
+    user_ids: List[int]
 
 class NotificationCreate(BaseModel):
     message: str
@@ -416,7 +420,7 @@ def create_room(room: RoomCreate, current_user: User = Depends(get_current_user)
         db.commit()
         return {"id": db_room.id, "status": "Личный чат создан"}
     else:
-        db_room = ChatRoom(name=room.name, room_type=room.room_type)
+        db_room = ChatRoom(name=room.name, room_type=room.room_type, is_public=room.is_public)
         db.add(db_room)
         db.commit()
         db.refresh(db_room)
@@ -982,7 +986,7 @@ def create_room(room: RoomCreate, current_user: User = Depends(get_current_user)
     # "ChatRoom error: 'invite_code' is an invalid keyword argument for ChatRoom" - this happened locally!
 
     # If the system tests use a different environment where database.py HAS been updated, then I SHOULD pass them in the constructor.
-    db_room = ChatRoom(name=room.name, room_type=room.room_type, invite_code=invite_code)
+    db_room = ChatRoom(name=room.name, room_type=room.room_type, invite_code=invite_code, is_public=room.is_public)
     db.add(db_room)
     db.commit()
     db.refresh(db_room)
@@ -1018,6 +1022,32 @@ def join_room(invite_code: str, current_user: User = Depends(get_current_user), 
         db.commit()
 
     return {"status": "joined", "room_id": room_id}
+
+@router.post('/chat/rooms/{room_id}/members')
+def add_members(room_id: int, req: RoomMembersAdd, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    caller_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    is_global_admin = current_user.profile and current_user.profile.rank == 'admin'
+
+    if not caller_member and not is_global_admin:
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    if not room.is_public:
+        if not is_global_admin and (not caller_member or caller_member.role != 'admin'):
+            raise HTTPException(status_code=403, detail="Only admins can add to private rooms")
+
+    added_count = 0
+    for uid in req.user_ids:
+        exists = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == uid).first()
+        if not exists:
+            db.add(ChatRoomMember(room_id=room_id, user_id=uid, role='member'))
+            added_count += 1
+
+    db.commit()
+    return {"status": "success", "added_count": added_count}
 
 @router.delete('/chat/rooms/{room_id}/members/{target_user_id}')
 def kick_member(room_id: int, target_user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

@@ -6,6 +6,7 @@
     <title>SKUFIA | Enterprise Command Center</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style-modal.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -65,10 +66,10 @@
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 16px;">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-metal); padding-bottom: 15px; margin-bottom: 15px;">
-                <h2 style="font-size: 18px; margin: 0;">Настройки</h2>
-                <button class="close-btn" style="background:none; border:none; color:var(--text-dim); cursor:pointer;" onclick="document.getElementById('settings-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <div class="modal-header">
+                <h2>Настройки</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('settings-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
             
@@ -132,8 +133,10 @@
     <div id="fab-hub-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 400px; padding: 25px;">
             <div class="modal-header">
-                <h2>НОВЫЙ ЧАТ</h2>
-                <button class="close-btn" onclick="document.getElementById('fab-hub-modal').style.display='none'">×</button>
+                <h2>Новый чат</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('fab-hub-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             
             <div style="display: flex; gap:10px; margin-bottom:15px;">
@@ -156,17 +159,50 @@
     <div id="create-room-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 350px; padding: 25px;">
             <div class="modal-header">
-                <h2 id="create-room-title">СОЗДАТЬ</h2>
-                <button class="close-btn" onclick="document.getElementById('create-room-modal').style.display='none'">×</button>
+                <h2 id="create-room-title">Создать</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('create-room-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label id="create-room-label">Название</label>
-                    <input type="text" id="create-room-input" class="cyber-input" style="width: 100%; margin-top: 5px;" placeholder="Введите название...">
+                    <input type="text" id="create-room-input" class="cyber-input" style="width: 100%; margin-top: 5px; border-radius: 8px;" placeholder="Введите название...">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; border: 1px solid var(--border-metal);">
+                    <div>
+                        <label style="margin: 0; font-size: 14px;">Публичный чат</label>
+                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Любой участник может приглашать</div>
+                    </div>
+                    <input type="checkbox" id="create-room-public" style="width: 18px; height: 18px; cursor: pointer;">
                 </div>
                 <input type="hidden" id="create-room-type" value="group">
-                <button id="create-room-confirm-btn" class="cyber-btn" style="width: 100%;" onclick="window.confirmCreateRoom()">СОЗДАТЬ</button>
+                <button id="create-room-confirm-btn" class="cyber-btn" style="width: 100%; border-radius: 8px;" onclick="window.confirmCreateRoom()">Создать чат</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; padding: 25px;">
+            <div class="modal-header">
+                <h2>Добавить участника</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('add-member-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 10px;">
+                <input type="text" id="add-member-search" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="Поиск контактов..." oninput="window.filterAddMemberContacts()">
+            </div>
+            
+            <div id="add-member-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 5px; margin-bottom: 15px;">
+                <!-- Contacts rendered here -->
+                <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>
+            </div>
+            
+            <button id="add-member-confirm-btn" class="cyber-btn" style="width: 100%; border-radius: 8px;" onclick="window.submitAddMembers()">ДОБАВИТЬ ВЫБРАННЫХ</button>
         </div>
     </div>
 
@@ -503,6 +539,7 @@
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                                         </button>
                                         <div id="chat-options-dropdown" class="chat-options-dropdown" style="display:none;">
+                                            <button id="btn-add-member" onclick="window.openAddMemberModal()" style="display:none; color: var(--accent-cyan);">👥 Добавить участника</button>
                                             <button onclick="window.chatOptionAction('mute')">🔕 Без звука</button>
                                             <button onclick="window.chatOptionAction('search')">🔍 Поиск по чату</button>
                                             <button onclick="window.chatOptionAction('wallpaper')">🎨 Фон чата</button>
@@ -567,9 +604,9 @@
     
 
 
-    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script src="db.js"></script>
-    <script src="rtcManager.js"></script>
-    <script src="app.js"></script>
+    <script defer src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script defer src="db.js"></script>
+    <script defer src="rtcManager.js"></script>
+    <script defer src="app.js"></script>
 </body>
 </html>

@@ -657,6 +657,11 @@ input {
     color: var(--accent-cyan);
     text-shadow: var(--glow);
     font-size: 14px;
+    height: 70px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
 }
 
 .messages-window {
@@ -707,11 +712,12 @@ input {
 }
 
 .chat-input-area {
-    padding: 20px;
+    padding: 8px 12px;
     background: #111820;
-    border-top: 2px solid var(--border-metal);
+    border-top: 1px solid var(--border-metal);
     display: flex;
-    gap: 15px;
+    gap: 8px;
+    align-items: flex-end;
 }
 
 #msg-input {
@@ -823,9 +829,9 @@ body.super-user .nav-btn.active {
     display: flex;
     flex: 1;
     background: var(--bg-panel);
-    border: 1px solid var(--border-metal);
+    border: none;
     border-radius: 8px; /* Modern touch */
-    box-shadow: var(--panel-shadow);
+    box-shadow: none;
     overflow: hidden;
     position: relative;
     backdrop-filter: var(--backdrop-blur);
@@ -857,6 +863,9 @@ body.super-user .nav-btn.active {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    height: 70px;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .sidebar-header-top {
@@ -888,6 +897,9 @@ body.super-user .nav-btn.active {
     padding: 4px;
     border-radius: 50%;
     transition: var(--transition);
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
 }
 
 .icon-btn:hover {
@@ -1101,6 +1113,8 @@ body.super-user .nav-btn.active {
 .header-avatar {
     width: 40px;
     height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
     background: linear-gradient(135deg, var(--accent-cyan), var(--accent-amber));
     border-radius: 50%;
     display: flex;
@@ -1309,6 +1323,12 @@ body.super-user .nav-btn.active {
     font-size: 14px;
     padding: 8px 4px;
     outline: none;
+    resize: none;
+    overflow-y: auto;
+    max-height: 120px;
+    min-height: 38px;
+    line-height: 1.4;
+    align-self: center;
 }
 
 #chat-input::placeholder {
@@ -1740,9 +1760,9 @@ body.super-user .nav-btn.active {
     min-width: 40px;
     padding: 0 10px;
     font-size: 18px;
-    background: rgba(0, 242, 255, 0.08);
-    border: 1px solid var(--border-metal);
-    color: var(--accent-cyan);
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
     cursor: pointer;
     transition: var(--transition);
     display: flex;
@@ -1750,9 +1770,11 @@ body.super-user .nav-btn.active {
     justify-content: center;
 }
 .attach-btn:hover {
-    background: rgba(0, 242, 255, 0.2);
-    border-color: var(--accent-cyan);
-    box-shadow: var(--glow);
+    background: transparent;
+    border-color: transparent;
+    color: var(--accent-cyan);
+    transform: scale(1.1);
+    box-shadow: none;
 }
 
 .chat-file-preview {
