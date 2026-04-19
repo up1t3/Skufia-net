@@ -1,15 +1,27 @@
 from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from datetime import datetime
 import os
 
 # Database URL - using PostgreSQL as per blueprint
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/skufia.db')
+DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql+asyncpg://postgres:postgres@db:5432/skufia')
 
 # Add check_same_thread=False for SQLite
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+else:
+    # Use Async PostgreSQL engine
+    engine = create_async_engine(
+        DATABASE_URL,
+        pool_size=20,
+        max_overflow=10,
+        pool_pre_ping=True
+    )
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, class_=AsyncSession)
+
 Base = declarative_base()
 
 class User(Base):
