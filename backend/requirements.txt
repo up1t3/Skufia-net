@@ -5,4 +5,9 @@ python-jose[cryptography]
 passlib[bcrypt]
 bcrypt==3.2.2
 python-multipart
-websockets
+websocketsblurhash
+Pillow
+celery
+redis
+requests
+numpy
