@@ -1,6 +1,9 @@
 {
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "autoprefixer": "^10.4.27",
+    "eslint": "^10.2.1",
+    "globals": "^17.5.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2"
   },
