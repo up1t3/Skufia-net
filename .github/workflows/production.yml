@@ -1,0 +1,54 @@
+name: Production Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install bcrypt==4.0.1
+          pip install pytest pytest-asyncio httpx
+
+      - name: Run backend tests
+        run: |
+          mkdir -p backend/data
+          touch backend/data/skufia.db
+          DATABASE_URL="sqlite:///./backend/data/skufia.db" PYTHONPATH="$GITHUB_WORKSPACE/backend" python -m pytest backend/tests/
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Run frontend linting
+        working-directory: frontend
+        run: npx eslint . || true
+
+  build-docker:
+    runs-on: ubuntu-latest
+    needs: test
+    if: success()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: docker compose build
