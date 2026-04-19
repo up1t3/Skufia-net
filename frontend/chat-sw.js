@@ -74,3 +74,70 @@ self.addEventListener('activate', (event) => {
         })
     );
 });
+// --- Push Notification Listeners ---
+
+self.addEventListener('push', function(event) {
+    console.log('[Service Worker] Push Received.');
+    console.log(`[Service Worker] Push had this data: "${event.data.text()}"`);
+
+    let title = 'Skufia Notification';
+    let options = {
+        body: 'New message',
+        icon: '/favicon.png', // Assuming favicon.png exists as seen in ls -la
+        badge: '/favicon.png'
+    };
+
+    if (event.data) {
+        try {
+            const data = event.data.json();
+            title = data.title || title;
+            options.body = data.body || options.body;
+            if (data.icon) options.icon = data.icon;
+            if (data.badge) options.badge = data.badge;
+            if (data.data) options.data = data.data; // Custom payload data
+        } catch (e) {
+            // If not JSON, use the text as body
+            options.body = event.data.text();
+        }
+    }
+
+    event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', function(event) {
+    console.log('[Service Worker] Notification click Received.');
+    event.notification.close();
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+            // If a window is already open, focus it
+            for (let i = 0; i < clientList.length; i++) {
+                let client = clientList[i];
+                if (client.url.includes('/chat.html') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // If no window is open, open a new one
+            if (clients.openWindow) {
+                return clients.openWindow('/chat.html');
+            }
+        })
+    );
+});
+
+self.addEventListener('pushsubscriptionchange', function(event) {
+    console.log('[Service Worker]: \'pushsubscriptionchange\' event fired.');
+    // Logic to re-subscribe and send the new subscription to the server
+    const applicationServerKey = 'YOUR_PUBLIC_VAPID_KEY_HERE'; // Ideally fetched or injected
+    event.waitUntil(
+        self.registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: applicationServerKey
+        })
+        .then(function(newSubscription) {
+            console.log('[Service Worker] New subscription: ', newSubscription);
+            // Send the new subscription details to the server using fetch()
+            // e.g., fetch('/api/subscribe', { method: 'POST', body: JSON.stringify(newSubscription) })
+        })
+    );
+});

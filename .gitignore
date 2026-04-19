@@ -11,3 +11,4 @@ uploads/
 proxy_log.txt
 error.txt
 frontend/node_modules/
+venv/

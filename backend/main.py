@@ -55,7 +55,15 @@ def run_migrations():
             cursor.execute("ALTER TABLE messages ADD COLUMN is_edited BOOLEAN DEFAULT 0")
             print("MIGRATION: Added 'is_edited' column to messages table.")
 
-        
+        # Check and add messages.is_deleted_for_all
+        if 'is_deleted_for_all' not in msg_cols:
+            cursor.execute("ALTER TABLE messages ADD COLUMN is_deleted_for_all BOOLEAN DEFAULT 0")
+            print("MIGRATION: Added 'is_deleted_for_all' column to messages table.")
+
+        # Check and add messages.ttl_seconds
+        if 'ttl_seconds' not in msg_cols:
+            cursor.execute("ALTER TABLE messages ADD COLUMN ttl_seconds INTEGER")
+            print("MIGRATION: Added 'ttl_seconds' column to messages table.")
 
         # Check and add chat_rooms.invite_code
         cursor.execute("PRAGMA table_info(chat_rooms)")
