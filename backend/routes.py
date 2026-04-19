@@ -396,27 +396,72 @@ def create_room(room: RoomCreate, current_user: User = Depends(get_current_user)
         return {"id": db_room.id, "status": "Канал/группа созданы. Вы назначены администратором."}
 
 @router.get('/chat/rooms/{room_id}/history')
-def get_room_history(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Retrieves chat history for a specific room"""
+def get_room_history(
+    room_id: int, 
+    before_id: Optional[int] = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves chat history for a specific room with keyset pagination.
+    
+    - `before_id`: Return messages with id < before_id (cursor for infinite scroll)
+    - `limit`: Max messages per page (default 50, max 100)
+    
+    Response includes `has_more` flag and `next_cursor` for the frontend.
+    """
     # Verify membership
-    membership = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id, 
+        ChatRoomMember.user_id == current_user.id
+    ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied to this sector")
-        
-    messages = db.query(Message).filter(Message.room_id == room_id).order_by(Message.created_at.asc()).all()
-    return [
-        {
-            "id": m.id,
-            "sender": get_display_name(m.sender), 
-            "sender_id": m.sender_id, 
-            "text": m.content, 
-            "iv": m.encryption_iv,
-            "file_url": m.file_url,
-            "reply_to_id": m.reply_to_id,
-            "is_edited": m.is_edited,
-            "timestamp": m.created_at.strftime('%H:%M')
-        } for m in messages
-    ]
+    
+    # Clamp limit
+    limit = min(max(1, limit), 100)
+    
+    # Build query with keyset cursor
+    query = db.query(Message).filter(
+        Message.room_id == room_id,
+        Message.is_deleted_for_all == False
+    )
+    
+    if before_id is not None:
+        query = query.filter(Message.id < before_id)
+    
+    # Fetch limit+1 to detect if more pages exist
+    messages = query.order_by(Message.id.desc()).limit(limit + 1).all()
+    
+    has_more = len(messages) > limit
+    if has_more:
+        messages = messages[:limit]
+    
+    # Reverse to chronological order for display
+    messages.reverse()
+    
+    next_cursor = messages[0].id if has_more and messages else None
+    
+    return {
+        "messages": [
+            {
+                "id": m.id,
+                "sender": get_display_name(m.sender), 
+                "sender_id": m.sender_id, 
+                "text": m.content, 
+                "iv": m.encryption_iv,
+                "file_url": m.file_url,
+                "reply_to_id": m.reply_to_id,
+                "is_edited": m.is_edited,
+                "reactions": m.reactions or {},
+                "timestamp": m.created_at.isoformat()
+            } for m in messages
+        ],
+        "has_more": has_more,
+        "next_cursor": next_cursor,
+        "limit": limit
+    }
 
 @router.get('/users/search/{query}')
 def search_users(query: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

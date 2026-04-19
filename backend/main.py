@@ -140,7 +140,9 @@ def run_migrations():
     except Exception as e:
         print(f"MIGRATION WARNING: {e}")
 
-run_migrations()
+# Only run SQLite migrations when using SQLite backend
+if DATABASE_URL.startswith("sqlite"):
+    run_migrations()
 
 if DATABASE_URL.startswith("sqlite"):
     Base.metadata.create_all(bind=engine)

@@ -1375,8 +1375,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (history) {
             history.innerHTML = '<div class="chat-placeholder">Loading buffer...</div>';
             try {
-                const messages = await apiRequest(`/chat/rooms/${roomId}/history`);
+                const response = await apiRequest(`/chat/rooms/${roomId}/history?limit=50`);
                 history.innerHTML = '';
+                const messages = response.messages || response; // backward compat
+                state.chat.hasMore = response.has_more || false;
+                state.chat.nextCursor = response.next_cursor || null;
                 // @ts-ignore
                 for (const m of messages) {
                     // Try decrypting history if we have the key
