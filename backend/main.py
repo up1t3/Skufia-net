@@ -3,7 +3,7 @@ import seed_everything
 import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from database import engine, Base, SessionLocal, Profile
+from database import engine, Base, SessionLocal, Profile, DATABASE_URL
 from routes import router as main_router
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, List
@@ -142,8 +142,8 @@ def run_migrations():
 
 run_migrations()
 
-# Initialize database tables on startup (creates new tables, won't modify existing)
-Base.metadata.create_all(bind=engine)
+if DATABASE_URL.startswith("sqlite"):
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="Skufia API",
@@ -198,7 +198,7 @@ class ConnectionManager:
             db.commit()
         db.close()
 
-    def disconnect(self, user_id: int):
+    async def disconnect(self, user_id: int):
         if user_id in self.active_connections:
             del self.active_connections[user_id]
             ACTIVE_WEBSOCKETS.dec()
@@ -279,10 +279,14 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
         for task in pending:
             task.cancel()
     finally:
-        manager.disconnect(user_id)
+        await manager.disconnect(user_id)
 
 @app.on_event("startup")
 async def startup_event():
+    # Setup standard synchronous initialization if not done explicitly
+    if not DATABASE_URL.startswith("sqlite"):
+        Base.metadata.create_all(bind=engine)
+            
     await broadcast.connect()
     print("Initializing Skufia Ecosystem... Checking for data seeds...")
 

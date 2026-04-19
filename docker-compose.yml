@@ -19,7 +19,11 @@ services:
     build:
       context: ./backend
     container_name: skufia-celery
-    command: python worker.py
+    command: celery -A worker.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://postgres:password@postgres:5432/skufia
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
       - postgres
       - redis
@@ -45,7 +49,7 @@ services:
     ports:
       - "8007:8007"
     environment:
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/skufia
+      - DATABASE_URL=postgresql+psycopg2://postgres:password@postgres:5432/skufia
       - REDIS_URL=redis://redis:6379/0
     depends_on:
       - postgres
