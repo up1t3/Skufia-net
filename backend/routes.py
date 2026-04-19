@@ -61,6 +61,9 @@ class ProfileUpdate(BaseModel):
     rank: str = None
     avatar_url: str = None
 
+class PublicKeyUpdate(BaseModel):
+    public_key: str
+
 # --- Dependency ---
 def get_db():
     db = SessionLocal()
@@ -283,10 +286,19 @@ class AvatarUpdate(BaseModel):
 @router.post('/me/avatar')
 def update_avatar(data: AvatarUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if profile:
+    if profile and data.avatar_url:
         profile.avatar_url = data.avatar_url
-        db.commit()
+        
+    db.commit()
     return {"status": "Avatar updated successfully"}
+
+@router.post('/me/key')
+def update_public_key(data: PublicKeyUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db.query(User).filter(User.id == current_user.id).update({"public_key": data.public_key})
+    db.commit()
+    return {"status": "Public key updated successfully"}
+
+# --- CHAT MODULE ---
 # --- TELEGRAM INTEGRATION ---
 
 class TelegramLink(BaseModel):
