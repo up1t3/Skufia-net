@@ -6,5 +6,8 @@
     "globals": "^17.5.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2"
+  },
+  "dependencies": {
+    "dexie": "^4.4.2"
   }
 }
