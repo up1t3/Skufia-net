@@ -65,7 +65,7 @@ services:
       context: ./frontend
     container_name: skufia-web
     ports:
-      - "5551:80"
+      - "8008:80"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
       - ./frontend/nginx_full.conf:/etc/nginx/nginx.conf

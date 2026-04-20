@@ -1,5 +1,5 @@
 import os
-from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Base, engine, ChatRoom, ChatRoomMember
+from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Base, engine, ChatRoom, ChatRoomMember, Message
 from datetime import datetime, timedelta
 from auth import get_password_hash
 
@@ -9,6 +9,7 @@ def seed_data():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     # Clear data in FK-safe order (children before parents)
+    db.query(Message).delete()
     db.query(ChatRoomMember).delete()
     db.query(ChatRoom).delete()
     db.query(WikiArticle).delete()

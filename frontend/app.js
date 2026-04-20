@@ -43,8 +43,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Configuration ---
-    // Bypass local proxy and hit backend directly on port 8007
-    const API_BASE_URL = 'http://localhost:8007/api';
+    // Use relative path for production (proxied via Nginx)
+    const API_BASE_URL = '/api';
 
     // --- State Management ---
     const state = {
@@ -219,7 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('Публичный ключ зарегистрирован в Cyber-Vault ✅', 'success');
     }
 
-    const WS_URL = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.hostname + ':8007';
+    // Use relative port for WebSocket (proxied via Nginx)
+    const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const host = window.location.host; // includes port
+    const WS_URL = protocol + host;
 
     // --- Audio Engine ---
     const silentWav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
