@@ -858,7 +858,8 @@ body.super-user .nav-btn.active {
 
 .sidebar-header {
     padding: 16px;
-    background: rgba(0, 0, 0, 0.1);
+    background: transparent;
+    border-top: none;
     border-bottom: 1px solid var(--border-metal);
     display: flex;
     flex-direction: column;
@@ -1326,9 +1327,9 @@ body.super-user .nav-btn.active {
     resize: none;
     overflow-y: auto;
     max-height: 120px;
-    min-height: 38px;
+    min-height: 36px;
     line-height: 1.4;
-    align-self: center;
+    align-self: flex-end;
 }
 
 #chat-input::placeholder {

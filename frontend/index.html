@@ -397,7 +397,9 @@
                     <div class="modal-content" style="max-width: 600px;">
                         <div class="modal-header">
                             <h3 id="listing-detail-title">Детали лота</h3>
-                            <span class="close-btn" onclick="document.getElementById('listing-detail-modal').style.display='none'">&times;</span>
+                            <span class="close-btn" onclick="document.getElementById('listing-detail-modal').style.display='none'">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </span>
                         </div>
                         <div class="listing-detail-body">
                             <div id="listing-detail-gallery" class="listing-gallery"></div>
@@ -419,7 +421,9 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>ВЫБОР ОПЕРАТИВНИКА (AVATAR)</h3>
-                        <span class="close-btn" onclick="closeAvatarModal()">&times;</span>
+                        <span class="close-btn" onclick="closeAvatarModal()">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </span>
                     </div>
                     <div class="avatar-grid" id="avatar-selector-grid">
                         <!-- 35 Premium Avatars injected here -->
@@ -498,7 +502,7 @@
                                     </div>
                                 </div>
                                 <!-- Search Mode -->
-                                <div class="sidebar-search-compact" id="sidebar-active-search" style="display: none; padding: 4px 12px; border-radius: 20px; max-width: 85%; margin: 0 auto; animation: fadeIn 0.2s ease;">
+                                <div class="sidebar-search-compact" id="sidebar-active-search" style="display: none; padding: 4px 12px; border-radius: 20px; max-width: 65%; margin: 0 auto; animation: fadeIn 0.2s ease;">
                                     <button class="icon-btn" style="margin-left: -8px; padding: 2px; color: var(--accent-cyan);" onclick="toggleSidebarSearch(false)">
                                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
                                     </button>
