@@ -43,8 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Configuration ---
-    // Use relative path for production (proxied via Nginx)
-    const API_BASE_URL = '/api';
+    // Use relative path for production, but point directly to backend for local dev server
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const API_BASE_URL = isLocalDev ? 'http://localhost:8007/api' : '/api';
 
     // --- State Management ---
     const state = {
