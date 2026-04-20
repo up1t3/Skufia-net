@@ -3,9 +3,9 @@ services:
     image: postgres:16
     container_name: skufia-postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: skufia
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-skufia}
     volumes:
       - skufia_pgdata:/var/lib/postgresql/data
     restart: always
@@ -21,9 +21,9 @@ services:
     container_name: skufia-celery
     command: celery -A worker.celery_app worker --loglevel=info --concurrency=2
     environment:
-      - DATABASE_URL=postgresql+psycopg2://postgres:password@postgres:5432/skufia
-      - REDIS_URL=redis://redis:6379/0
-      - CELERY_BROKER_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
     depends_on:
       - postgres
       - redis
@@ -40,7 +40,7 @@ services:
     ports:
       - "3478:3478/udp"
       - "3478:3478/tcp"
-    command: turnserver --use-auth-secret --static-auth-secret=skufia_secret --realm=skufia.local
+    command: turnserver --use-auth-secret --static-auth-secret=${TURN_SECRET:-skufia_secret} --realm=${TURN_REALM:-skufia.local}
 
   backend:
     build:
@@ -49,8 +49,8 @@ services:
     ports:
       - "8007:8007"
     environment:
-      - DATABASE_URL=postgresql+psycopg2://postgres:password@postgres:5432/skufia
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     depends_on:
       - postgres
       - redis

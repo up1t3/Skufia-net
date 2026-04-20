@@ -4,6 +4,9 @@ FROM nginx:alpine
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
+# Copy our custom Nginx config
+COPY nginx_full.conf /etc/nginx/nginx.conf
+
 # Copy static assets from the frontend directory to the nginx html folder
 COPY . /usr/share/nginx/html/
 

@@ -19,133 +19,82 @@ except ImportError:
 
 from monitoring import setup_metrics, ACTIVE_WEBSOCKETS
 
+from sqlalchemy import inspect, text
+from database import engine, Base, DATABASE_URL
+
 # --- Database Migration (add missing columns to existing DB) ---
 def run_migrations():
-    """Add columns that may be missing from older schema versions."""
-    import sqlite3
-    db_path = 'skufia.db'
+    """Add columns that may be missing from older schema versions, database-agnostic."""
     try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        inspector = inspect(engine)
         
-        # Check and add users.public_key
-        cursor.execute("PRAGMA table_info(users)")
-        user_cols = [row[1] for row in cursor.fetchall()]
-        if 'public_key' not in user_cols:
-            cursor.execute("ALTER TABLE users ADD COLUMN public_key TEXT")
-            print("MIGRATION: Added 'public_key' column to users table.")
-        
-        # Check and add messages.encryption_iv
-        cursor.execute("PRAGMA table_info(messages)")
-        msg_cols = [row[1] for row in cursor.fetchall()]
-        if 'encryption_iv' not in msg_cols:
-            cursor.execute("ALTER TABLE messages ADD COLUMN encryption_iv TEXT")
-            print("MIGRATION: Added 'encryption_iv' column to messages table.")
-        
-        # Check and add messages.file_url
-        if 'file_url' not in msg_cols:
-            cursor.execute("ALTER TABLE messages ADD COLUMN file_url TEXT")
-            print("MIGRATION: Added 'file_url' column to messages table.")
+        with engine.begin() as conn:
+            # Helper to check if column exists
+            def column_exists(table_name, column_name):
+                if not inspector.has_table(table_name):
+                    return False
+                cols = [col['name'] for col in inspector.get_columns(table_name)]
+                return column_name in cols
+                
+            # Helper to add column
+            def add_column(table_name, column_name, column_type, default=""):
+                if not column_exists(table_name, column_name):
+                    default_clause = f" DEFAULT {default}" if default else ""
+                    conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}{default_clause}"))
+                    print(f"MIGRATION: Added '{column_name}' column to {table_name} table.")
+
+            # users
+            add_column("users", "public_key", "TEXT")
             
-        # Check and add messages.reply_to_id
-        if 'reply_to_id' not in msg_cols:
-            cursor.execute("ALTER TABLE messages ADD COLUMN reply_to_id INTEGER")
-            print("MIGRATION: Added 'reply_to_id' column to messages table.")
+            # messages
+            add_column("messages", "encryption_iv", "TEXT")
+            add_column("messages", "file_url", "TEXT")
+            add_column("messages", "reply_to_id", "INTEGER")
+            add_column("messages", "is_edited", "BOOLEAN", default="0" if DATABASE_URL.startswith("sqlite") else "FALSE")
+            add_column("messages", "is_deleted_for_all", "BOOLEAN", default="0" if DATABASE_URL.startswith("sqlite") else "FALSE")
+            add_column("messages", "ttl_seconds", "INTEGER")
+            # postgres requires valid json literal for default '{}', sqlite takes '{}'
+            add_column("messages", "reactions", "JSON", default="'{}'")
             
-        # Check and add messages.is_edited
-        if 'is_edited' not in msg_cols:
-            cursor.execute("ALTER TABLE messages ADD COLUMN is_edited BOOLEAN DEFAULT 0")
-            print("MIGRATION: Added 'is_edited' column to messages table.")
-
-        # Check and add messages.is_deleted_for_all
-        if 'is_deleted_for_all' not in msg_cols:
-            cursor.execute("ALTER TABLE messages ADD COLUMN is_deleted_for_all BOOLEAN DEFAULT 0")
-            print("MIGRATION: Added 'is_deleted_for_all' column to messages table.")
-
-        # Check and add messages.ttl_seconds
-        if 'ttl_seconds' not in msg_cols:
-            cursor.execute("ALTER TABLE messages ADD COLUMN ttl_seconds INTEGER")
-            print("MIGRATION: Added 'ttl_seconds' column to messages table.")
-
-        # Check and add messages.reactions
-        if 'reactions' not in msg_cols:
-            cursor.execute("ALTER TABLE messages ADD COLUMN reactions JSON DEFAULT '{}'")
-            print("MIGRATION: Added 'reactions' column to messages table.")
-
-        # Check and add chat_rooms.invite_code
-        cursor.execute("PRAGMA table_info(chat_rooms)")
-        room_cols = [row[1] for row in cursor.fetchall()]
-        if 'invite_code' not in room_cols:
-            cursor.execute("ALTER TABLE chat_rooms ADD COLUMN invite_code TEXT")
-            print("MIGRATION: Added 'invite_code' column to chat_rooms table.")
-
-        # Check and add chat_room_members.role
-        cursor.execute("PRAGMA table_info(chat_room_members)")
-        member_cols = [row[1] for row in cursor.fetchall()]
-        if 'role' not in member_cols:
-            cursor.execute("ALTER TABLE chat_room_members ADD COLUMN role TEXT DEFAULT 'member'")
-            print("MIGRATION: Added 'role' column to chat_room_members table.")
-
-        if 'unread_count' not in member_cols:
-            cursor.execute("ALTER TABLE chat_room_members ADD COLUMN unread_count INTEGER DEFAULT 0")
-            print("MIGRATION: Added 'unread_count' column to chat_room_members table.")
-
-        # Ensure push_tokens table exists for raw SQLite access before Base.metadata.create_all
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS push_tokens (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            token VARCHAR NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )
-        """)
-
-        # Check and add profiles.nickname
-        cursor.execute("PRAGMA table_info(profiles)")
-        profile_cols = [row[1] for row in cursor.fetchall()]
-        if 'nickname' not in profile_cols:
-            cursor.execute("ALTER TABLE profiles ADD COLUMN nickname VARCHAR")
-            print("MIGRATION: Added 'nickname' column to profiles table.")
+            # chat_rooms
+            add_column("chat_rooms", "invite_code", "TEXT")
             
-        # Check and add chat_rooms.invite_code
-        cursor.execute("PRAGMA table_info(chat_rooms)")
-        room_cols = [row[1] for row in cursor.fetchall()]
-        if 'invite_code' not in room_cols:
-            cursor.execute("ALTER TABLE chat_rooms ADD COLUMN invite_code TEXT UNIQUE")
-            print("MIGRATION: Added 'invite_code' column to chat_rooms table.")
+            # chat_room_members
+            add_column("chat_room_members", "role", "VARCHAR" if DATABASE_URL.startswith("postgres") else "TEXT", default="'member'")
+            add_column("chat_room_members", "unread_count", "INTEGER", default="0")
             
-        # Check and add chat_room_members.role
-        cursor.execute("PRAGMA table_info(chat_room_members)")
-        member_cols = [row[1] for row in cursor.fetchall()]
-        if 'role' not in member_cols:
-            cursor.execute("ALTER TABLE chat_room_members ADD COLUMN role TEXT DEFAULT 'member'")
-            print("MIGRATION: Added 'role' column to chat_room_members table.")
-        
-        # Check and add market_listings new columns
-        cursor.execute("PRAGMA table_info(market_listings)")
-        market_listings_cols = [row[1] for row in cursor.fetchall()]
-        if 'status' not in market_listings_cols:
-            cursor.execute("ALTER TABLE market_listings ADD COLUMN status VARCHAR DEFAULT 'active'")
-            print("MIGRATION: Added 'status' column to market_listings table.")
-        if 'views_count' not in market_listings_cols:
-            cursor.execute("ALTER TABLE market_listings ADD COLUMN views_count INTEGER DEFAULT 0")
-            print("MIGRATION: Added 'views_count' column to market_listings table.")
-        if 'updated_at' not in market_listings_cols:
-            cursor.execute("ALTER TABLE market_listings ADD COLUMN updated_at DATETIME")
-            print("MIGRATION: Added 'updated_at' column to market_listings table.")
+            # Ensure push_tokens table exists for raw SQL access before Base.metadata.create_all
+            conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS push_tokens (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id),
+                token VARCHAR NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """ if getattr(engine.dialect, 'name', '') == 'postgresql' else """
+            CREATE TABLE IF NOT EXISTS push_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                token VARCHAR NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            )
+            """))
 
-        conn.commit()
-        conn.close()
+            # profiles
+            add_column("profiles", "nickname", "VARCHAR")
+            
+            # market_listings
+            add_column("market_listings", "status", "VARCHAR", default="'active'")
+            add_column("market_listings", "views_count", "INTEGER", default="0")
+            add_column("market_listings", "updated_at", "TIMESTAMP" if getattr(engine.dialect, 'name', '') == 'postgresql' else "DATETIME")
+            
     except Exception as e:
         print(f"MIGRATION WARNING: {e}")
 
-# Only run SQLite migrations when using SQLite backend
-if DATABASE_URL.startswith("sqlite"):
-    run_migrations()
-
-if DATABASE_URL.startswith("sqlite"):
-    Base.metadata.create_all(bind=engine)
+# Always create tables from SQLAlchemy models
+Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app = FastAPI(
     title="Skufia API",
