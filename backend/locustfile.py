@@ -2,7 +2,7 @@
 SKUFenger Load Test — Locust
 Запуск: locust -f locustfile.py --host=http://localhost:8007
 """
-from locust import HttpUser, task, between, events
+from locust import HttpUser, task, between, events, TaskSet
 import json
 import random
 
@@ -70,3 +70,39 @@ class SkufiaUser(HttpUser):
     def get_notifications(self):
         """GET /api/notifications."""
         self.client.get("/api/notifications", headers=self.auth_headers, name="/api/notifications")
+
+class MarketChaosTasks(TaskSet):
+    @task
+    def search_market(self):
+        """Simulate a user heavily searching the market."""
+        search_terms = ["девайс", "редк", "тест", "ноутбук", "скуф"]
+        q = random.choice(search_terms)
+        self.client.get(f"/api/market?q={q}", headers=self.user.auth_headers, name="/api/market?q=[term]")
+
+class ChaosLoadTest(HttpUser):
+    wait_time = between(0.1, 0.5)
+    tasks = [MarketChaosTasks]
+    token = None
+
+    def on_start(self):
+        """Register + Login for chaos load test."""
+        uid = random.randint(100000, 999999)
+        username = f"chaos_{uid}"
+        email = f"chaos_{uid}@skufia.net"
+
+        self.client.post("/api/auth/register", json={
+            "username": username,
+            "email": email,
+            "password": "loadtest123"
+        }, name="/api/auth/register")
+
+        resp = self.client.post("/api/auth/login", json={
+            "username": username,
+            "password": "loadtest123"
+        }, name="/api/auth/login")
+
+        if resp.status_code == 200:
+            self.token = resp.json().get("access_token")
+            self.auth_headers = {"Authorization": f"Bearer {self.token}"}
+        else:
+            self.auth_headers = {}
