@@ -71,6 +71,24 @@
     --chat-bubble-radius: 18px;
 }
 
+[data-theme="gold"] {
+    --bg-dark: #121008;
+    --bg-panel: rgba(30, 25, 10, 0.85);
+    --bg-accent: rgba(212, 175, 55, 0.15);
+    --accent-cyan: #FFD700; 
+    --accent-amber: #FF8C00; 
+    --text-main: #FFF8DC;
+    --text-dim: #D4AF37;
+    --border-metal: rgba(212, 175, 55, 0.4);
+    --glow: 0 0 10px rgba(255, 215, 0, 0.6);
+    --panel-shadow: 0 4px 15px rgba(255, 215, 0, 0.15);
+    --transition: all 0.3s ease;
+    --font-main: 'Share Tech Mono', monospace;
+    --crt-display: block;
+    --backdrop-blur: blur(12px) saturate(150%);
+    --chat-bubble-radius: 4px;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -874,22 +892,24 @@ body.super-user .nav-btn.active {
 }
 
 .sidebar-header {
-    padding: 16px;
-    background: transparent;
+    padding: 0 16px;
+    background: rgba(0, 0, 0, 0.15);
     border-top: none;
     border-bottom: 1px solid var(--border-metal);
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    height: 70px;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
     box-sizing: border-box;
     flex-shrink: 0;
+    backdrop-filter: blur(10px);
 }
 
 .sidebar-header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
 }
 
 .sidebar-title {
@@ -1109,16 +1129,19 @@ body.super-user .nav-btn.active {
 }
 
 .chat-info {
-    padding: 15px 20px;
+    padding: 0 20px;
     background: rgba(0, 0, 0, 0.15);
     border-bottom: 1px solid var(--border-metal);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 60px;
+    height: 56px;
     color: var(--text-main);
     backdrop-filter: blur(10px);
     z-index: 20;
+    position: sticky;
+    top: 0;
+    flex-shrink: 0;
 }
 
 .chat-header-profile {
@@ -1295,13 +1318,14 @@ body.super-user .nav-btn.active {
 
 .chat-capsule {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    flex-wrap: nowrap;
     background: var(--bg-panel);
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 20px;
-    padding: 6px 16px;
+    padding: 6px 12px;
     width: 100%;
-    gap: 12px;
+    gap: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
     transition: border-color 0.2s ease;
 }
@@ -1339,15 +1363,13 @@ body.super-user .nav-btn.active {
     color: var(--text-main);
     font-family: var(--font-main);
     font-size: 14px;
-    padding: 6px 4px;
+    padding: 8px 4px;
+    margin: 0;
     box-sizing: border-box;
     outline: none;
-    resize: none;
-    overflow-y: auto;
-    max-height: 120px;
-    min-height: 32px;
-    line-height: 1.4;
-    align-self: flex-end;
+    height: auto;
+    align-self: center;
+    min-width: 0;
 }
 
 #chat-input::placeholder {

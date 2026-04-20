@@ -1324,36 +1324,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (header) {
-            const headerDiv = document.createElement('div');
-            headerDiv.className = 'chat-user-header';
+            const headerAvatar = document.getElementById('header-avatar');
+            const headerTitle = document.getElementById('chat-header-title');
+            
+            if (headerAvatar) {
+                headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                headerAvatar.style.background = 'transparent';
+                headerAvatar.style.color = 'transparent';
+            }
+            if (headerTitle) {
+                headerTitle.textContent = roomName.toUpperCase();
+            }
 
-            const img = document.createElement('img');
-            img.src = `https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}`;
-            img.className = 'chat-user-avatar';
+            const headerStatus = document.getElementById('chat-header-status');
+            const statusDot = header.querySelector('.status-dot');
+            if (headerStatus) headerStatus.textContent = ''; 
+            if (statusDot) statusDot.style.display = 'none';
 
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'chat-user-info';
-
-            const nameDiv = document.createElement('div');
-            nameDiv.style.fontSize = '14px';
-            nameDiv.textContent = roomName.toUpperCase();
-
-            infoDiv.appendChild(nameDiv);
-            headerDiv.appendChild(img);
-            headerDiv.appendChild(infoDiv);
-
-            const badgeDiv = document.createElement('div');
-            badgeDiv.className = 'encryption-badge';
-            badgeDiv.id = 'chat-encryption-status';
-
-            const span = document.createElement('span');
-            span.textContent = '';
-
-            badgeDiv.appendChild(span);
-
-            header.innerHTML = '';
-            header.appendChild(headerDiv);
-            header.appendChild(badgeDiv);
+            let badgeDiv = document.getElementById('chat-encryption-status');
+            if (!badgeDiv) {
+                badgeDiv = document.createElement('div');
+                badgeDiv.className = 'encryption-badge';
+                badgeDiv.id = 'chat-encryption-status';
+                const span = document.createElement('span');
+                badgeDiv.appendChild(span);
+                const profile = header.querySelector('.chat-header-profile');
+                if (profile) profile.appendChild(badgeDiv);
+            }
+            badgeDiv.innerHTML = '<span></span>';
         }
 
         // --- E2EE INITIALIZATION ---
