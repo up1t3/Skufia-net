@@ -11,12 +11,13 @@
 }
 
 .modal-content {
-    background: rgba(22, 24, 28, 0.85) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: var(--bg-panel) !important;
+    border: 1px solid var(--border-metal) !important;
     border-radius: 24px !important;
     padding: 32px !important;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 242, 255, 0.05) !important;
+    box-shadow: var(--panel-shadow) !important;
     animation: scaleInModal 0.3s forwards cubic-bezier(0.16, 1, 0.3, 1) !important;
+    color: var(--text-main);
 }
 @keyframes scaleInModal {
     from { transform: scale(0.95) translateY(10px); }
@@ -24,12 +25,11 @@
 }
 
 [data-theme="neon"] .modal-content {
-    border: 1px solid rgba(0, 242, 255, 0.3) !important;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 40px rgba(0, 242, 255, 0.15) !important;
 }
 
 .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-bottom: 1px solid var(--border-metal) !important;
     padding-bottom: 20px !important;
     margin-bottom: 24px !important;
 }
@@ -40,8 +40,8 @@
 }
 
 .close-btn-svg {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--bg-accent);
+    border: 1px solid var(--border-metal);
     color: var(--text-dim);
     cursor: pointer;
     border-radius: 50%;
@@ -54,8 +54,13 @@
 }
 
 .close-btn-svg:hover {
-    background: rgba(0, 242, 255, 0.15);
-    border-color: rgba(0, 242, 255, 0.4);
+    background: var(--bg-panel);
+    border-color: var(--accent-cyan);
     color: var(--accent-cyan);
     transform: rotate(90deg) scale(1.1);
+}
+
+/* Light Theme Modal Specific Overrides can be removed as we now use generic variables */
+[data-theme="light-ios"] .modal {
+    background: rgba(0, 0, 0, 0.2) !important;
 }

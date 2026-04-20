@@ -33,7 +33,7 @@
                     <label>ПАРОЛЬ ДЛЯ СВЯЗИ</label>
                     <div style="position: relative;">
                         <input type="password" id="login-password" required style="width: 100%; padding-right: 40px;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('login-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-color); opacity: 0.7;">👁️</button>
+                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('login-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
                     </div>
                 </div>
                 <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
@@ -57,7 +57,7 @@
                     <label>ПАРОЛЬ (ЗАПОМНИ!)</label>
                     <div style="position: relative;">
                         <input type="password" id="reg-password" required style="width: 100%; padding-right: 40px;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reg-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-color); opacity: 0.7;">👁️</button>
+                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reg-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
                     </div>
                 </div>
                 <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
@@ -84,7 +84,7 @@
                 <!-- Avatar Upload Section -->
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
                     <div class="avatar-upload-container" style="position: relative; cursor: pointer; transition: transform 0.2s ease;" onclick="document.getElementById('settings-avatar-upload').click()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=Admin&background=1f2937&color=00f2ff" alt="Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-cyan); box-shadow: 0 0 10px rgba(0,242,255,0.2);">
+                        <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=Admin&background=1f2937&color=00f2ff" alt="Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-cyan); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                         <div class="avatar-overlay" style="position: absolute; bottom: 0; right: 0; background: var(--accent-cyan); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
                             <svg viewBox="0 0 24 24" width="14" height="14" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                         </div>
@@ -95,7 +95,7 @@
 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label style="font-size: 13px; color: var(--text-dim);">Тема оформления</label>
-                    <select id="settings-theme-select" class="cyber-input" style="width: 100%; border: 1px solid var(--border-metal); background: rgba(0,0,0,0.2); color: var(--text-main); padding: 10px; border-radius: 8px; margin-top: 5px;">
+                    <select id="settings-theme-select" class="cyber-input" style="width: 100%; border: 1px solid var(--border-metal); background: var(--bg-accent); color: var(--text-main); padding: 10px; border-radius: 8px; margin-top: 5px;">
                         <option value="cyber">Skufia Cyber (Neon)</option>
                         <option value="telegram">Dark</option>
                         <option value="light-ios">Light (iOS Style)</option>
@@ -103,7 +103,7 @@
                 </div>
 
                 <!-- Toggles Section -->
-                <div style="background: rgba(0,0,0,0.15); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border-metal);">
+                <div style="background: var(--bg-accent); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border-metal);">
                     <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
                         <label style="margin: 0; font-size: 14px;">Звуковые уведомления</label>
                         <input type="checkbox" id="settings-sound-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
@@ -126,7 +126,7 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <button id="sync-contacts-btn" style="width: 100%; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; background: rgba(0,242,255,0.05); color: var(--accent-cyan); border: 1px solid rgba(0,242,255,0.2); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(0,242,255,0.1)'" onmouseout="this.style.background='rgba(0,242,255,0.05)'">
+                    <button id="sync-contacts-btn" class="cyber-btn" style="width: 100%; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px;">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
                         Синхронизация контактов
                     </button>
@@ -155,7 +155,7 @@
                 <input type="text" id="fab-contact-search" class="cyber-input" style="width: 100%; border-radius: 6px;" placeholder="Поиск контактов..." oninput="window.filterFabContacts()">
             </div>
             
-            <div id="fab-contacts-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px;">
+            <div id="fab-contacts-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 6px; padding: 5px;">
                 <!-- Contacts rendered here -->
                 <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>
             </div>
@@ -177,7 +177,7 @@
                     <input type="text" id="create-room-input" class="cyber-input" style="width: 100%; margin-top: 5px; border-radius: 8px;" placeholder="Введите название...">
                 </div>
                 
-                <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; border: 1px solid var(--border-metal);">
+                <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; background: var(--bg-accent); border-radius: 8px; padding: 12px; border: 1px solid var(--border-metal);">
                     <div>
                         <label style="margin: 0; font-size: 14px;">Публичный чат</label>
                         <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Любой участник может приглашать</div>
@@ -204,7 +204,7 @@
                 <input type="text" id="add-member-search" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="Поиск контактов..." oninput="window.filterAddMemberContacts()">
             </div>
             
-            <div id="add-member-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 5px; margin-bottom: 15px;">
+            <div id="add-member-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 8px; padding: 5px; margin-bottom: 15px;">
                 <!-- Contacts rendered here -->
                 <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>
             </div>
