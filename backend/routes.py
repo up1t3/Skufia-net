@@ -838,26 +838,35 @@ class MarketCreate(BaseModel):
     category: str = "Разное"
     location: str = "Вся сеть"
 
-@router.get('/market', response_model=List[dict])
-def get_market_listings(category: str = None, location: str = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.get('/market')
+def get_market_listings(category: str = None, location: str = None, q: str = None, page: int = 1, per_page: int = 20, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     query = db.query(MarketListing).filter(MarketListing.is_active == True)
     if category and category != "Все":
         query = query.filter(MarketListing.category == category)
     if location and location != "Везде":
         # simple 'LIKE' for locations if we want, or exact match. Exact match is simpler.
         query = query.filter(MarketListing.location == location)
+    if q:
+        search_pattern = f"%{q}%"
+        query = query.filter((MarketListing.title.ilike(search_pattern)) | (MarketListing.description.ilike(search_pattern)))
         
-    listings = query.order_by(MarketListing.created_at.desc()).all()
-    return [{
-        "id": m.id, 
-        "title": m.title, 
-        "price": m.price, 
-        "description": m.description, 
-        "category": m.category,
-        "location": m.location,
-        "seller": get_display_name(m.seller),
-        "seller_id": m.seller_id
-    } for m in listings]
+    total = query.count()
+    listings = query.order_by(MarketListing.created_at.desc()).offset((page - 1) * per_page).limit(per_page).all()
+
+    return {
+        "total": total,
+        "items": [{
+            "id": m.id,
+            "title": m.title,
+            "price": m.price,
+            "description": m.description,
+            "category": m.category,
+            "location": m.location,
+            "seller": get_display_name(m.seller),
+            "seller_id": m.seller_id,
+            "status": m.status
+        } for m in listings]
+    }
 
 @router.post('/market')
 def create_market_listing(market: MarketCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -874,6 +883,21 @@ def create_market_listing(market: MarketCreate, current_user: User = Depends(get
     db.commit()
     db.refresh(db_market)
     return {"id": db_market.id, "status": "Listing active"}
+
+class MarketStatusUpdate(BaseModel):
+    status: str
+
+@router.patch('/market/{item_id}/status')
+def update_market_status(item_id: int, update: MarketStatusUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    item = db.query(MarketListing).filter(MarketListing.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Lot not found")
+    if item.seller_id != current_user.id and (not current_user.profile or current_user.profile.rank != "admin"):
+        raise HTTPException(status_code=403, detail="Not authorized to update this lot")
+
+    item.status = update.status
+    db.commit()
+    return {"status": "success"}
 
 @router.delete('/market/{item_id}')
 def delete_market_listing(item_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

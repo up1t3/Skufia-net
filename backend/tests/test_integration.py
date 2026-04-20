@@ -196,7 +196,8 @@ def test_market_create_and_get(client, auth_headers):
     # Get listings
     response = client.get("/api/market?category=Электроника&location=Скуфград", headers=auth_headers)
     assert response.status_code == 200
-    listings = response.json()
+    data = response.json()
+    listings = data["items"]
     assert len(listings) > 0
     assert listings[0]["title"] == "Avito Скуф-Тест"
     
@@ -206,7 +207,7 @@ def test_market_create_and_get(client, auth_headers):
     
     # Verify deletion
     response = client.get("/api/market?category=Электроника&location=Скуфград", headers=auth_headers)
-    assert len(response.json()) == 0
+    assert len(response.json()["items"]) == 0
 
 def test_events_create_and_get(client, auth_headers):
     payload = {
