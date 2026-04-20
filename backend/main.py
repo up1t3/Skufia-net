@@ -205,6 +205,25 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 "payload": data.get('payload')
                             }
                             await manager.send_personal_message(relay_msg, target_id)
+                    elif data.get('type') == 'typing_indicator':
+                        target_id = data.get('target')
+                        if target_id:
+                            relay_msg = {
+                                "type": "typing_indicator",
+                                "sender_id": user_id,
+                                "typing": data.get('typing', True)
+                            }
+                            await manager.send_personal_message(relay_msg, target_id)
+                    elif data.get('type') == 'read_receipt':
+                        target_id = data.get('target')
+                        if target_id:
+                            relay_msg = {
+                                "type": "read_receipt",
+                                "sender_id": user_id,
+                                "message_id": data.get('message_id'),
+                                "room_id": data.get('room_id')
+                            }
+                            await manager.send_personal_message(relay_msg, target_id)
                 except json.JSONDecodeError:
                     pass
         except WebSocketDisconnect:
