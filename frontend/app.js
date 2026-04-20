@@ -68,7 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 privateKey: null
             },
             /** @type {Object.<number, CryptoKey>} */
-            sessionKeys: {} // Map of roomId -> CryptoKey (AES)
+            sessionKeys: {}, // Map of roomId -> CryptoKey (AES)
+            currentFolderId: 'all',
+            folders: []
         },
         logs: [],
         audioEnabled: true,
@@ -316,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewId === 'wiki') loadWiki();
             if (viewId === 'trade') loadMarket();
             if (viewId === 'registry') loadRegistry();
-            if (viewId === 'messages') loadChatRooms();
+            if (viewId === 'messages') { loadChatRooms(); if (window.loadFolders) window.loadFolders(); }
             if (viewId === 'events') loadEvents();
             if (viewId === 'dashboard') loadDashboard();
         }
@@ -1218,66 +1220,172 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const rooms = await apiRequest('/chat/rooms');
             state.chat.rooms = rooms;
-            list.innerHTML = '';
-            // @ts-ignore
-            rooms.forEach(room => {
-                const div = document.createElement('div');
-                div.className = `sidebar-item ${state.chat.currentRoomId === room.id ? 'active' : ''}`;
-                div.dataset.name = (room.name || '').toLowerCase();
-                
-                const avatarDiv = document.createElement('div');
-                avatarDiv.className = 'sidebar-item-avatar';
-                
-                if (room.avatar_url) {
-                    const img = document.createElement('img');
-                    img.src = room.avatar_url;
-                    img.alt = 'AV';
-                    img.style.width = '100%';
-                    img.style.height = '100%';
-                    img.style.objectFit = 'cover';
-                    avatarDiv.appendChild(img);
-                } else {
-                    const initial = room.name ? room.name.charAt(0).toUpperCase() : '?';
-                    avatarDiv.textContent = initial;
-                    avatarDiv.classList.add('dynamic-avatar');
-                    const charCode = initial.charCodeAt(0) || 0;
-                    const hue = (charCode * 137) % 360;
-                    avatarDiv.style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 30%))`;
-                    avatarDiv.style.color = '#fff';
-                    avatarDiv.style.display = 'flex';
-                    avatarDiv.style.alignItems = 'center';
-                    avatarDiv.style.justifyContent = 'center';
-                    avatarDiv.style.fontSize = '20px';
-                    avatarDiv.style.fontWeight = 'bold';
-                    avatarDiv.style.textShadow = '0 1px 3px rgba(0,0,0,0.5)';
-                }
-
-                const infoDiv = document.createElement('div');
-                infoDiv.className = 'sidebar-item-info';
-
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'sidebar-item-name';
-                nameDiv.textContent = room.name;
-
-                const lastMsgDiv = document.createElement('div');
-                lastMsgDiv.className = 'sidebar-item-last-msg';
-                lastMsgDiv.textContent = room.last_message || 'Нет сообщений';
-
-                infoDiv.appendChild(nameDiv);
-                infoDiv.appendChild(lastMsgDiv);
-
-                const statusSpan = document.createElement('span');
-                statusSpan.className = `status-dot ${room.is_online ? 'online' : ''}`;
-                statusSpan.style.display = 'none'; // User requested to hide this green dot
-
-                div.appendChild(avatarDiv);
-                div.appendChild(infoDiv);
-                div.appendChild(statusSpan);
-                div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
-                list.appendChild(div);
-            });
+            renderChatRooms();
         } catch (e) { addLog('Failed to load chat channels', 'error'); }
     }
+
+    function renderChatRooms() {
+        const list = document.getElementById('chat-rooms-list');
+        if (!list) return;
+        list.innerHTML = '';
+        
+        let roomsToRender = state.chat.rooms || [];
+        if (state.chat.currentFolderId !== 'all') {
+            const folder = state.chat.folders.find(f => f.id == state.chat.currentFolderId);
+            if (folder && folder.rooms) {
+                roomsToRender = roomsToRender.filter(r => folder.rooms.includes(r.id));
+            }
+        }
+
+        // @ts-ignore
+        roomsToRender.forEach(room => {
+            const div = document.createElement('div');
+            div.className = `sidebar-item ${state.chat.currentRoomId === room.id ? 'active' : ''}`;
+            div.dataset.name = (room.name || '').toLowerCase();
+            
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'sidebar-item-avatar';
+            
+            if (room.avatar_url) {
+                const img = document.createElement('img');
+                img.src = room.avatar_url;
+                img.alt = 'AV';
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                avatarDiv.appendChild(img);
+            } else {
+                const initial = room.name ? room.name.charAt(0).toUpperCase() : '?';
+                avatarDiv.textContent = initial;
+                avatarDiv.classList.add('dynamic-avatar');
+                const charCode = initial.charCodeAt(0) || 0;
+                const hue = (charCode * 137) % 360;
+                avatarDiv.style.background = `linear-gradient(135deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 30%))`;
+                avatarDiv.style.color = '#fff';
+                avatarDiv.style.display = 'flex';
+                avatarDiv.style.alignItems = 'center';
+                avatarDiv.style.justifyContent = 'center';
+                avatarDiv.style.fontSize = '20px';
+                avatarDiv.style.fontWeight = 'bold';
+                avatarDiv.style.textShadow = '0 1px 3px rgba(0,0,0,0.5)';
+            }
+
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'sidebar-item-info';
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'sidebar-item-name';
+            nameDiv.textContent = room.name;
+
+            const lastMsgDiv = document.createElement('div');
+            lastMsgDiv.className = 'sidebar-item-last-msg';
+            lastMsgDiv.textContent = room.last_message || 'Нет сообщений';
+
+            infoDiv.appendChild(nameDiv);
+            infoDiv.appendChild(lastMsgDiv);
+
+            const statusSpan = document.createElement('span');
+            statusSpan.className = `status-dot ${room.is_online ? 'online' : ''}`;
+            statusSpan.style.display = 'none';
+
+            div.appendChild(avatarDiv);
+            div.appendChild(infoDiv);
+            div.appendChild(statusSpan);
+            div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
+            list.appendChild(div);
+        });
+    }
+
+    // --- FOLDERS LOGIC ---
+    window.openFolderModal = function() {
+        const input = document.getElementById('folder-name-input');
+        if(input) input.value = '';
+        const container = document.getElementById('folder-rooms-selection');
+        if (container) {
+            container.innerHTML = '';
+            if (!state.chat.rooms || state.chat.rooms.length === 0) {
+               container.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-dim)">Нет доступных чатов</div>';
+            } else {
+                state.chat.rooms.forEach(room => {
+                    const div = document.createElement('div');
+                    div.style.display = 'flex';
+                    div.style.alignItems = 'center';
+                    div.style.gap = '10px';
+                    div.style.padding = '8px';
+                    div.style.borderBottom = '1px solid var(--border-metal)';
+                    
+                    div.innerHTML = `<input type="checkbox" id="folder-room-${room.id}" value="${room.id}" style="width:16px; height:16px; cursor:pointer;">
+                        <label for="folder-room-${room.id}" style="color:var(--text-main); cursor:pointer;">${room.name}</label>`;
+                    container.appendChild(div);
+                });
+            }
+        }
+        document.getElementById('folder-modal').style.display = 'flex';
+    };
+
+    window.submitFolderCreate = async function() {
+        const name = document.getElementById('folder-name-input').value.trim();
+        if (!name) return addLog('Введите имя папки', 'error');
+        
+        const checkboxes = document.querySelectorAll('#folder-rooms-selection input[type="checkbox"]:checked');
+        const roomIds = Array.from(checkboxes).map(c => parseInt(c.value));
+        
+        try {
+            const resp = await apiRequest('/chat/folders', 'POST', { name: name, rooms: roomIds });
+            addLog('Папка ' + name + ' создана', 'success');
+            document.getElementById('folder-modal').style.display = 'none';
+            await loadFolders();
+        } catch(e) {
+            addLog('Ошибка создания папки', 'error');
+        }
+    };
+
+    window.loadFolders = async function() {
+        try {
+            state.chat.folders = await apiRequest('/chat/folders');
+            renderFoldersTabs();
+        } catch(e) {
+            console.error('Failed to load folders:', e);
+        }
+    }
+
+    function renderFoldersTabs() {
+        const tabsContainer = document.getElementById('chat-folders-tabs');
+        if (!tabsContainer) return;
+        
+        tabsContainer.innerHTML = '';
+        
+        const allTab = document.createElement('div');
+        allTab.className = 'folder-tab' + (state.chat.currentFolderId === 'all' ? ' active' : '');
+        allTab.setAttribute('onclick', "window.selectFolder('all', this)");
+        allTab.innerText = 'Все чаты';
+        tabsContainer.appendChild(allTab);
+        
+        (state.chat.folders || []).forEach(folder => {
+             const fTab = document.createElement('div');
+             fTab.className = 'folder-tab' + (state.chat.currentFolderId == folder.id ? ' active' : '');
+             fTab.setAttribute('onclick', "window.selectFolder(" + folder.id + ", this)");
+             fTab.innerText = folder.name;
+             tabsContainer.appendChild(fTab);
+        });
+        
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-folder-btn';
+        addBtn.setAttribute('onclick', "window.openFolderModal()");
+        addBtn.title = "Создать папку";
+        addBtn.innerText = "+";
+        tabsContainer.appendChild(addBtn);
+        
+        renderChatRooms();
+    }
+
+    window.selectFolder = function(folderId, element) {
+        state.chat.currentFolderId = folderId;
+        const tabs = document.querySelectorAll('#chat-folders-tabs .folder-tab');
+        tabs.forEach(t => t.classList.remove('active'));
+        if (element) element.classList.add('active');
+        renderChatRooms();
+    };
 
     /** 
      * @param {number} roomId 
@@ -1670,7 +1778,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 try {
                     const room = await apiRequest('/chat/rooms', 'POST', { name: "Private", room_type: 'private', target_user_id: u.id });
                     addLog(room.is_existing ? "Чат уже существует" : "Личный чат создан", 'success');
-                    loadChatRooms();
+                    await window.loadChatRooms();
+                    window.selectChatRoom(room.id, u.username, 'private', u.id, 'member');
                 } catch(e) {
                     addLog('Ошибка создания чата', 'error');
                 }
@@ -2212,9 +2321,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settings-modal');
     const openSettingsBtn = document.getElementById('open-settings-btn');
     if (openSettingsBtn && settingsModal) {
-        openSettingsBtn.addEventListener('click', (e) => {
+        openSettingsBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             settingsModal.style.display = 'flex';
+            
+            // Fetch profile data
+            try {
+                const profile = await apiRequest('/me');
+                if (profile && profile.handle) {
+                    const handleInput = document.getElementById('settings-handle');
+                    if (handleInput) handleInput.value = profile.handle.replace('@', '');
+                }
+            } catch (err) {
+                console.error('Failed to load profile details', err);
+            }
+        });
+    }
+
+    const handleInput = document.getElementById('settings-handle');
+    if (handleInput) {
+        handleInput.addEventListener('blur', async (e) => {
+            let newVal = e.target.value.trim();
+            if (newVal && !newVal.startsWith('@')) {
+                newVal = '@' + newVal;
+            }
+            try {
+                await apiRequest('/me/update', 'POST', { handle: newVal });
+                addLog('Короткое имя обновлено', 'success');
+            } catch (err) {
+                addLog('Ошибка при сохранении имени', 'error');
+            }
         });
     }
 
@@ -2307,6 +2443,15 @@ document.addEventListener('DOMContentLoaded', () => {
             chatLayout.style.cssText = 'display:flex;flex:1;height:100%;min-height:0;overflow:hidden;border:none;border-radius:0;';
         }
 
+        // --- SKUFENGER AUTH BRANDING ---
+        const authTitle = document.getElementById('auth-title');
+        const loginBtn = document.querySelector('#login-form button[type="submit"]');
+        const regBtn = document.querySelector('#register-form button[type="submit"]');
+        
+        if (authTitle) authTitle.textContent = 'ВХОД В SKUFENGER';
+        if (loginBtn) loginBtn.textContent = 'ВОЙТИ В МЕССЕНДЖЕР';
+        if (regBtn) regBtn.textContent = 'СОЗДАТЬ АККАУНТ';
+
         // Force the chat view right away
         switchView('messages');
 
@@ -2320,6 +2465,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.loadMarket = loadMarket;
     window.loadRegistry = loadRegistry;
     window.loadChatRooms = loadChatRooms;
+    window.loadFolders = loadFolders;
+    window.renderChatRooms = renderChatRooms;
     window.loadTopicPosts = loadTopicPosts;
     window.likePost = likePost;
     window.likeWiki = likeWiki;
@@ -2567,3 +2714,66 @@ window.submitAddMembers = async function() {
         addLog('Ошибка при добавлении', 'error');
     }
 };
+
+// --- CREATOR PLAQUE AND MATRIX BRANDING ---
+window.openCreatorPlaque = function(e) {
+    if (e) e.preventDefault();
+    document.getElementById('creator-plaque-modal').style.display = 'flex';
+};
+
+// Matrix Scramble Text Effect function
+class ScrambleText {
+    constructor(el, delay = 0) {
+        this.el = el;
+        // Matrix style: Latin, Cyrillic, Numbers, and classic Katakana
+        this.chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZАБВГДЕЗИКЛМНОПРСТУФХЦЧШЩЮЯ0123456789アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン';
+        this.original = el.getAttribute('data-text') || el.innerText;
+        this.delay = delay;
+    }
+    start() {
+        // Immediately obfuscate the text so original isn't visible during the delay
+        let initialScrambled = '';
+        for (let i = 0; i < this.original.length; i++) {
+            initialScrambled += this.chars[Math.floor(Math.random() * this.chars.length)];
+        }
+        this.el.innerText = initialScrambled;
+
+        setTimeout(() => {
+            let iteration = 0;
+            const maxIterations = 20;
+            const interval = setInterval(() => {
+                let scrambled = '';
+                for (let i = 0; i < this.original.length; i++) {
+                    if (i < iteration / 2) {
+                        scrambled += this.original[i];
+                    } else {
+                        scrambled += this.chars[Math.floor(Math.random() * this.chars.length)];
+                    }
+                }
+                this.el.innerText = scrambled;
+                if (iteration >= maxIterations) {
+                    clearInterval(interval);
+                    this.el.innerText = this.original;
+                }
+                iteration++;
+            }, 30);
+        }, this.delay);
+    }
+}
+
+// Observe brand element when it becomes visible
+if (window.IntersectionObserver) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const els = entry.target.querySelectorAll('.scramble-text');
+                els.forEach((el, index) => {
+                    const extraDelay = index * 400; // stagger start times
+                    new ScrambleText(el, 200 + extraDelay).start();
+                });
+            }
+        });
+    });
+    const modal = document.getElementById('settings-modal');
+    if (modal) observer.observe(modal);
+}

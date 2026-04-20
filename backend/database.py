@@ -33,6 +33,8 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     telegram_id = Column(String, unique=True, nullable=True)
     public_key = Column(Text, nullable=True) # RSA Public Key for E2EE
+    handle = Column(String, unique=True, nullable=True) # Short username like @up1t3rV
+    is_superadmin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class Profile(Base):
@@ -96,6 +98,22 @@ class ChatRoomMember(Base):
     role = Column(String, default='member') # admin, member, banned
     unread_count = Column(Integer, default=0)
     joined_at = Column(DateTime, default=datetime.utcnow)
+
+class ChatFolder(Base):
+    __tablename__ = 'chat_folders'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    name = Column(String, nullable=False)
+    icon = Column(String, nullable=True) # Emoji icon or SVG ref
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ChatFolderMember(Base):
+    __tablename__ = 'chat_folder_members'
+    id = Column(Integer, primary_key=True, index=True)
+    folder_id = Column(Integer, ForeignKey('chat_folders.id', ondelete='CASCADE'))
+    room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'))
+    added_at = Column(DateTime, default=datetime.utcnow)
 
 # --- ENTERPRISE MODULES ---
 

@@ -892,7 +892,7 @@ body.super-user .nav-btn.active {
 }
 
 .sidebar-header {
-    padding: 0 16px;
+    padding: 0 20px;
     background: rgba(0, 0, 0, 0.15);
     border-top: none;
     border-bottom: 1px solid var(--border-metal);
@@ -1172,6 +1172,48 @@ body.super-user .nav-btn.active {
     display: flex;
     flex-direction: column;
     justify-content: center;
+}
+
+/* --- MODAL SPECIFIC STYLES --- */
+.modal-header h2 {
+    font-size: 1.2rem;
+    margin: 0;
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+/* Action Menu Items (New Chat Modal) */
+.menu-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+    padding: 10px 15px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-metal);
+    border-radius: 12px;
+    color: var(--text-main);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: var(--transition);
+}
+
+.menu-action-btn:hover {
+    background: var(--bg-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.menu-action-btn .icon-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
 #chat-header-title {
@@ -1548,6 +1590,30 @@ body.super-user .nav-btn.active {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 20px;
+}
+
+.market-list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.market-list-view .market-card {
+    flex-direction: row;
+    height: 140px;
+}
+
+.market-list-view .market-card-image-container {
+    width: 200px;
+    height: 100%;
+    aspect-ratio: unset;
+}
+
+.market-list-view .market-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .market-card {
@@ -2086,4 +2152,43 @@ body.super-user .nav-btn.active {
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: translateY(0); }
+}
+.chat-folders-tabs {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid var(--border-metal);
+}
+.chat-folders-tabs::-webkit-scrollbar {
+    height: 0;
+}
+.folder-tab {
+    padding: 6px 12px;
+    border-radius: 14px;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-dim);
+    transition: var(--transition);
+}
+.folder-tab.active {
+    background: var(--accent-cyan);
+    color: #fff;
+    font-weight: bold;
+}
+.folder-tab:hover:not(.active) {
+    background: rgba(0, 242, 255, 0.1);
+}
+.add-folder-btn {
+    background: transparent;
+    border: none;
+    color: var(--accent-cyan);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
 }

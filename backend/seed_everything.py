@@ -22,7 +22,13 @@ def seed_data():
     db.commit()
 
     print("Creating initial system administrator...")
-    admin = User(username="Admin_Skuf", email="overseer@skufia.net", hashed_password=DEFAULT_PASSWORD)
+    admin = User(
+        username="Vladimir Popov", 
+        email="overseer@skufia.net", 
+        hashed_password=DEFAULT_PASSWORD,
+        handle="@up1t3rV",
+        is_superadmin=True
+    )
     db.add(admin)
     db.commit()
     db.refresh(admin)
@@ -30,7 +36,7 @@ def seed_data():
     # Create admin profile
     admin_prof = db.query(Profile).filter(Profile.user_id == admin.id).first()
     if not admin_prof:
-        admin_prof = Profile(user_id=admin.id, rank="Верховный Скуф", karma=9999, bio="Хранитель цифрового архива.")
+        admin_prof = Profile(user_id=admin.id, nickname="Vladimir Popov", rank="Верховный Скуф", karma=9999, bio="Создатель и Хранитель Skufia-Net.")
         db.add(admin_prof)
 
     # 2. Create Archetypal Users

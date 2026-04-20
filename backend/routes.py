@@ -60,6 +60,7 @@ class NotificationCreate(BaseModel):
 
 class ProfileUpdate(BaseModel):
     username: str = None
+    handle: str = None
     nickname: str = None
     bio: str = None
     rank: str = None
@@ -241,6 +242,8 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
     return {
         "id": current_user.id,
         "username": current_user.username,
+        "handle": current_user.handle if current_user.handle else "",
+        "is_superadmin": current_user.is_superadmin,
         "nickname": profile.nickname if profile else "",
         "display_name": profile.nickname if (profile and profile.nickname) else current_user.username,
         "email": current_user.email,
@@ -261,6 +264,9 @@ def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_curr
             raise HTTPException(status_code=400, detail="Callsign already taken by another operative")
         user_db.username = data.username
 
+    if data.handle is not None:
+        user_db.handle = data.handle
+
     # 2. Update Profile table
     profile = db.query(Profile).filter(Profile.user_id == user_db.id).first()
     if not profile:
@@ -275,6 +281,8 @@ def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_curr
     return {
         "id": user_db.id,
         "username": user_db.username,
+        "handle": user_db.handle if user_db.handle else "",
+        "is_superadmin": user_db.is_superadmin,
         "nickname": profile.nickname,
         "display_name": profile.nickname if profile.nickname else user_db.username,
         "email": user_db.email,
@@ -358,13 +366,18 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
         room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
         if not room: continue
         
+        # Chronological sort logic
+        last_msg = db.query(Message).filter(Message.room_id == room.id).order_by(Message.created_at.desc()).first()
+        last_activity = last_msg.created_at.timestamp() if last_msg and last_msg.created_at else room.created_at.timestamp()
+
         room_data = {
             "id": room.id, 
             "name": room.name, 
             "type": room.room_type, 
             "my_role": m.role,
             "avatar_url": None,
-            "other_user_id": None
+            "other_user_id": None,
+            "last_activity": last_activity
         }
         
         if room.room_type == 'private':
@@ -384,7 +397,54 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
                         
         rooms_data.append(room_data)
         
+    rooms_data.sort(key=lambda x: x["last_activity"], reverse=True)
     return rooms_data
+
+class FolderCreate(BaseModel):
+    name: str
+    icon: Optional[str] = None
+    rooms: List[int] = []
+
+@router.post('/chat/folders')
+def create_folder(req: FolderCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from database import ChatFolder, ChatFolderMember
+    db_folder = ChatFolder(user_id=current_user.id, name=req.name, icon=req.icon)
+    db.add(db_folder)
+    db.commit()
+    db.refresh(db_folder)
+    
+    for rid in req.rooms:
+        mem = ChatFolderMember(folder_id=db_folder.id, room_id=rid)
+        db.add(mem)
+    db.commit()
+    
+    return {"id": db_folder.id, "status": "Folder created"}
+
+@router.get('/chat/folders')
+def get_folders(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from database import ChatFolder, ChatFolderMember
+    folders = db.query(ChatFolder).filter(ChatFolder.user_id == current_user.id).order_by(ChatFolder.order_index).all()
+    result = []
+    for f in folders:
+        r_members = db.query(ChatFolderMember.room_id).filter(ChatFolderMember.folder_id == f.id).all()
+        rooms = [r[0] for r in r_members]
+        result.append({
+            "id": f.id,
+            "name": f.name,
+            "icon": f.icon,
+            "rooms": rooms
+        })
+    return result
+
+@router.delete('/chat/folders/{folder_id}')
+def delete_folder(folder_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from database import ChatFolder
+    folder = db.query(ChatFolder).filter(ChatFolder.id == folder_id, ChatFolder.user_id == current_user.id).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+    db.delete(folder)
+    db.commit()
+    return {"status": "success"}
 
 @router.post('/chat/rooms')
 def create_room(room: RoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
