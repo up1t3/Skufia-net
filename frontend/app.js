@@ -1307,7 +1307,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="file" id="file-input" style="display:none" onchange="uploadFileAndSend()">
                         <textarea id="chat-input" rows="1" placeholder="Сообщение..." oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.sendChatMessage(); }"></textarea>
                         
-                        <div class="action-buttons" style="display: flex; align-items: flex-end; padding-bottom: 2px; gap: 4px;">
+                        <div class="action-buttons" style="display: flex; align-items: flex-end; gap: 4px;">
                             <button class="capsule-btn" title="Смайлы">
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                             </button>

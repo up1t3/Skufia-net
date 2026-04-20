@@ -961,7 +961,7 @@ body.super-user .nav-btn.active {
     width: 56px;
     height: 56px;
     border-radius: 50%;
-    background: var(--accent-gradient, var(--accent-color));
+    background: var(--accent-gradient, var(--accent-cyan));
     color: white;
     border: none;
     display: flex;
@@ -1339,12 +1339,13 @@ body.super-user .nav-btn.active {
     color: var(--text-main);
     font-family: var(--font-main);
     font-size: 14px;
-    padding: 8px 4px;
+    padding: 6px 4px;
+    box-sizing: border-box;
     outline: none;
     resize: none;
     overflow-y: auto;
     max-height: 120px;
-    min-height: 36px;
+    min-height: 32px;
     line-height: 1.4;
     align-self: flex-end;
 }
