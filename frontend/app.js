@@ -47,7 +47,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const API_BASE_URL = isLocalDev ? 'http://localhost:8007/api' : '/api';
 
+    // --- Utility: Debounce ---
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
     // --- State Management ---
+    window.marketState = {
+        page: 1,
+        layout: 'grid',
+        filters: { q: '', cat: 'Все', loc: 'Везде', sort: 'newest', min: null, max: null }
+    };
+
     const state = {
         currentView: 'home',
         user: { 
@@ -414,6 +433,33 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error("Rating rejected", e); }
     }
 
+    // --- MARKET EVENT LISTENERS ---
+    const marketSearchInput = document.getElementById('market-search');
+    if (marketSearchInput) {
+        marketSearchInput.addEventListener('input', debounce((e) => {
+            window.marketState.filters.q = e.target.value;
+            window.marketState.page = 1;
+            loadMarket();
+        }, 300));
+    }
+    const marketFilterCat = document.getElementById('market-filter-cat');
+    if (marketFilterCat) {
+        marketFilterCat.addEventListener('change', (e) => {
+            window.marketState.filters.cat = e.target.value;
+            window.marketState.page = 1;
+            loadMarket();
+        });
+    }
+    const marketFilterLoc = document.getElementById('market-filter-loc');
+    if (marketFilterLoc) {
+        marketFilterLoc.addEventListener('change', (e) => {
+            window.marketState.filters.loc = e.target.value;
+            window.marketState.page = 1;
+            loadMarket();
+        });
+    }
+
+
     // --- MODULE: WIKI ---
     async function loadWiki() {
         const container = document.querySelector('.wiki-content');
@@ -484,17 +530,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.querySelector('.market-grid');
         if (!container) return;
         
-        // @ts-ignore
-        const catFilter = document.getElementById('market-filter-cat')?.value || 'Все';
-        // @ts-ignore
-        const locFilter = document.getElementById('market-filter-loc')?.value || 'Везде';
-        
         container.innerHTML = '<div class="system-msg">Scanning trade frequencies...</div>';
         try {
-            const listings = await apiRequest(`/market?category=${catFilter}&location=${locFilter}`);
+            const params = new URLSearchParams();
+            if (window.marketState.filters.cat && window.marketState.filters.cat !== 'Все') {
+                params.append('category', window.marketState.filters.cat);
+            }
+            if (window.marketState.filters.loc && window.marketState.filters.loc !== 'Везде') {
+                params.append('location', window.marketState.filters.loc);
+            }
+            if (window.marketState.filters.q) {
+                params.append('q', window.marketState.filters.q);
+            }
+            params.append('page', window.marketState.page.toString());
+
+            const data = await apiRequest(`/market?${params.toString()}`);
+            const listings = data.items || [];
+
             container.innerHTML = '';
             if (!listings || listings.length === 0) {
                 container.innerHTML = '<div class="system-msg">MARKET_EMPTY: Нет активных лотов на бирже.</div>';
+                if(window.renderMarketPagination) window.renderMarketPagination(1, 1);
                 return;
             }
             listings.forEach(/** @param {any} item */ item => {
@@ -586,9 +642,68 @@ document.addEventListener('DOMContentLoaded', () => {
                 div.onclick = () => openListingModal(item.id);
                 container.appendChild(div);
             });
+
+            if(window.renderMarketPagination) {
+                window.renderMarketPagination(data.page || 1, data.pages || 1);
+            }
         } catch (e) {
             container.innerHTML = '<div class="system-msg">ERROR: Не удалось синхронизировать данные биржи.</div>';
         }
+    }
+
+    window.renderMarketPagination = function(currentPage, totalPages) {
+        let paginationContainer = document.querySelector('.market-pagination');
+        if (!paginationContainer) {
+            paginationContainer = document.createElement('div');
+            paginationContainer.className = 'market-pagination';
+            paginationContainer.style.display = 'flex';
+            paginationContainer.style.justifyContent = 'center';
+            paginationContainer.style.alignItems = 'center';
+            paginationContainer.style.gap = '15px';
+            paginationContainer.style.marginTop = '20px';
+
+            const viewTrade = document.getElementById('view-trade');
+            if(viewTrade) {
+                viewTrade.appendChild(paginationContainer);
+            }
+        }
+
+        paginationContainer.innerHTML = '';
+
+        if (totalPages <= 1) return; // Hide if only 1 page
+
+        const prevBtn = document.createElement('button');
+        prevBtn.className = 'cyber-btn-small';
+        prevBtn.textContent = 'НАЗАД';
+        prevBtn.disabled = currentPage <= 1;
+        if(currentPage <= 1) prevBtn.style.opacity = '0.5';
+        prevBtn.onclick = () => {
+            if (window.marketState.page > 1) {
+                window.marketState.page--;
+                loadMarket();
+            }
+        };
+
+        const pageText = document.createElement('span');
+        pageText.style.color = 'var(--text-main)';
+        pageText.style.fontFamily = 'var(--font-mono)';
+        pageText.textContent = `СТРАНИЦА ${currentPage} / ${totalPages}`;
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = 'cyber-btn-small';
+        nextBtn.textContent = 'ВПЕРЕД';
+        nextBtn.disabled = currentPage >= totalPages;
+        if(currentPage >= totalPages) nextBtn.style.opacity = '0.5';
+        nextBtn.onclick = () => {
+            if (window.marketState.page < totalPages) {
+                window.marketState.page++;
+                loadMarket();
+            }
+        };
+
+        paginationContainer.appendChild(prevBtn);
+        paginationContainer.appendChild(pageText);
+        paginationContainer.appendChild(nextBtn);
     }
 
     window.toggleFavorite = async function(event, itemId) {
@@ -614,10 +729,53 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('listing-detail-price').textContent = item.price;
             document.getElementById('listing-detail-desc').textContent = item.description || 'Нет описания.';
 
-            let statusText = 'АКТИВЕН';
-            if (item.status === 'sold') statusText = 'ПРОДАНО';
-            if (item.status === 'reserved') statusText = 'В РЕЗЕРВЕ';
-            document.getElementById('listing-detail-status').textContent = `Статус: ${statusText}`;
+            const statusContainer = document.getElementById('listing-detail-status');
+            if (item.seller_id === state.user.id) {
+                const select = document.createElement('select');
+                select.id = 'modal-status-edit';
+                select.className = 'cyber-input';
+                select.style.padding = '5px';
+                select.style.fontSize = '12px';
+                select.style.marginTop = '5px';
+
+                const optActive = document.createElement('option');
+                optActive.value = 'active';
+                optActive.textContent = 'АКТИВЕН';
+
+                const optReserved = document.createElement('option');
+                optReserved.value = 'reserved';
+                optReserved.textContent = 'В РЕЗЕРВЕ';
+
+                const optSold = document.createElement('option');
+                optSold.value = 'sold';
+                optSold.textContent = 'ПРОДАНО';
+
+                select.appendChild(optActive);
+                select.appendChild(optReserved);
+                select.appendChild(optSold);
+
+                select.value = item.status || 'active';
+
+                select.onchange = async (e) => {
+                    try {
+                        await apiRequest(`/market/${item.id}/status`, 'PATCH', { status: e.target.value });
+                        addLog('Статус лота обновлен', 'success');
+                        loadMarket(); // Refresh list in background
+                    } catch (err) {
+                        addLog('Ошибка при обновлении статуса', 'error');
+                        // Revert selection on error
+                        select.value = item.status || 'active';
+                    }
+                };
+
+                statusContainer.innerHTML = 'Статус: ';
+                statusContainer.appendChild(select);
+            } else {
+                let statusText = 'АКТИВЕН';
+                if (item.status === 'sold') statusText = 'ПРОДАНО';
+                if (item.status === 'reserved') statusText = 'В РЕЗЕРВЕ';
+                statusContainer.textContent = `Статус: ${statusText}`;
+            }
 
             const gallery = document.getElementById('listing-detail-gallery');
             gallery.innerHTML = '';
