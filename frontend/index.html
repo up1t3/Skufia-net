@@ -325,14 +325,15 @@
                     <h2 class="view-title">💰 БИРЖА СКУФОВ</h2>
                     <div class="action-bar">
                         <button class="btn-primary" id="btn-market-new" onclick="toggleMarketForm()">+ ПРЕДЛОЖИТЬ ЛОТ</button>
-                        <select id="market-filter-cat" class="input-text" style="width: auto;" onchange="loadMarket()">
+                        <input type="text" id="market-search" class="input-text" placeholder="Поиск..." style="width: 200px;" />
+                        <select id="market-filter-cat" class="input-text" style="width: auto;">
                             <option value="Все">Все тематики</option>
                             <option value="Электроника">Электроника</option>
                             <option value="Снаряжение">Снаряжение</option>
                             <option value="Услуги">Услуги</option>
                             <option value="Разное">Разное</option>
                         </select>
-                        <select id="market-filter-loc" class="input-text" style="width: auto;" onchange="loadMarket()">
+                        <select id="market-filter-loc" class="input-text" style="width: auto;">
                             <option value="Везде">Вся сеть (Везде)</option>
                             <option value="Москва">Москва</option>
                             <option value="Скуфград">Скуфград</option>
