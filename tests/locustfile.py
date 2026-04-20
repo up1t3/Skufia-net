@@ -1,4 +1,5 @@
 import json
+import random
 import time
 import uuid
 import websocket
@@ -54,6 +55,18 @@ class WebSocketUser(User):
         json_message = json.dumps(message)
 
         start_time = time.time()
+
+        # Simulating a 5% packet drop (Chaos Testing)
+        if random.random() < 0.05:
+            events.request.fire(
+                request_type="ws_send",
+                name="send_json",
+                response_time=int((time.time() - start_time) * 1000),
+                response_length=0,
+                exception=Exception("Chaos Proxy: Simulated Packet Drop"),
+            )
+            return
+
         try:
             self.ws.send(json_message)
             events.request.fire(
