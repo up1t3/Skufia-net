@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Use relative port for WebSocket (proxied via Nginx)
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const host = window.location.host; // includes port
+    const host = isLocalDev ? 'localhost:8007' : window.location.host; 
     const WS_URL = protocol + host;
 
     // --- Audio Engine ---
@@ -2078,6 +2078,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     async function syncGlobalAlerts() {
+        if (!state.user.token) return; // Prevent 401 polling
         const banner = document.getElementById('global-alert-banner');
         if (!banner) return;
         try {
