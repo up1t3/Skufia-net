@@ -141,8 +141,8 @@ def seed_data():
 
     # 6. Seed Market Listings
     market_items = [
-        {"title": "Монитор Sony Trinitron", "desc": "В отличном состоянии, легкий засвет по углам.", "price": "Обмен на чай или 2000р", "seller": "CRT_Guru"},
-        {"title": "Механическая клавиатура IBM Model M", "desc": "Звучит как пулемет. Состояние: музейное.", "price": "5000р", "seller": "Old_School_Coder"},
+        {"title": "Монитор Sony Trinitron", "desc": "В отличном состоянии, легкий засвет по углам.", "price": 2000.0, "seller": "CRT_Guru"},
+        {"title": "Механическая клавиатура IBM Model M", "desc": "Звучит как пулемет. Состояние: музейное.", "price": 5000.0, "seller": "Old_School_Coder"},
     ]
     for item in market_items:
         user = db.query(User).filter(User.username == item['seller']).first()

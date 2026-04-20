@@ -66,6 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
         layout: 'grid',
         filters: { q: '', cat: 'Все', loc: 'Везде', sort: 'newest', min: null, max: null }
     };
+    window.updatePriceFilter = debounce(function(e, type) { 
+        window.marketState.filters[type] = e.target.value; 
+        window.marketState.page = 1; 
+        loadMarket(); 
+    }, 500);
+    window.updateMarketSort = function(e) { window.marketState.filters.sort = e.target.value; window.marketState.page = 1; loadMarket(); };
+    window.setMarketLayout = function(layout) { window.marketState.layout = layout; loadMarket(); };
 
     const state = {
         currentView: 'home',
@@ -530,6 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.querySelector('.market-grid');
         if (!container) return;
         
+        container.className = 'market-grid ' + (window.marketState.layout === 'list' ? 'market-list-view' : '');
         container.innerHTML = '<div class="system-msg">Scanning trade frequencies...</div>';
         try {
             const params = new URLSearchParams();
@@ -541,6 +549,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (window.marketState.filters.q) {
                 params.append('q', window.marketState.filters.q);
+            }
+            if (window.marketState.filters.min) {
+                params.append('min_price', window.marketState.filters.min);
+            }
+            if (window.marketState.filters.max) {
+                params.append('max_price', window.marketState.filters.max);
+            }
+            if (window.marketState.filters.sort) {
+                params.append('sort', window.marketState.filters.sort);
             }
             params.append('page', window.marketState.page.toString());
 

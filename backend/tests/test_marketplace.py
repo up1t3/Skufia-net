@@ -89,7 +89,7 @@ def test_market_pagination(client, auth_headers1, setup_db):
             MarketListing(
                 title=f"Mock Item {i}",
                 description="desc",
-                price="100",
+                price=100.0,
                 category="Разное",
                 location="Вся сеть",
                 seller_id=user.id
@@ -112,7 +112,7 @@ def test_market_pagination(client, auth_headers1, setup_db):
         db.add(MarketListing(
             title=f"Mock Item {i}",
             description="desc",
-            price="100",
+            price=100.0,
             category="Разное",
             location="Вся сеть",
             seller_id=user.id
@@ -134,7 +134,7 @@ def test_market_search(client, auth_headers1, setup_db):
     db.add(MarketListing(
         title="Редкий девайс",
         description="Очень редкий",
-        price="5000",
+        price=5000.0,
         category="Разное",
         location="Вся сеть",
         seller_id=user.id
@@ -160,7 +160,7 @@ def test_market_status_update(client, auth_headers1, auth_headers2, setup_db):
     listing = MarketListing(
         title="To be sold",
         description="status test",
-        price="100",
+        price=100.0,
         category="Разное",
         location="Вся сеть",
         seller_id=user.id
