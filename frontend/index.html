@@ -31,7 +31,10 @@
                 </div>
                 <div class="form-group">
                     <label>ПАРОЛЬ ДЛЯ СВЯЗИ</label>
-                    <input type="password" id="login-password" required>
+                    <div style="position: relative;">
+                        <input type="password" id="login-password" required style="width: 100%; padding-right: 40px;">
+                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('login-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-color); opacity: 0.7;">👁️</button>
+                    </div>
                 </div>
                 <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
                 <button type="submit" class="cyber-btn primary-btn" style="width: 100%;">ВОЙТИ В СЕТЬ</button>
@@ -52,7 +55,10 @@
                 </div>
                 <div class="form-group">
                     <label>ПАРОЛЬ (ЗАПОМНИ!)</label>
-                    <input type="password" id="reg-password" required>
+                    <div style="position: relative;">
+                        <input type="password" id="reg-password" required style="width: 100%; padding-right: 40px;">
+                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reg-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-color); opacity: 0.7;">👁️</button>
+                    </div>
                 </div>
                 <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
                 <button type="submit" class="cyber-btn primary-btn" style="width: 100%;">АКТИВИРОВАТЬ АККАУНТ</button>
