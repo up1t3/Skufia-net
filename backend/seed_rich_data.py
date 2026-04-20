@@ -122,13 +122,13 @@ def seed_rich_data():
 
     # 5. Market Listings
     market_items = [
-        ("GeForce 8800 GTX", "Топ за свои деньги. Потянет Crysis!", 5000),
-        ("Диск Lineage 2 C4", "Лицензия от Буки.", 300),
-        ("Монитор SyncMaster 757MB", "100Гц в 1024x768! Глаза не болят.", 1200),
-        ("Коврик для мыши SteelSeries", "Для про-геймеров.", 600),
+        ("GeForce 8800 GTX", "Топ за свои деньги. Потянет Crysis!", 5000.0, "fixed"),
+        ("Диск Lineage 2 C4", "Лицензия от Буки.", 300.0, "fixed"),
+        ("Монитор SyncMaster 757MB", "100Гц в 1024x768! Глаза не болят.", 1200.0, "fixed"),
+        ("Коврик для мыши SteelSeries", "Для про-геймеров.", 600.0, "fixed"),
     ]
-    for title, desc, price in market_items:
-        db.add(MarketListing(title=title, description=desc, price=price, seller_id=user_objs[random.choice(usernames)].id))
+    for title, desc, price, price_type in market_items:
+        db.add(MarketListing(title=title, description=desc, price=price, price_type=price_type, seller_id=user_objs[random.choice(usernames)].id))
 
     db.commit()
     db.close()

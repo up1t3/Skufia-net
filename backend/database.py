@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Index
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Index, Numeric, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import JSONB
@@ -114,7 +114,8 @@ class MarketListing(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text)
-    price = Column(String, nullable=True) # String to allow 'Trade' or 'Negotiable'
+    price = Column(Numeric(10, 2), nullable=False)
+    price_type = Column(String, default='fixed')
     category = Column(String, nullable=True, default='Разное')
     location = Column(String, nullable=True, default='Вся сеть')
     seller_id = Column(Integer, ForeignKey('users.id'))
@@ -124,6 +125,10 @@ class MarketListing(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+
+    __table_args__ = (
+        Index('ix_market_search', 'category', 'is_active', 'created_at'),
+    )
 
 class ListingImage(Base):
     __tablename__ = 'listing_images'
@@ -140,6 +145,10 @@ class ListingFavorite(Base):
     listing_id = Column(Integer, ForeignKey('market_listings.id', ondelete='CASCADE'))
     user_id = Column(Integer, ForeignKey('users.id'))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('listing_id', 'user_id', name='uix_user_listing_fav'),
+    )
 
 class Event(Base):
     __tablename__ = 'events'

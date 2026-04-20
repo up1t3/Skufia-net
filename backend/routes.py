@@ -833,7 +833,8 @@ def broadcast_notification(notif: NotificationCreate, current_user: User = Depen
 # --- MARKET MODULE ---
 class MarketCreate(BaseModel):
     title: str
-    price: str
+    price: float
+    price_type: str = "fixed"
     description: str = ""
     category: str = "Разное"
     location: str = "Вся сеть"
@@ -851,7 +852,8 @@ def get_market_listings(category: str = None, location: str = None, current_user
     return [{
         "id": m.id, 
         "title": m.title, 
-        "price": m.price, 
+        "price": float(m.price) if m.price else 0.0,
+        "price_type": m.price_type,
         "description": m.description, 
         "category": m.category,
         "location": m.location,
@@ -864,6 +866,7 @@ def create_market_listing(market: MarketCreate, current_user: User = Depends(get
     db_market = MarketListing(
         title=market.title,
         price=market.price,
+        price_type=market.price_type,
         description=market.description,
         category=market.category,
         location=market.location,
@@ -895,7 +898,8 @@ def get_recommended_listings(current_user: User = Depends(get_current_user), db:
     return [{
         "id": m.id, 
         "title": m.title, 
-        "price": m.price, 
+        "price": float(m.price) if m.price else 0.0,
+        "price_type": m.price_type,
         "description": m.description, 
         "category": m.category,
         "location": m.location,

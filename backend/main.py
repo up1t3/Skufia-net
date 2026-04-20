@@ -232,11 +232,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     finally:
         await manager.disconnect(user_id)
 
+from initialize import initialize_market_module
+
 @app.on_event("startup")
 async def startup_event():
     # Setup standard synchronous initialization if not done explicitly
     if not DATABASE_URL.startswith("sqlite"):
         Base.metadata.create_all(bind=engine)
+
+    # Initialize Market Module (wipe old data on startup)
+    initialize_market_module()
             
     await broadcast.connect()
     print("Initializing Skufia Ecosystem... Checking for data seeds...")
