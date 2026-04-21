@@ -34,8 +34,21 @@ class User(Base):
     telegram_id = Column(String, unique=True, nullable=True)
     public_key = Column(Text, nullable=True) # RSA Public Key for E2EE
     handle = Column(String, unique=True, nullable=True) # Short username like @up1t3rV
+    recovery_email = Column(String, nullable=True)
+    phone_number = Column(String, unique=True, index=True, nullable=True)
+    accepted_pd = Column(Boolean, default=False)
     is_superadmin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class UserContact(Base):
+    __tablename__ = 'user_contacts'
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    contact_name = Column(String, nullable=False)
+    contact_phone = Column(String, nullable=False)
+    linked_user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class Profile(Base):
     __tablename__ = 'profiles'

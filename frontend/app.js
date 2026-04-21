@@ -1629,6 +1629,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                 `;
+                const draft = localStorage.getItem(`skuf_draft_${roomId}`);
+                const cInput = document.getElementById('chat-input');
+                if (cInput && draft) {
+                    cInput.value = draft;
+                }
             }
         }
         
@@ -1697,6 +1702,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const chatMain = document.querySelector('.chat-main');
         if (chatMain) chatMain.classList.add('active');
+        
+        const chatLayout = document.querySelector('.chat-layout');
+        if (chatLayout) chatLayout.classList.add('chat-open');
 
         if (history) {
             history.innerHTML = '<div class="chat-placeholder">Loading buffer...</div>';
@@ -1785,7 +1793,20 @@ document.addEventListener('DOMContentLoaded', () => {
         footerDiv.className = 'msg-footer';
         const timeSpan = document.createElement('span');
         timeSpan.className = 'msg-time';
-        timeSpan.textContent = timeStr;
+        timeSpan.innerHTML = `${timeStr} `;
+        if (isMe) {
+            const isRead = msg.is_read;
+            const checkSvg = isRead 
+                ? '<svg viewBox="0 0 24 24" width="14" height="14" style="color:var(--accent-cyan)"><path d="M7 11.5L10 14.5L17 7.5"></path><path d="M11 11.5L14 14.5L21 7.5" fill="none" stroke="currentColor"></path></svg>'
+                : '<svg viewBox="0 0 24 24" width="14" height="14" style="color:var(--text-dim)"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor"></path></svg>';
+            timeSpan.insertAdjacentHTML('beforeend', checkSvg);
+        } else if (!msg.is_read && state.chat.socket && state.chat.socket.readyState === 1) {
+            state.chat.socket.send(JSON.stringify({
+                type: 'read_ack',
+                room_id: state.chat.currentRoomId,
+                message_id: msg.id
+            }));
+        }
         footerDiv.appendChild(timeSpan);
 
         div.appendChild(headerDiv);
@@ -1849,6 +1870,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let content = input.value.trim();
         let secureMsg = null;
+        localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
 
         // --- ENCRYPT IF SECURE ---
         const roomId = state.chat.currentRoomId;
@@ -2165,17 +2187,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const sendChatBtn = document.getElementById('send-chat-btn');
     if (chatInput) {
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendChatMsg();
-            else if (state.chat.socket) {
-                // Throttle maybe in real app, simply send here for demo
+        let typingTimer;
+        chatInput.addEventListener('input', (e) => {
+            if (state.chat.currentRoomId) {
+                localStorage.setItem(`skuf_draft_${state.chat.currentRoomId}`, e.target.value);
+            }
+            if (state.chat.socket && state.chat.socket.readyState === 1) {
                 state.chat.socket.send(JSON.stringify({
-                    type: 'typing_start',
+                    type: 'typing_status',
+                    status: true,
                     room_id: state.chat.currentRoomId,
                     sender: state.user.username,
                     sender_id: state.user.id
                 }));
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    state.chat.socket.send(JSON.stringify({
+                        type: 'typing_status',
+                        status: false,
+                        room_id: state.chat.currentRoomId,
+                        sender: state.user.username,
+                        sender_id: state.user.id
+                    }));
+                }, 2000);
             }
+        });
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMsg(); }
         });
     }
     if (sendChatBtn) {
@@ -2678,6 +2716,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- CONTACT SEARCH FILTER ---
+    window.closeChatMobile = function() {
+        const chatLayout = document.querySelector('.chat-layout');
+        if (chatLayout) chatLayout.classList.remove('chat-open');
+    };
+    
     const contactSearchInput = document.getElementById('contact-search');
     if (contactSearchInput) {
         contactSearchInput.addEventListener('input', function() {

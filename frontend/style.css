@@ -99,7 +99,10 @@ body {
     background-color: var(--bg-dark);
     color: var(--text-main);
     font-family: var(--font-main);
-    overflow-x: hidden;
+    overflow: hidden;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
     background-image: 
         linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
         linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
@@ -139,9 +142,9 @@ body::after {
 .app-container {
     display: flex;
     flex-direction: column;
-    min-height: 100dvh;
+    height: 100dvh;
     width: 100vw;
-    overflow-x: hidden;
+    overflow: hidden;
     padding: 20px;
     gap: 20px;
     box-sizing: border-box;
@@ -899,6 +902,7 @@ body.super-user .nav-btn.active {
     background: rgba(0, 0, 0, 0.15);
     border-top: none;
     border-bottom: 1px solid var(--border-metal);
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -979,7 +983,7 @@ body.super-user .nav-btn.active {
 /* Floating Action Button */
 .fab-create-btn {
     position: absolute;
-    bottom: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
     right: 24px;
     z-index: 100;
     width: 56px;

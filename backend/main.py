@@ -197,7 +197,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                 text_data = await websocket.receive_text()
                 try:
                     data = json.loads(text_data)
-                    if data.get('type') == 'rtc_signal':
+                    msg_type = data.get('type')
+                    if msg_type == 'rtc_signal':
                         target_id = data.get('target')
                         if target_id:
                             relay_msg = {
@@ -207,6 +208,41 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 "payload": data.get('payload')
                             }
                             await manager.send_personal_message(relay_msg, target_id)
+                    elif msg_type == 'typing_status':
+                        room_id = data.get('room_id')
+                        if room_id:
+                            db = SessionLocal()
+                            from database import ChatRoomMember
+                            members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
+                            uids = [m.user_id for m in members if m.user_id != user_id]
+                            db.close()
+                            
+                            relay_msg = {
+                                "type": "typing_status",
+                                "sender_id": user_id,
+                                "room_id": room_id,
+                                "is_typing": data.get('status', True)
+                            }
+                            await manager.broadcast(relay_msg, user_ids=uids)
+                    elif msg_type == 'read_ack':
+                        message_id = data.get('message_id')
+                        room_id = data.get('room_id')
+                        if message_id:
+                            db = SessionLocal()
+                            from database import Message
+                            msg = db.query(Message).filter(Message.id == message_id).first()
+                            if msg and msg.sender_id != user_id:
+                                msg.is_read = True
+                                db.commit()
+                                
+                                relay_msg = {
+                                    "type": "read_ack",
+                                    "message_id": message_id,
+                                    "room_id": msg.room_id,
+                                    "reader_id": user_id
+                                }
+                                await manager.send_personal_message(relay_msg, msg.sender_id)
+                            db.close()
                 except json.JSONDecodeError:
                     pass
         except WebSocketDisconnect:
