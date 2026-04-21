@@ -8,6 +8,11 @@ DEFAULT_PASSWORD = get_password_hash('password123')
 def seed_data():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
+    if db.query(User).count() > 0:
+        print("Database already seeded. Skipping initial data injection.")
+        db.close()
+        return
+
     # Clear data in FK-safe order (children before parents)
     db.query(Message).delete()
     db.query(ChatRoomMember).delete()
