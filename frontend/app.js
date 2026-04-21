@@ -292,18 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const mobileMenuBtn = document.getElementById('mobile-menu-toggle');
     const sidePanel = document.querySelector('.side-panel');
     if (mobileMenuBtn && sidePanel) {
-        mobileMenuBtn.addEventListener('click', () => {
-            sidePanel.classList.toggle('open-mobile');
-        });
-        
-        // Close sidebar on mobile when navigating
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    sidePanel.classList.remove('open-mobile');
-                }
-            });
-        });
+        // Redundant listeners removed. The actual logic is handled at the bottom of the file (lines 3018+)
     }
 
     // --- System Logging ---

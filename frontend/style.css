@@ -2281,8 +2281,8 @@ body.super-user .nav-btn.active {
 }
 
 .ent-card {
-    background: rgba(10, 15, 20, 0.6);
-    border: 1px solid rgba(0, 242, 255, 0.2);
+    background: var(--bg-accent);
+    border: 1px solid var(--border-metal);
     border-radius: 16px;
     padding: 25px;
     cursor: pointer;
@@ -2307,10 +2307,10 @@ body.super-user .nav-btn.active {
 }
 
 .ent-card:hover {
-    border-color: var(--accent-cyan);
-    box-shadow: 0 8px 25px rgba(0, 242, 255, 0.15), 0 0 0 1px var(--accent-cyan) inset;
     transform: translateY(-5px);
-    background: rgba(10, 15, 20, 0.8);
+    border-color: var(--accent-cyan);
+    box-shadow: var(--glow);
+    background: var(--bg-panel);
 }
 
 .ent-card:hover::before {
