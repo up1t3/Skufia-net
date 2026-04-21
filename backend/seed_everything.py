@@ -1,5 +1,8 @@
 import os
-from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Base, engine, ChatRoom, ChatRoomMember, Message
+from database import (SessionLocal, User, Profile, Category, Topic, Post,
+    WikiArticle, MarketListing, Event, Base, engine, ChatRoom, ChatRoomMember,
+    Message, ChatFolder, ChatFolderMember, UserContact, ListingImage,
+    ListingFavorite, PostLike, WikiLike, FCMToken, GlobalNotification)
 from datetime import datetime, timedelta
 from auth import get_password_hash
 
@@ -14,6 +17,15 @@ def seed_data():
         return
 
     # Clear data in FK-safe order (children before parents)
+    db.query(ChatFolderMember).delete()
+    db.query(ChatFolder).delete()
+    db.query(UserContact).delete()
+    db.query(ListingFavorite).delete()
+    db.query(ListingImage).delete()
+    db.query(PostLike).delete()
+    db.query(WikiLike).delete()
+    db.query(FCMToken).delete()
+    db.query(GlobalNotification).delete()
     db.query(Message).delete()
     db.query(ChatRoomMember).delete()
     db.query(ChatRoom).delete()

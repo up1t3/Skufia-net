@@ -47,6 +47,9 @@ def run_migrations():
             add_column("users", "public_key", "TEXT")
             add_column("users", "handle", "VARCHAR")
             add_column("users", "is_superadmin", "BOOLEAN", default="0" if DATABASE_URL.startswith("sqlite") else "FALSE")
+            add_column("users", "recovery_email", "VARCHAR")
+            add_column("users", "phone_number", "VARCHAR")
+            add_column("users", "accepted_pd", "BOOLEAN", default="0" if DATABASE_URL.startswith("sqlite") else "FALSE")
             
             # messages
             add_column("messages", "encryption_iv", "TEXT")
@@ -288,8 +291,7 @@ async def startup_event():
     if run_bot:
         print("Starting Telegram Support Bot...")
         asyncio.create_task(run_bot())
-# Include API routes (Forum, Market, Wiki, etc.)
-app.include_router(main_router, tags=["API"])
+# [FIX-04] Removed duplicate include_router (already included at line 142 with prefix='/api')
 
 @app.get("/", tags=["Health"])
 async def root():

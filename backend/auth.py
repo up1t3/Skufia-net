@@ -73,6 +73,7 @@ class RegisterRequest(BaseModel):
     username: str
     email: str
     password: str
+    accepted_pd: bool = False  # ФЗ-152: Personal data processing consent
 
 class LoginRequest(BaseModel):
     username: str
@@ -80,6 +81,13 @@ class LoginRequest(BaseModel):
 
 @router.post('/register', status_code=status.HTTP_201_CREATED)
 def register_user(req: RegisterRequest, db = Depends(get_db)):
+    # [ФЗ-152] Reject registration if personal data consent is not given
+    if not req.accepted_pd:
+        raise HTTPException(
+            status_code=400, 
+            detail="Необходимо дать согласие на обработку персональных данных (ФЗ-152)"
+        )
+    
     if db.query(User).filter(User.username == req.username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
     if db.query(User).filter(User.email == req.email).first():
@@ -89,7 +97,8 @@ def register_user(req: RegisterRequest, db = Depends(get_db)):
     new_user = User(
         username=req.username,
         email=req.email,
-        hashed_password=hashed_pwd
+        hashed_password=hashed_pwd,
+        accepted_pd=True  # Confirmed consent at registration time
     )
     db.add(new_user)
     db.commit()

@@ -304,11 +304,7 @@ def update_avatar(data: AvatarUpdate, current_user: User = Depends(get_current_u
     db.commit()
     return {"status": "Avatar updated successfully"}
 
-@router.post('/me/key')
-def update_public_key(data: PublicKeyUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    db.query(User).filter(User.id == current_user.id).update({"public_key": data.public_key})
-    db.commit()
-    return {"status": "Public key updated successfully"}
+# [FIX-07] Removed duplicate /me/key route (kept the full implementation below at line 347)
 
 # --- CHAT MODULE ---
 # --- TELEGRAM INTEGRATION ---
@@ -370,6 +366,12 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
         last_msg = db.query(Message).filter(Message.room_id == room.id).order_by(Message.created_at.desc()).first()
         last_activity = last_msg.created_at.timestamp() if last_msg and last_msg.created_at else room.created_at.timestamp()
 
+        # Get last message text for sidebar snippet
+        last_msg_text = None
+        if last_msg:
+            sender_name = get_display_name(last_msg.sender) if last_msg.sender else 'unknown'
+            last_msg_text = f"{sender_name}: {last_msg.content[:60]}" if last_msg.content else None
+
         room_data = {
             "id": room.id, 
             "name": room.name, 
@@ -377,6 +379,7 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
             "my_role": m.role,
             "avatar_url": None,
             "other_user_id": None,
+            "last_message": last_msg_text,
             "last_activity": last_activity
         }
         
@@ -549,8 +552,9 @@ def get_room_history(
                 "file_url": m.file_url,
                 "reply_to_id": m.reply_to_id,
                 "is_edited": m.is_edited,
+                "is_read": m.is_read,
                 "reactions": m.reactions or {},
-                "timestamp": m.created_at.isoformat()
+                "timestamp": m.created_at.strftime('%H:%M') if m.created_at else '00:00'
             } for m in messages
         ],
         "has_more": has_more,
@@ -560,9 +564,25 @@ def get_room_history(
 
 @router.get('/users/search/{query}')
 def search_users(query: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Finds operators by nickname for direct channel initialization"""
-    users = db.query(User).filter(User.username.ilike(f"%{query}%")).all()
-    return [{"id": u.id, "username": get_display_name(u), "is_online": u.profile.is_online if u.profile else False} for u in users]
+    """Search users by username, nickname, @handle, or phone number"""
+    q = f"%{query}%"
+    # Normalize phone: strip spaces/dashes for comparison
+    phone_q = ''.join(c for c in query if c.isdigit())
+    
+    users = db.query(User).outerjoin(Profile, Profile.user_id == User.id).filter(
+        (User.username.ilike(q)) |
+        (User.handle.ilike(q)) |
+        (User.phone_number.ilike(q)) |
+        (Profile.nickname.ilike(q))
+    ).filter(User.id != current_user.id).limit(20).all()
+    
+    return [{
+        "id": u.id, 
+        "username": get_display_name(u),
+        "handle": u.handle or '',
+        "avatar_url": u.profile.avatar_url if u.profile else None,
+        "is_online": u.profile.is_online if u.profile else False
+    } for u in users]
 
 class ChatContent(BaseModel):
     content: str
@@ -1264,3 +1284,51 @@ def get_contacts(current_user: User = Depends(get_current_user), db: Session = D
     # Dummy mock returning registered users for MVP logic
     users = db.query(User).filter(User.id != current_user.id).all()
     return [{"id": u.id, "username": u.username, "status": "online" if u.profile and u.profile.is_online else "offline"} for u in users]
+
+# --- INVITE SYSTEM ---
+import secrets
+from datetime import datetime, timedelta
+
+# In-memory invite store (MVP). Key: code, Value: {user_id, created_at, uses_left}
+_invite_store: dict = {}
+
+@router.post('/invite/generate')
+def generate_invite(current_user: User = Depends(get_current_user)):
+    """Generate a one-time invite link to register on Skufia-Net"""
+    code = secrets.token_urlsafe(12)
+    _invite_store[code] = {
+        "invited_by_id": current_user.id,
+        "invited_by": current_user.username,
+        "created_at": datetime.utcnow().isoformat(),
+        "uses_left": 1  # Single-use by default
+    }
+    return {
+        "code": code,
+        "invite_url": f"/register?invite={code}",
+        "expires": "Одноразовая",
+        "message": f"Ссылка-приглашение создана. Передайте её контакту."
+    }
+
+@router.get('/invite/{code}')
+def check_invite(code: str):
+    """Validate an invite code (called when user opens invite link)"""
+    invite = _invite_store.get(code)
+    if not invite:
+        raise HTTPException(status_code=404, detail="Код приглашения недействителен или истёк")
+    if invite["uses_left"] <= 0:
+        raise HTTPException(status_code=410, detail="Приглашение уже использовано")
+    return {
+        "valid": True,
+        "invited_by": invite["invited_by"],
+        "message": f"Вас пригласил {invite['invited_by']}. Зарегистрируйтесь для входа в Skufia-Net."
+    }
+
+@router.post('/invite/{code}/use')
+def use_invite(code: str, db: Session = Depends(get_db)):
+    """Mark invite as used after successful registration"""
+    invite = _invite_store.get(code)
+    if not invite or invite["uses_left"] <= 0:
+        raise HTTPException(status_code=404, detail="Код недействителен")
+    invite["uses_left"] -= 1
+    return {"status": "used"}
+

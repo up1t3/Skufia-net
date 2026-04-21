@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v25'; // Bumped version for auto-update
+const CACHE_NAME = 'skufia-chat-v26'; // Bumped: chat fixes 2026-04-21
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

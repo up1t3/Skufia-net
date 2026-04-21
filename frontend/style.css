@@ -1361,9 +1361,13 @@ body.super-user .nav-btn.active {
 
 .premium-input-wrapper {
     padding: 12px 20px;
+    /* safe-area: сдвигаем вверх на высоту адресной строки/Home Bar */
+    padding-bottom: max(12px, calc(12px + env(safe-area-inset-bottom)));
     background: rgba(0,0,0,0.1);
     border-top: 1px solid rgba(255, 255, 255, 0.05);
     position: relative;
+    /* Гарантируем отображение над нативным UI браузера */
+    flex-shrink: 0;
 }
 
 .chat-capsule {
@@ -2139,12 +2143,20 @@ body.super-user .nav-btn.active {
         top: 0;
         left: 0;
         width: 100%;
-        height: 100%;
+        /* dvh = dynamic viewport height, учитывает появление/скрытие адресной строки */
+        height: 100dvh;
+        /* Fallback для старых браузеров */
+        height: 100vh;
+        height: 100dvh;
         z-index: 50;
         transform: translateX(100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         background: var(--bg-panel);
         backdrop-filter: var(--backdrop-blur);
+        /* Flex колонка: history растягивается, input прижат к низу */
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
     }
     
     .chat-layout.chat-open .chat-main {

@@ -1072,14 +1072,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             addLog('Установка защищенного туннеля...', 'info');
-            const room = await apiRequest('/chat/private', 'POST', { target_user_id: targetId });
+            // [FIX-01] Correct route: /chat/rooms with room_type='private'
+            const room = await apiRequest('/chat/rooms', 'POST', {
+                name: 'Private',
+                room_type: 'private',
+                target_user_id: targetId
+            });
             switchView('messages');
-            loadChatRooms();
-            setTimeout(() => {
-                const roomElement = document.querySelector(`.sidebar-item`); // Usually loaded by now
-                selectChatRoom(room.id, room.name, room.room_type, targetId);
-                addLog('E2EE-Канал установлен', 'success');
-            }, 500);
+            // Refresh room list and then select the new/existing room
+            await loadChatRooms();
+            // [FIX-02] Find room name from loaded list instead of relying on POST response fields
+            const roomInList = state.chat.rooms.find(r => r.id === room.id);
+            const roomName = roomInList ? roomInList.name : 'Личный чат';
+            const roomType = roomInList ? roomInList.type : 'private';
+            selectChatRoom(room.id, roomName, roomType, targetId);
+            addLog('E2EE-Канал установлен', 'success');
         } catch (e) {
             addLog('Не удалось установить соединение', 'error');
         }
@@ -1378,7 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (data.type === 'delete_message') {
                 const el = document.getElementById(`msg-${data.message_id}`);
                 if (el) el.remove();
-            } else if (data.type === 'typing_start') {
+            } else if (data.type === 'typing_status') {
                 if (state.chat.currentRoomId === data.room_id && data.sender_id !== state.user.id) {
                     const typingEl = document.getElementById('typing-indicator');
                     if (typingEl) {
@@ -1732,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (placeholder) placeholder.remove();
 
         const div = document.createElement('div');
-        const isMe = msg.sender === state.user.username || msg.id === state.user.id;
+        const isMe = msg.sender_id === state.user.id || msg.sender === state.user.username;
         div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
         
         const timeStr = msg.timestamp || '00:00';
@@ -1942,54 +1949,118 @@ document.addEventListener('DOMContentLoaded', () => {
     window.openFabHub = function() {
         document.getElementById('fab-hub-modal').style.display = 'flex';
         const contactList = document.getElementById('fab-contacts-list');
-        contactList.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка...</div>';
+        contactList.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...</div>';
         
+        // Load all users initially
         apiRequest('/users/list').then(users => {
             state.contacts = users.filter(u => u.id !== state.user.id);
             window['filterFabContacts']();
         }).catch(e => {
-            contactList.innerHTML = '<div style="text-align:center; padding:15px; color:red;">Ошибка загрузки</div>';
+            contactList.innerHTML = '<div style="text-align:center; padding:15px; color:red;">\u041e\u0448\u0438\u0431\u043a\u0430 \u0437\u0430\u0433\u0440\u0443\u0437\u043a\u0438</div>';
         });
     };
 
+    // Debounced server search
+    let _fabSearchTimer = null;
+
     // @ts-ignore
     window.filterFabContacts = function() {
-        const query = (document.getElementById('fab-contact-search')?.value || '').toLowerCase();
+        const query = (document.getElementById('fab-contact-search')?.value || '').trim();
         const contactList = document.getElementById('fab-contacts-list');
-        contactList.innerHTML = '';
-        
-        const filtered = (state.contacts || []).filter(u => 
-            (u.username || '').toLowerCase().includes(query)
+
+        // If query long enough — search server (by phone or nickname)
+        if (query.length >= 2) {
+            clearTimeout(_fabSearchTimer);
+            _fabSearchTimer = setTimeout(async () => {
+                contactList.innerHTML = '<div style="text-align:center; padding:10px; color:var(--text-dim);">\u041f\u043e\u0438\u0441\u043a...</div>';
+                try {
+                    const results = await apiRequest(`/users/search/${encodeURIComponent(query)}`);
+                    renderFabContacts(results, contactList);
+                } catch(e) {
+                    contactList.innerHTML = '<div style="text-align:center; padding:10px; color:red;">\u041e\u0448\u0438\u0431\u043a\u0430 \u043f\u043e\u0438\u0441\u043a\u0430</div>';
+                }
+            }, 350);
+            return;
+        }
+
+        // Otherwise filter local cache
+        const filtered = (state.contacts || []).filter(u =>
+            (u.username || '').toLowerCase().includes(query.toLowerCase())
         );
-        
-        if (filtered.length === 0) {
-            contactList.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Нет контактов</div>';
+        renderFabContacts(filtered, contactList);
+    };
+
+    function renderFabContacts(users, contactList) {
+        contactList.innerHTML = '';
+
+        // --- Invite button always at top ---
+        const inviteDiv = document.createElement('div');
+        inviteDiv.style.cssText = 'padding: 10px 12px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border-metal); cursor: pointer; border-radius: 8px; transition: background 0.15s;';
+        inviteDiv.onmouseover = () => inviteDiv.style.background = 'rgba(0,242,255,0.07)';
+        inviteDiv.onmouseout = () => inviteDiv.style.background = 'transparent';
+        inviteDiv.innerHTML = `
+            <div style="width:44px;height:44px;border-radius:50%;background:rgba(0,242,255,0.12);border:1px dashed var(--accent-cyan);display:flex;align-items:center;justify-content:center;color:var(--accent-cyan);flex-shrink:0;">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </div>
+            <div>
+                <div style="font-size:14px;font-weight:600;color:var(--accent-cyan);">Пригласить друга</div>
+                <div style="font-size:11px;color:var(--text-dim);">Отправить ссылку для регистрации в Skufia-Net</div>
+            </div>
+        `;
+        inviteDiv.onclick = async () => {
+            try {
+                const resp = await apiRequest('/invite/generate', 'POST');
+                const fullUrl = `${window.location.origin}${resp.invite_url}`;
+                if (navigator.share) {
+                    await navigator.share({
+                        title: 'Skufia-Net — приглашение',
+                        text: 'Присоединяйся ко мне в Skufia-Net — защищённом мессенджере для своих.',
+                        url: fullUrl
+                    });
+                } else {
+                    await navigator.clipboard.writeText(fullUrl);
+                    addLog('Ссылка-приглашение скопирована в буфер — вставьте в WhatsApp, Telegram или SMS', 'success');
+                }
+            } catch(e) {
+                addLog('Ошибка генерации ссылки', 'error');
+            }
+        };
+        contactList.appendChild(inviteDiv);
+
+        if (!users || users.length === 0) {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'text-align:center; padding:20px; color:var(--text-dim); font-size:13px;';
+            empty.textContent = 'Пользователи не найдены. Пригласите друзей!';
+            contactList.appendChild(empty);
             return;
         }
         
-        filtered.forEach(u => {
+        users.forEach(u => {
             const div = document.createElement('div');
             div.className = 'sidebar-item';
             div.style.cursor = 'pointer';
             
-            const initial = (u.username).charAt(0).toUpperCase();
-            const charCode = initial.charCodeAt(0) || 0;
+            const initial = (u.username || '?').charAt(0).toUpperCase();
+            const charCode = initial.charCodeAt(0) || 65;
             const hue = (charCode * 137) % 360;
+            const avatarHtml = u.avatar_url 
+                ? `<img src="${u.avatar_url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` 
+                : `<div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;">${initial}</div>`;
+            const onlineDot = u.is_online ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00f2ff;margin-left:5px;vertical-align:middle;"></span>` : '';
+            const handleText = u.handle ? `<span style="color:var(--text-dim);font-size:11px;">${u.handle}</span>` : '';
             
             div.innerHTML = `
-                <div class="sidebar-item-avatar dynamic-avatar" style="background: linear-gradient(135deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 80%, 30%)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:20px;">
-                    ${initial}
-                </div>
+                ${avatarHtml}
                 <div class="sidebar-item-info">
-                    <div class="sidebar-item-name">${u.username}</div>
-                    <div class="sidebar-item-last-msg">Скуфенгер</div>
+                    <div class="sidebar-item-name">${u.username}${onlineDot}</div>
+                    <div class="sidebar-item-last-msg">${handleText || 'Skufia-Net'}</div>
                 </div>
             `;
             div.onclick = async () => {
                 document.getElementById('fab-hub-modal').style.display = 'none';
                 try {
-                    const room = await apiRequest('/chat/rooms', 'POST', { name: "Private", room_type: 'private', target_user_id: u.id });
-                    addLog(room.is_existing ? "Чат уже существует" : "Личный чат создан", 'success');
+                    const room = await apiRequest('/chat/rooms', 'POST', { name: 'Private', room_type: 'private', target_user_id: u.id });
+                    addLog(room.is_existing ? 'Чат уже существует' : 'Личный чат создан', 'success');
                     await window.loadChatRooms();
                     window.selectChatRoom(room.id, u.username, 'private', u.id, 'member');
                 } catch(e) {
@@ -1998,7 +2069,7 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             contactList.appendChild(div);
         });
-    };
+    }
 
     // @ts-ignore
     window.openCreateRoomModal = function(type) {
@@ -2503,16 +2574,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('register-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const btn = e.target.querySelector('button');
-        btn.textContent = 'ОЖИДАНИЕ...';
+        const btn = document.getElementById('reg-submit-btn') || e.target.querySelector('button[type="submit"]');
+        if (btn) btn.textContent = 'ОЖИДАНИЕ...';
         try {
+            const pdConsent = document.getElementById('reg-pd-consent');
             const res = await fetch(`${API_BASE_URL}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     username: document.getElementById('reg-username').value,
                     email: document.getElementById('reg-email').value,
-                    password: document.getElementById('reg-password').value
+                    password: document.getElementById('reg-password').value,
+                    accepted_pd: pdConsent ? pdConsent.checked : false  // [ФЗ-152]
                 })
             });
             const data = await res.json();
@@ -2528,7 +2601,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             document.getElementById('reg-error').textContent = err.message;
         } finally {
-            btn.textContent = 'АКТИВИРОВАТЬ АККАУНТ';
+            if (btn) btn.textContent = 'АКТИВИРОВАТЬ АККАУНТ';
         }
     });
 
@@ -2700,6 +2773,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.likeWiki = likeWiki;
     window.switchView = switchView;
     window.selectChatRoom = selectChatRoom;
+    // [FIX-06] Alias: selectChatRoom renders new #chat-input with inline onclick="window.sendChatMessage()"
+    window.sendChatMessage = sendChatMsg;
     window.openSkufenger = function() {
         window.open(window.location.pathname + '?app=skufenger', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
     };
