@@ -676,7 +676,7 @@ input {
     border-right: 3px solid var(--border-metal);
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    /* Removed overflow-y: auto to prevent the FAB from scrolling out of view */
 }
 
 .chat-main {
@@ -981,6 +981,7 @@ body.super-user .nav-btn.active {
     position: absolute;
     bottom: 24px;
     right: 24px;
+    z-index: 100;
     width: 56px;
     height: 56px;
     border-radius: 50%;
