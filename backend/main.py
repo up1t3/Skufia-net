@@ -117,12 +117,7 @@ setup_metrics(app)
 # Allow requests from frontend (port 5551) and localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5551",
-        "http://127.0.0.1:5551",
-        "http://localhost:8007",
-        "http://127.0.0.1:8007"
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

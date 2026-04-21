@@ -2281,7 +2281,7 @@ body.super-user .nav-btn.active {
 }
 
 .ent-card {
-    background: var(--bg-accent);
+    background: color-mix(in srgb, var(--bg-panel) 60%, transparent);
     border: 1px solid var(--border-metal);
     border-radius: 16px;
     padding: 25px;
@@ -2310,7 +2310,7 @@ body.super-user .nav-btn.active {
     transform: translateY(-5px);
     border-color: var(--accent-cyan);
     box-shadow: var(--glow);
-    background: var(--bg-panel);
+    background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
 }
 
 .ent-card:hover::before {
