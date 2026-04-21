@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v24';
+const CACHE_NAME = 'skufia-chat-v25'; // Bumped version for auto-update
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -23,39 +23,27 @@ self.addEventListener('fetch', (event) => {
     // Only intercept GET requests
     if (event.request.method !== 'GET') return;
 
-    // Skip WebSockets or API calls
-    if (event.request.url.includes('/ws/') || event.request.url.includes('/chat/upload_audio')) return;
+    // Skip WebSockets or API calls entirely (Fixes Unexpected token < in JSON)
+    if (event.request.url.includes('/ws/') || event.request.url.includes('/api/')) return;
 
+    // Apply Stale-While-Revalidate strategy for auto-updating application on launch
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-
-                // Not in cache - fetch from network
-                return fetch(event.request).then(
-                    (networkResponse) => {
-                        // Check if valid response
-                        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                            return networkResponse;
-                        }
-
-                        // Clone response and add to cache
-                        const responseToCache = networkResponse.clone();
-                        caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return networkResponse;
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.match(event.request).then((cachedResponse) => {
+                const fetchedResponse = fetch(event.request).then((networkResponse) => {
+                    // Update cache for next time
+                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                        cache.put(event.request, networkResponse.clone());
                     }
-                ).catch(() => {
-                    // Fallback for offline if not in cache (could return an offline HTML page if we had one)
+                    return networkResponse;
+                }).catch(() => {
                     console.log('Fetch failed, maybe offline.');
                 });
-            })
+
+                // Return cached response immediately if available, otherwise wait for network
+                return cachedResponse || fetchedResponse;
+            });
+        })
     );
 });
 
