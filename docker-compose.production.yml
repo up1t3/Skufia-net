@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: skufia-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-skufia}
+    volumes:
+      - skufia_pgdata:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: skufia-redis
+    restart: always
+
+  celery:
+    image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest
+    container_name: skufia-celery
+    command: celery -A worker.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - skufia_uploads:/app/uploads
+      - skufia_db:/app/data
+    restart: always
+
+  coturn:
+    image: coturn/coturn
+    container_name: skufia-coturn
+    restart: always
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+    command: turnserver --use-auth-secret --static-auth-secret=${TURN_SECRET:-skufia_secret} --realm=${TURN_REALM:-skuf-net.ru}
+
+  backend:
+    image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest
+    container_name: skufia-api
+    ports:
+      - "8007:8007"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - skufia_uploads:/app/uploads
+      - skufia_db:/app/data
+    restart: always
+
+  frontend:
+    image: ghcr.io/${GHCR_USER:-up1t3}/skufia-frontend:latest
+    container_name: skufia-web
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    restart: always
+
+volumes:
+  skufia_uploads:
+  skufia_db:
+  skufia_pgdata:

@@ -33,6 +33,18 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('skufia_theme', themeName);
     }
     window.changeTheme = changeTheme;
+    
+    window.setAndCloseTheme = function(themeName) {
+        changeTheme(themeName);
+        document.getElementById('theme-switcher-modal').style.display = 'none';
+        
+        // Add a nice cyber-glitch effect on save
+        const heroText = document.querySelector('.glitch');
+        if (heroText) {
+            heroText.style.animation = 'none';
+            setTimeout(() => { heroText.style.animation = ''; }, 10);
+        }
+    };
 
     // Initialize Theme
     const savedTheme = localStorage.getItem('skufia_theme') || 'telegram';
@@ -277,8 +289,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const views = document.querySelectorAll('.view');
     const navBtns = document.querySelectorAll('.nav-btn');
     const logContainer = document.getElementById('system-logs');
-    const mobileMenuBtn = document.querySelector('.mobile-only');
+    const mobileMenuBtn = document.getElementById('mobile-menu-toggle');
     const sidePanel = document.querySelector('.side-panel');
+    if (mobileMenuBtn && sidePanel) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidePanel.classList.toggle('open-mobile');
+        });
+        
+        // Close sidebar on mobile when navigating
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    sidePanel.classList.remove('open-mobile');
+                }
+            });
+        });
+    }
 
     // --- System Logging ---
     function addLog(message, type = 'info') {
@@ -2936,19 +2962,54 @@ class ScrambleText {
     }
 }
 
-// Observe brand element when it becomes visible
-if (window.IntersectionObserver) {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const els = entry.target.querySelectorAll('.scramble-text');
-                els.forEach((el, index) => {
-                    const extraDelay = index * 400; // stagger start times
-                    new ScrambleText(el, 200 + extraDelay).start();
-                });
+// Initialize scramble text effects globally across the board
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        document.querySelectorAll('.scramble-text').forEach((el, index) => {
+            const delay = index * 250;
+            new ScrambleText(el, 100 + delay).start();
+        });
+    }, 500); // Give rendering a brief moment before scrambling
+});
+
+// --- MOBILE MENU LOGIC (SANDWICH) ---
+const mobileToggle = document.getElementById('mobile-menu-toggle');
+const sidePanel = document.getElementById('side-panel');
+if (mobileToggle && sidePanel) {
+    // Create backdrop for mobile sidebar
+    const backdrop = document.createElement('div');
+    backdrop.id = 'mobile-backdrop';
+    backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:998; opacity:0; transition:opacity 0.3s ease;';
+    
+    // Append to app-container to share stacking context with side-panel 
+    const container = document.querySelector('.app-container') || document.body;
+    container.appendChild(backdrop);
+
+    mobileToggle.addEventListener('click', () => {
+        const isOpen = sidePanel.classList.toggle('open-mobile');
+        if (isOpen) {
+            backdrop.style.display = 'block';
+            setTimeout(() => backdrop.style.opacity = '1', 10);
+        } else {
+            backdrop.style.opacity = '0';
+            setTimeout(() => backdrop.style.display = 'none', 300);
+        }
+    });
+
+    backdrop.addEventListener('click', () => {
+        sidePanel.classList.remove('open-mobile');
+        backdrop.style.opacity = '0';
+        setTimeout(() => backdrop.style.display = 'none', 300);
+    });
+
+    // Close menu when navigating on mobile
+    document.querySelectorAll('.side-panel .nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if(window.innerWidth <= 768) {
+                sidePanel.classList.remove('open-mobile');
+                backdrop.style.opacity = '0';
+                setTimeout(() => backdrop.style.display = 'none', 300);
             }
         });
     });
-    const modal = document.getElementById('settings-modal');
-    if (modal) observer.observe(modal);
 }

@@ -139,9 +139,12 @@ body::after {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    min-height: 100dvh;
+    width: 100vw;
+    overflow-x: hidden;
     padding: 20px;
     gap: 20px;
+    box-sizing: border-box;
 }
 
 header {
@@ -2164,6 +2167,75 @@ body.super-user .nav-btn.active {
 .chat-folders-tabs::-webkit-scrollbar {
     height: 0;
 }
+
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .side-panel {
+        width: 100%;
+        max-width: 320px;
+        position: fixed;
+        top: 0;
+        left: -330px;
+        bottom: 0;
+        z-index: 999;
+        transition: left 0.3s ease;
+        background: var(--bg-panel);
+        backdrop-filter: blur(10px);
+        box-shadow: 2px 0 15px rgba(0,0,0,0.5);
+    }
+    
+    .side-panel.open-mobile {
+        left: 0;
+    }
+
+    .main-interface {
+        height: calc(100vh - 100px);
+    }
+    
+    header {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        padding: 5px 10px;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    header .left-controls, header .system-stats {
+        width: auto !important;
+    }
+    
+    header .logo {
+        width: auto !important;
+        font-size: 14px;
+        letter-spacing: 1px;
+    }
+    
+    header .version {
+        display: none; /* Hide version on mobile to save space */
+    }
+
+    .brand h1 {
+        font-size: 1.2rem;
+    }
+
+    .brand p {
+        display: none; /* Hide subtitle on tiny screens */
+    }
+
+    .user-info {
+        font-size: 0.8rem;
+    }
+
+    .viewport {
+        padding: 10px; /* Reduce 30px desktop padding */
+        border: none; /* Make it feel native on mobile */
+    }
+}
+
 .folder-tab {
     padding: 6px 12px;
     border-radius: 14px;
@@ -2191,4 +2263,107 @@ body.super-user .nav-btn.active {
     padding: 0 8px;
     display: flex;
     align-items: center;
+}
+
+/* --- PREMIUM UI REFURBISHMENT (CYBERPUNK GLASS) --- */
+
+.enterprise-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+    width: 100%;
+}
+
+.ent-card {
+    background: rgba(10, 15, 20, 0.6);
+    border: 1px solid rgba(0, 242, 255, 0.2);
+    border-radius: 16px;
+    padding: 25px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.ent-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.1), transparent);
+    transition: all 0.6s ease;
+    transform: skewX(-20deg);
+}
+
+.ent-card:hover {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 8px 25px rgba(0, 242, 255, 0.15), 0 0 0 1px var(--accent-cyan) inset;
+    transform: translateY(-5px);
+    background: rgba(10, 15, 20, 0.8);
+}
+
+.ent-card:hover::before {
+    left: 200%;
+}
+
+.ent-card .card-icon {
+    font-size: 36px;
+    margin-bottom: 15px;
+    filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.5));
+    transition: transform 0.3s ease;
+}
+
+.ent-card:hover .card-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.ent-card h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    color: var(--text-main);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.ent-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+
+/* Mobile specific overrides for grid */
+@media (max-width: 768px) {
+    .enterprise-grid {
+        grid-template-columns: 1fr; /* Force 1 column on mobile */
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .ent-card {
+        padding: 20px;
+        flex-direction: row;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .ent-card .card-icon {
+        margin-bottom: 0;
+        font-size: 28px;
+    }
+    
+    .ent-card h3 {
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+    
+    .ent-card p {
+        font-size: 12px;
+    }
 }
