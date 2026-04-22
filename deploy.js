@@ -182,6 +182,8 @@ async function deployToServer() {
     `docker compose -f ${composeFile} pull`,
     // Перезапускаем сервисы с нулевым даунтаймом
     `docker compose -f ${composeFile} up -d`,
+    // Применяем миграции БД (создаём новые таблицы если их нет)
+    `docker exec skufia-api python -c "from database import init_db; init_db(); print('DB migration applied')"`,
     // Убираем старые образы
     `docker image prune -f`,
   ]);

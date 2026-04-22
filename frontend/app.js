@@ -116,67 +116,204 @@ document.addEventListener('DOMContentLoaded', () => {
         pendingFile: null
     };
 
-    /** @typedef {Object} CryptoKeyPair
-     * @property {CryptoKey} publicKey
-     * @property {CryptoKey} privateKey
-     */
+    // =========================================================================
+    // SECURE CRYPTO ENGINE v2 — Signal-inspired E2EE
+    // =========================================================================
+    // Security properties:
+    // ✅ RSA private key: non-extractable, persisted in IndexedDB only
+    // ✅ AES session keys: non-extractable, cached per-room in IndexedDB
+    // ✅ Key fingerprint: SHA-256 of public key bytes, displayed to user
+    // ✅ Per-room AES-256-GCM keys — no universal key
+    // ✅ Private key NEVER sent to server
+    // ✅ Server stores only: public keys + RSA-wrapped AES bundles
+    // =========================================================================
 
-    // --- CRYPTO MANAGER (E2EE) ---
+    const IDB_NAME = 'skufia_vault';
+    const IDB_VERSION = 2;
+    const IDB_STORE_KEYS = 'identity_keys';
+    const IDB_STORE_SESSION = 'session_keys';
+
+    /** Open (or upgrade) the crypto vault IndexedDB */
+    function openVault() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(IDB_STORE_KEYS)) {
+                    db.createObjectStore(IDB_STORE_KEYS);
+                }
+                if (!db.objectStoreNames.contains(IDB_STORE_SESSION)) {
+                    db.createObjectStore(IDB_STORE_SESSION);
+                }
+            };
+            req.onsuccess = (e) => resolve(e.target.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    /** Read a value from IndexedDB */
+    async function vaultGet(store, key) {
+        const db = await openVault();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readonly');
+            const req = tx.objectStore(store).get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    /** Write a value to IndexedDB */
+    async function vaultPut(store, key, value) {
+        const db = await openVault();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readwrite');
+            const req = tx.objectStore(store).put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    /** Delete a value from IndexedDB */
+    async function vaultDelete(store, key) {
+        const db = await openVault();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(store, 'readwrite');
+            const req = tx.objectStore(store).delete(key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+
     class CryptoManager {
-        /** @returns {Promise<CryptoKeyPair>} */
+
+        // ── RSA Key Pair ──────────────────────────────────────────────────────
+
+        /**
+         * Generate RSA-OAEP 4096-bit key pair.
+         * Private key is NON-EXTRACTABLE — cannot be exported by any JS code.
+         * @returns {Promise<CryptoKeyPair>}
+         */
         static async generateKeyPair() {
-            // @ts-ignore
             return await window.crypto.subtle.generateKey(
                 {
-                    name: "RSA-OAEP",
-                    modulusLength: 2048,
+                    name: 'RSA-OAEP',
+                    modulusLength: 4096,          // 4096 for long-term identity
                     publicExponent: new Uint8Array([1, 0, 1]),
-                    hash: "SHA-256",
+                    hash: 'SHA-256',
                 },
-                true,
-                ["encrypt", "decrypt"]
+                false,                            // ← extractable: FALSE (private key protected!)
+                ['encrypt', 'decrypt']
             );
         }
 
-        /** @param {CryptoKey} key */
+        /**
+         * Export only the PUBLIC key as base64 SPKI (safe to share).
+         * @param {CryptoKey} key
+         * @returns {Promise<string>}
+         */
         static async exportPublicKey(key) {
-            const exported = await window.crypto.subtle.exportKey("spki", key);
+            const exported = await window.crypto.subtle.exportKey('spki', key);
             return btoa(String.fromCharCode(...new Uint8Array(exported)));
         }
 
-        /** @param {string} base64 */
+        /**
+         * Import a public key from base64 SPKI.
+         * @param {string} base64
+         * @returns {Promise<CryptoKey>}
+         */
         static async importPublicKey(base64) {
-            const binaryDerString = atob(base64);
-            const binaryDer = new Uint8Array(binaryDerString.length);
-            for (let i = 0; i < binaryDerString.length; i++) {
-                binaryDer[i] = binaryDerString.charCodeAt(i);
-            }
+            const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
             return await window.crypto.subtle.importKey(
-                "spki",
-                binaryDer,
-                { name: "RSA-OAEP", hash: "SHA-256" },
-                true,
-                ["encrypt"]
+                'spki', bytes,
+                { name: 'RSA-OAEP', hash: 'SHA-256' },
+                true,               // Public key can be extractable (it's public)
+                ['encrypt']
             );
         }
 
+        /**
+         * Compute SHA-256 fingerprint of a base64 public key.
+         * Displayed to user to detect MITM / key substitution.
+         * @param {string} pubBase64
+         * @returns {Promise<string>} fingerprint like "A1:B2:C3:..."
+         */
+        static async keyFingerprint(pubBase64) {
+            const bytes = Uint8Array.from(atob(pubBase64), c => c.charCodeAt(0));
+            const hash = await window.crypto.subtle.digest('SHA-256', bytes);
+            return Array.from(new Uint8Array(hash))
+                .map(b => b.toString(16).padStart(2, '0').toUpperCase())
+                .join(':');
+        }
+
+        // ── AES Session Key ───────────────────────────────────────────────────
+
+        /**
+         * Generate a fresh AES-256-GCM key for a chat session.
+         * NON-EXTRACTABLE — key bytes never leave the browser's crypto engine.
+         * @returns {Promise<CryptoKey>}
+         */
         static async generateSessionKey() {
             return await window.crypto.subtle.generateKey(
-                { name: "AES-GCM", length: 256 },
-                true,
-                ["encrypt", "decrypt"]
+                { name: 'AES-GCM', length: 256 },
+                false,              // ← non-extractable!
+                ['encrypt', 'decrypt']
             );
         }
 
-        /** 
-         * @param {CryptoKey} key 
-         * @param {string} text 
+        // ── Key Wrapping (RSA-OAEP wraps AES) ────────────────────────────────
+
+        /**
+         * Wrap (encrypt) an AES session key with an RSA public key.
+         * The result is a base64 blob safe to store on the server.
+         * @param {CryptoKey} rsaPublicKey
+         * @param {CryptoKey} aesKey
+         * @returns {Promise<string>} base64-encoded wrapped key
+         */
+        static async wrapKey(rsaPublicKey, aesKey) {
+            // Must exportKey('raw') since aesKey is non-extractable from our side,
+            // but we use wrapKey API which doesn't require extractable
+            const wrapped = await window.crypto.subtle.wrapKey(
+                'raw',
+                aesKey,
+                rsaPublicKey,
+                { name: 'RSA-OAEP' }
+            );
+            return btoa(String.fromCharCode(...new Uint8Array(wrapped)));
+        }
+
+        /**
+         * Unwrap (decrypt) a wrapped AES key using our RSA private key.
+         * Returns a non-extractable AES CryptoKey.
+         * @param {CryptoKey} rsaPrivateKey
+         * @param {string} wrappedBase64
+         * @returns {Promise<CryptoKey>}
+         */
+        static async unwrapKey(rsaPrivateKey, wrappedBase64) {
+            const wrapped = Uint8Array.from(atob(wrappedBase64), c => c.charCodeAt(0));
+            return await window.crypto.subtle.unwrapKey(
+                'raw',
+                wrapped,
+                rsaPrivateKey,
+                { name: 'RSA-OAEP' },
+                { name: 'AES-GCM', length: 256 },
+                false,              // ← result is also non-extractable
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        // ── Message Encryption / Decryption ───────────────────────────────────
+
+        /**
+         * Encrypt plaintext with AES-256-GCM.
+         * @param {CryptoKey} key
+         * @param {string} text
+         * @returns {Promise<{content: string, iv: string}>}
          */
         static async encryptMessage(key, text) {
             const iv = window.crypto.getRandomValues(new Uint8Array(12));
             const encoded = new TextEncoder().encode(text);
             const ciphertext = await window.crypto.subtle.encrypt(
-                { name: "AES-GCM", iv: iv },
+                { name: 'AES-GCM', iv },
                 key,
                 encoded
             );
@@ -186,79 +323,172 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         }
 
-        /** 
-         * @param {CryptoKey} key 
-         * @param {string} base64Content 
-         * @param {string} base64Iv 
+        /**
+         * Decrypt AES-256-GCM ciphertext.
+         * @param {CryptoKey} key
+         * @param {string} base64Content
+         * @param {string} base64Iv
+         * @returns {Promise<string>}
          */
         static async decryptMessage(key, base64Content, base64Iv) {
-            const iv = new Uint8Array(atob(base64Iv).split("").map(c => c.charCodeAt(0)));
-            const ciphertext = new Uint8Array(atob(base64Content).split("").map(c => c.charCodeAt(0)));
+            const iv = Uint8Array.from(atob(base64Iv), c => c.charCodeAt(0));
+            const ciphertext = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
             const decrypted = await window.crypto.subtle.decrypt(
-                { name: "AES-GCM", iv: iv },
+                { name: 'AES-GCM', iv },
                 key,
                 ciphertext
             );
             return new TextDecoder().decode(decrypted);
         }
-
-        /** 
-         * @param {CryptoKey} publicKey 
-         * @param {CryptoKey} sessionKey 
-         */
-        static async wrapKey(publicKey, sessionKey) {
-            const wrapped = await window.crypto.subtle.encrypt(
-                { name: "RSA-OAEP" },
-                publicKey,
-                await window.crypto.subtle.exportKey("raw", sessionKey)
-            );
-            return btoa(String.fromCharCode(...new Uint8Array(wrapped)));
-        }
-
-        /** 
-         * @param {CryptoKey} privateKey 
-         * @param {string} wrappedBase64 
-         */
-        static async unwrapKey(privateKey, wrappedBase64) {
-            const wrapped = new Uint8Array(atob(wrappedBase64).split("").map(c => c.charCodeAt(0)));
-            const rawKey = await window.crypto.subtle.decrypt(
-                { name: "RSA-OAEP" },
-                privateKey,
-                wrapped
-            );
-            return await window.crypto.subtle.importKey(
-                "raw",
-                rawKey,
-                { name: "AES-GCM", length: 256 },
-                true,
-                ["encrypt", "decrypt"]
-            );
-        }
     }
 
+    // ── Key Vault: persist identity + session keys in IndexedDB ──────────────
+
+    /**
+     * Get or generate the user's RSA identity key pair.
+     * Private key is stored as a NON-EXTRACTABLE CryptoKey in IndexedDB.
+     * Public key is stored as base64 (it's public).
+     * If keys exist: loads them from IndexedDB.
+     * If not: generates new pair, saves to IndexedDB, registers pubKey on server.
+     */
     async function ensureKeys() {
-        if (state.chat.keys.publicKey) return;
-        
-        // Try loading from localStorage for persistence
-        const storedPub = localStorage.getItem('skufia_pub');
-        const storedPriv = localStorage.getItem('skufia_priv');
-        
-        if (storedPub && storedPriv) {
-            // In a real app, we'd import them back. 
-            // For now, let's just generate new ones per "session" to ensure it works perfectly the first time.
+        if (state.chat.keys.publicKey && state.chat.keys.privateKey) return;
+
+        try {
+            // Try loading from IndexedDB vault
+            const storedPub = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
+            const storedPriv = await vaultGet(IDB_STORE_KEYS, 'priv_cryptokey');
+
+            if (storedPub && storedPriv) {
+                // storedPriv is the non-extractable CryptoKey object saved in IDB
+                addLog('🔐 Загрузка ключей из защищённого хранилища...', 'info');
+                state.chat.keys.publicKey = await CryptoManager.importPublicKey(storedPub);
+                state.chat.keys.privateKey = storedPriv; // already a CryptoKey
+                // Always re-register pubKey in case server restarted
+                await apiRequest('/me/key', 'POST', { public_key: storedPub }).catch(() => {});
+                const fp = await CryptoManager.keyFingerprint(storedPub);
+                state.chat.keyFingerprint = fp;
+                addLog(`🔑 Ключи восстановлены | Отпечаток: ${fp.slice(0, 23)}...`, 'success');
+                // Clear old insecure localStorage keys if present
+                localStorage.removeItem('skufia_pub_spki');
+                localStorage.removeItem('skufia_priv_pkcs8');
+                return;
+            }
+        } catch (e) {
+            addLog('⚠️ Ошибка чтения хранилища, генерируем новые ключи...', 'info');
+            await vaultDelete(IDB_STORE_KEYS, 'pub_base64');
+            await vaultDelete(IDB_STORE_KEYS, 'priv_cryptokey');
         }
 
-        addLog('Генерация ключей шифрования RSA-2048...', 'info');
+        // Generate fresh RSA-4096 identity key pair
+        addLog('⚙️ Генерация RSA-4096 ключевой пары...', 'info');
         const pair = await CryptoManager.generateKeyPair();
-        // @ts-ignore
         state.chat.keys.publicKey = pair.publicKey;
-        // @ts-ignore
         state.chat.keys.privateKey = pair.privateKey;
-        
+
+        // Export ONLY the public key (private stays inside WebCrypto engine)
         const pubBase64 = await CryptoManager.exportPublicKey(pair.publicKey);
+
+        // Save to IndexedDB:
+        //   - public key as base64 string (for re-import after page reload)
+        //   - private key as CryptoKey object (non-extractable, browser protects it)
+        await vaultPut(IDB_STORE_KEYS, 'pub_base64', pubBase64);
+        await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', pair.privateKey);
+
+        // Register public key on server (server NEVER sees private key)
         await apiRequest('/me/key', 'POST', { public_key: pubBase64 });
-        addLog('Публичный ключ зарегистрирован в Cyber-Vault ✅', 'success');
+
+        const fp = await CryptoManager.keyFingerprint(pubBase64);
+        state.chat.keyFingerprint = fp;
+        addLog(`✅ E2EE ключи созданы и защищены | Отпечаток: ${fp.slice(0, 23)}...`, 'success');
     }
+
+    /**
+     * Get or establish a session key for a given room.
+     * Tries IndexedDB cache first, then server-stored wrapped bundle.
+     * @param {number} roomId
+     * @param {number|null} receiverId
+     * @returns {Promise<CryptoKey|null>}
+     */
+    async function getOrEstablishSessionKey(roomId, receiverId) {
+        // 1. Check in-memory cache
+        if (state.chat.sessionKeys[roomId]) {
+            return state.chat.sessionKeys[roomId];
+        }
+
+        // 2. Check IndexedDB session cache
+        try {
+            const cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
+            if (cached) {
+                state.chat.sessionKeys[roomId] = cached;
+                return cached;
+            }
+        } catch(e) {}
+
+        // 3. Try to fetch wrapped key from server and unwrap locally
+        await ensureKeys();
+        if (!state.chat.keys.privateKey) return null;
+
+        try {
+            const keyBundle = await apiRequest(`/chat/rooms/${roomId}/key`);
+            if (keyBundle && keyBundle.wrapped_key) {
+                const sessionKey = await CryptoManager.unwrapKey(
+                    state.chat.keys.privateKey,
+                    keyBundle.wrapped_key
+                );
+                // Cache in memory and IndexedDB
+                state.chat.sessionKeys[roomId] = sessionKey;
+                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
+                addLog(`🔓 Сессионный ключ восстановлен для комнаты #${roomId}`, 'success');
+                return sessionKey;
+            }
+        } catch (e) {
+            // 404 = no key yet — we are the initiator
+        }
+
+        // 4. Generate new session key and distribute to both parties
+        if (!receiverId) return null;
+
+        addLog(`🔑 Установка E2EE сессии с пользователем #${receiverId}...`, 'info');
+
+        // Fetch recipient's public key
+        const targetKeyData = await apiRequest(`/users/${receiverId}/key`).catch(() => null);
+        if (!targetKeyData || !targetKeyData.public_key) {
+            addLog('⚠️ Получатель ещё не зарегистрировал ключи E2EE', 'error');
+            return null;
+        }
+
+        // Show fingerprint of recipient's key for MITM detection
+        const recipientFp = await CryptoManager.keyFingerprint(targetKeyData.public_key);
+        addLog(`🔍 Отпечаток ключа получателя: ${recipientFp.slice(0, 23)}...`, 'info');
+
+        // Generate fresh AES-256-GCM session key
+        const sessionKey = await CryptoManager.generateSessionKey();
+        state.chat.sessionKeys[roomId] = sessionKey;
+
+        // Wrap session key for RECIPIENT using their RSA public key
+        const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
+        const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
+
+        // Wrap session key for OURSELVES (so we can decrypt our own sent messages)
+        const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
+        const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
+        const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
+
+        // Store both bundles on server (server cannot decrypt — only wrapped blobs)
+        const keysPayload = {};
+        keysPayload[String(receiverId)] = wrappedForRecipient;
+        keysPayload[String(state.user.id)] = wrappedForSelf;
+        await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
+
+        // Cache in IndexedDB
+        await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
+
+        addLog(`✅ E2EE сессия установлена | Отпечаток: ${recipientFp.slice(0, 11)}...`, 'success');
+        return sessionKey;
+    }
+
+
 
     // Use relative port for WebSocket (proxied via Nginx)
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -1067,30 +1297,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // @ts-ignore
     window.startPrivateChat = async function(targetId) {
         if (targetId === state.user.id) {
-            addLog('Вы не можете начать чат с самим собой', 'error');
+            addLog('Нельзя открыть чат с самим собой', 'error');
             return;
         }
         try {
-            addLog('Установка защищенного туннеля...', 'info');
-            // [FIX-01] Correct route: /chat/rooms with room_type='private'
-            const room = await apiRequest('/chat/rooms', 'POST', {
-                name: 'Private',
-                room_type: 'private',
+            addLog('Открываю защищённый канал связи...', 'info');
+            // Use the dedicated /chat/private endpoint (get-or-create, no duplicates)
+            const room = await apiRequest('/chat/private', 'POST', {
                 target_user_id: targetId
             });
             switchView('messages');
             // Refresh room list and then select the new/existing room
             await loadChatRooms();
-            // [FIX-02] Find room name from loaded list instead of relying on POST response fields
             const roomInList = state.chat.rooms.find(r => r.id === room.id);
-            const roomName = roomInList ? roomInList.name : 'Личный чат';
+            const roomName = roomInList ? roomInList.name : 'Приватный чат';
             const roomType = roomInList ? roomInList.type : 'private';
             selectChatRoom(room.id, roomName, roomType, targetId);
             addLog('E2EE-Канал установлен', 'success');
         } catch (e) {
             addLog('Не удалось установить соединение', 'error');
+            console.error('startPrivateChat error:', e);
         }
     }
+
 
     // --- MODULE: EVENTS ---
     async function loadEvents() {
@@ -1485,12 +1714,52 @@ document.addEventListener('DOMContentLoaded', () => {
             statusSpan.className = `status-dot ${room.is_online ? 'online' : ''}`;
             statusSpan.style.display = 'none';
 
+            // Delete/Leave button (visible on hover)
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'room-delete-btn';
+            deleteBtn.innerHTML = '✕';
+            deleteBtn.title = room.type === 'private' ? 'Удалить чат' : 'Покинуть / удалить';
+            deleteBtn.style.cssText = `
+                display: none; position: absolute; right: 6px; top: 50%;
+                transform: translateY(-50%);
+                background: rgba(255,50,50,0.15); border: 1px solid rgba(255,50,50,0.4);
+                color: #ff5555; border-radius: 50%; width: 22px; height: 22px;
+                font-size: 11px; cursor: pointer; line-height: 1;
+                transition: background 0.2s;
+            `;
+            deleteBtn.onmouseenter = () => deleteBtn.style.background = 'rgba(255,50,50,0.4)';
+            deleteBtn.onmouseleave = () => deleteBtn.style.background = 'rgba(255,50,50,0.15)';
+            deleteBtn.onclick = async (e) => {
+                e.stopPropagation();
+                const label = room.type === 'private' ? 'удалить этот приватный чат' : 'покинуть/удалить эту комнату';
+                if (!confirm(`Вы уверены, что хотите ${label}? Это действие необратимо.`)) return;
+                try {
+                    await apiRequest(`/chat/rooms/${room.id}`, 'DELETE');
+                    // Remove from state and re-render
+                    state.chat.rooms = state.chat.rooms.filter(r => r.id !== room.id);
+                    if (state.chat.currentRoomId === room.id) {
+                        state.chat.currentRoomId = null;
+                        const chatMain = document.querySelector('.chat-main');
+                        if (chatMain) chatMain.classList.remove('active');
+                    }
+                    renderChatRooms();
+                    addLog(`✅ Чат удалён`, 'success');
+                } catch (err) {
+                    addLog(`❌ Ошибка: ${err.message}`, 'error');
+                }
+            };
+            div.style.position = 'relative';
+            div.onmouseenter = () => { deleteBtn.style.display = 'block'; };
+            div.onmouseleave = () => { deleteBtn.style.display = 'none'; };
+
             div.appendChild(avatarDiv);
             div.appendChild(infoDiv);
             div.appendChild(statusSpan);
+            div.appendChild(deleteBtn);
             div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
             list.appendChild(div);
         });
+
     }
 
     // --- FOLDERS LOGIC ---
@@ -1595,10 +1864,17 @@ document.addEventListener('DOMContentLoaded', () => {
         state.chat.currentRoomId = roomId;
         state.chat.currentRoomName = roomName;
         state.chat.currentReceiverId = receiverId || null;
-        
+        state.chat.currentMyRole = myRole || 'member';
+        state.chat.currentRoomType = type || 'private';
+
+        // Push a history entry so the Back button closes the chat panel
+        // instead of exiting the PWA / navigating away
+        history.pushState({ skufia: true, view: 'messages', chat: true, roomId }, '', `#chat-${roomId}`);
+
         const header = document.getElementById('chat-header');
-        const history = document.getElementById('chat-history');
+        const chatHistoryEl = document.getElementById('chat-history');
         const inputArea = document.querySelector('.chat-input-area');
+
         
         if (inputArea) {
             if (type === 'channel' && myRole !== 'admin') {
@@ -1664,29 +1940,42 @@ document.addEventListener('DOMContentLoaded', () => {
             badgeDiv.innerHTML = '<span></span>';
         }
 
-        // --- E2EE INITIALIZATION ---
+        // --- E2EE v2: Use centralized key management ---
         if (type === 'private' && receiverId) {
-            await ensureKeys();
+            const badge = document.getElementById('chat-encryption-status');
             try {
-                const targetKeyData = await apiRequest(`/users/${receiverId}/key`);
-                if (targetKeyData && targetKeyData.public_key) {
-                    addLog(`Установка защищенного соединения с ${roomName}...`, 'info');
-                    // In a real app we'd negotiate a session key now.
-                    // For demo, we just generate one locally.
-                    if (!state.chat.sessionKeys[roomId]) {
-                        state.chat.sessionKeys[roomId] = await CryptoManager.generateSessionKey();
-                    }
-                    const badge = document.getElementById('chat-encryption-status');
+                await ensureKeys();
+                const sessionKey = await getOrEstablishSessionKey(roomId, receiverId);
+                if (sessionKey) {
+                    const myFp = state.chat.keyFingerprint || '';
                     if (badge) {
-                        badge.innerHTML = '🔒 ЗАЩИЩЕНО (E2EE ACTIVE)';
+                        badge.innerHTML = `🔒 E2EE ACTIVE`;
+                        badge.title = `Твой отпечаток: ${myFp.slice(0, 23)}...`;
                         badge.style.color = '#0f0';
                         badge.style.background = 'rgba(0, 255, 65, 0.1)';
+                        badge.style.cursor = 'pointer';
+                        badge.onclick = () => {
+                            const fp = state.chat.keyFingerprint || 'н/д';
+                            alert(`🔑 Твой отпечаток ключа:\n${fp}\n\nПопроси собеседника прочитать тебе свой отпечаток вслух — они должны совпадать. Если нет — возможна атака MITM.`);
+                        };
+                    }
+                } else {
+                    if (badge) {
+                        badge.innerHTML = '⚠️ E2EE недоступен';
+                        badge.style.color = '#ffaa00';
+                        badge.style.background = 'rgba(255,170,0,0.1)';
                     }
                 }
             } catch (e) {
-                console.warn('E2EE Negotiation failed:', e);
+                console.warn('E2EE init error:', e);
+                if (badge) {
+                    badge.innerHTML = '⚠️ Ошибка E2EE';
+                    badge.style.color = '#f00';
+                }
             }
         }
+
+
         
         // Highlight active room in sidebar
         document.querySelectorAll('.sidebar-item').forEach(el => {
@@ -1698,15 +1987,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const chatMain = document.querySelector('.chat-main');
         if (chatMain) chatMain.classList.add('active');
+
+        // Show/hide group management buttons in dropdown
+        const isGroupOrChannel = ['group', 'channel'].includes(type);
+        const isAdminOrOwner = ['owner', 'admin'].includes(myRole);
+        const btnAddMember = document.getElementById('btn-add-member');
+        const btnGroupSettings = document.getElementById('btn-group-settings');
+        if (btnAddMember) btnAddMember.style.display = (isGroupOrChannel && isAdminOrOwner) ? 'block' : 'none';
+        if (btnGroupSettings) btnGroupSettings.style.display = isGroupOrChannel ? 'block' : 'none';
+
         
         const chatLayout = document.querySelector('.chat-layout');
         if (chatLayout) chatLayout.classList.add('chat-open');
 
-        if (history) {
-            history.innerHTML = '<div class="chat-placeholder">Loading buffer...</div>';
+        if (chatHistoryEl) {
+            chatHistoryEl.innerHTML = '<div class="chat-placeholder">Loading buffer...</div>';
             try {
                 const response = await apiRequest(`/chat/rooms/${roomId}/history?limit=50`);
-                history.innerHTML = '';
+                chatHistoryEl.innerHTML = '';
                 const messages = response.messages || response; // backward compat
                 state.chat.hasMore = response.has_more || false;
                 state.chat.nextCursor = response.next_cursor || null;
@@ -1725,8 +2023,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     renderChatMessage(m);
                 }
-                history.scrollTop = history.scrollHeight;
-            } catch (e) { history.innerHTML = '<div class="chat-placeholder">ERROR: HISTORY UNAVAILABLE</div>'; }
+                chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+            } catch (e) { chatHistoryEl.innerHTML = '<div class="chat-placeholder">ERROR: HISTORY UNAVAILABLE</div>'; }
+
         }
     }
 
@@ -1865,26 +2164,42 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!input || !input.value.trim() || !state.chat.currentRoomId) return;
         
         let content = input.value.trim();
-        let secureMsg = null;
         localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
 
-        // --- ENCRYPT IF SECURE ---
         const roomId = state.chat.currentRoomId;
-        if (state.chat.sessionKeys[roomId]) {
-            try {
-                secureMsg = await CryptoManager.encryptMessage(state.chat.sessionKeys[roomId], content);
-            } catch (e) {
-                addLog('Ошибка шифрования сообщения', 'error');
-                return;
-            }
+        const receiverId = state.chat.currentReceiverId;
+
+        // --- E2EE: Lazy key establishment ---
+        // Try to get/establish session key (private chats only)
+        let sessionKey = null;
+        if (receiverId) {
+            sessionKey = await getOrEstablishSessionKey(roomId, receiverId).catch(() => null);
         }
 
-        const payload = {
-            content: (state.chat.sessionKeys[roomId] && secureMsg) ? secureMsg.content : content,
-            encryption_iv: (state.chat.sessionKeys[roomId] && secureMsg) ? secureMsg.iv : "",
-            file_url: state.pendingFile ? state.pendingFile.url : null,
-            reply_to_id: state.chat.replyToId
-        };
+        let payload;
+        if (sessionKey) {
+            // Encrypt the message
+            try {
+                const encrypted = await CryptoManager.encryptMessage(sessionKey, content);
+                payload = {
+                    content: encrypted.content,
+                    encryption_iv: encrypted.iv,
+                    file_url: state.pendingFile ? state.pendingFile.url : null,
+                    reply_to_id: state.chat.replyToId
+                };
+            } catch (e) {
+                addLog('❌ Ошибка шифрования сообщения', 'error');
+                return;
+            }
+        } else {
+            // No E2EE — group chat or recipient hasn't registered keys
+            payload = {
+                content,
+                encryption_iv: '',
+                file_url: state.pendingFile ? state.pendingFile.url : null,
+                reply_to_id: state.chat.replyToId
+            };
+        }
 
         try {
             if (state.chat.editingId) {
@@ -1899,6 +2214,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playSound('click');
         } catch (e) { addLog('Transmission failed', 'error'); }
     }
+
 
     /** Upload a file to the server and store the URL in pendingFile */
     async function uploadChatFile(/** @type {File} */ file) {
@@ -2078,12 +2394,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = document.getElementById('create-room-label');
         const typeInput = document.getElementById('create-room-type');
         const input = document.getElementById('create-room-input');
-        
+        const descInput = document.getElementById('create-room-desc');
+
         title.textContent = type === 'channel' ? 'СОЗДАТЬ КАНАЛ' : 'СОЗДАТЬ ГРУППУ';
         label.textContent = type === 'channel' ? 'Название канала' : 'Название группы';
         if (typeInput) typeInput.value = type;
         if (input) input.value = '';
-        
+        if (descInput) descInput.value = '';
+
         modal.style.display = 'flex';
         if (input) input.focus();
     };
@@ -2093,20 +2411,316 @@ document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('create-room-input');
         const typeInput = document.getElementById('create-room-type');
         const pubToggle = document.getElementById('create-room-public');
+        const descInput = document.getElementById('create-room-desc');
         const name = input ? input.value.trim() : '';
         const rType = typeInput ? typeInput.value : 'group';
         const isPublic = pubToggle ? pubToggle.checked : false;
-        
+        const description = descInput ? descInput.value.trim() : '';
+
         if (!name) return;
-        
+
         try {
             document.getElementById('create-room-modal').style.display = 'none';
-            const payload = { name, room_type: rType, is_public: isPublic };
-            const room = await apiRequest('/chat/rooms', 'POST', payload);
-            addLog(`Создано: ${name}`, 'success');
-            loadChatRooms();
+            // Use new /chat/groups endpoint which sets owner_id and invite_code
+            const payload = { name, room_type: rType, is_public: isPublic, description, initial_members: [] };
+            const room = await apiRequest('/chat/groups', 'POST', payload);
+            addLog(`✅ Создано: ${name}`, 'success');
+            await loadChatRooms();
+            // Auto-open the new room
+            if (room && room.id) {
+                selectChatRoom(room.id, name, rType, null, 'owner');
+            }
         } catch (e) { addLog('Ошибка создания', 'error'); }
     };
+
+    // ─── GROUP SETTINGS MODAL ───────────────────────────────────────────────
+
+    /**
+     * Opens the group/channel settings modal for the current room.
+     * Shows member list, role management, invite links, and danger zone.
+     */
+    // @ts-ignore
+    window.openGroupSettings = async function() {
+        const roomId = state.chat.currentRoomId;
+        const myRole = state.chat.currentMyRole;
+        if (!roomId) return;
+        if (window.toggleChatOptions) window.toggleChatOptions();
+
+        // Fetch room info and members in parallel
+        let roomInfo = null, members = [];
+        try {
+            [roomInfo, members] = await Promise.all([
+                apiRequest(`/chat/rooms/${roomId}/info`),
+                apiRequest(`/chat/rooms/${roomId}/members`)
+            ]);
+        } catch (e) {
+            addLog('Не удалось загрузить информацию о группе', 'error');
+            return;
+        }
+
+        const isAdmin = ['owner', 'admin'].includes(myRole);
+        const isOwner = myRole === 'owner';
+
+        // ── Build modal ──
+        const existing = document.getElementById('group-settings-modal');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'group-settings-modal';
+        overlay.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(8px);
+            display:flex; align-items:center; justify-content:center; z-index:9999;
+            animation: fadeIn 0.2s ease;
+        `;
+        overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+        const roleBadgeColor = { owner: '#f0b429', admin: '#00ff41', member: '#888', banned: '#f00' };
+        const roleLabel = { owner: '👑 Владелец', admin: '⚡ Администратор', member: '👤 Участник', banned: '🚫 Заблокирован' };
+
+        const membersHTML = members.map(m => {
+            const canKick = isAdmin && m.role !== 'owner' && !(m.role === 'admin' && !isOwner) && m.user_id !== state.user.id;
+            const canChangeRole = isOwner && m.role !== 'owner' && m.user_id !== state.user.id;
+            const avatar = m.avatar_url
+                ? `<img src="${m.avatar_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
+                : `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${m.username}" style="width:36px;height:36px;border-radius:50%;">`;
+
+            return `
+            <div class="member-row" style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);">
+                ${avatar}
+                <div style="flex:1;">
+                    <div style="font-size:13px;font-weight:600;">${m.username}</div>
+                    <div style="font-size:11px;color:${roleBadgeColor[m.role] || '#888'};">${roleLabel[m.role] || m.role}</div>
+                </div>
+                <div style="display:flex;gap:6px;">
+                    ${canChangeRole ? `
+                        <select onchange="window.updateMemberRole(${roomId}, ${m.user_id}, this.value)"
+                            style="background:var(--bg-panel);border:1px solid var(--border-metal);color:var(--text-primary);padding:3px 6px;border-radius:4px;font-size:11px;cursor:pointer;">
+                            <option value="admin" ${m.role==='admin'?'selected':''}>⚡ Адмін</option>
+                            <option value="member" ${m.role==='member'?'selected':''}>👤 Участник</option>
+                            <option value="banned" ${m.role==='banned'?'selected':''}>🚫 Бан</option>
+                        </select>
+                    ` : ''}
+                    ${canKick ? `
+                        <button onclick="window.kickMember(${roomId}, ${m.user_id}, '${m.username}')"
+                            style="background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.3);color:#ff5555;padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;">
+                            Исключить
+                        </button>
+                    ` : ''}
+                </div>
+            </div>`;
+        }).join('');
+
+        overlay.innerHTML = `
+        <div style="background:var(--bg-panel);border:1px solid var(--border-metal);border-radius:16px;width:min(520px,95vw);max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.8);">
+            <!-- Header -->
+            <div style="padding:20px;border-bottom:1px solid var(--border-metal);display:flex;align-items:center;gap:14px;">
+                <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0f0,#0af);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">
+                    ${roomInfo.type === 'channel' ? '📢' : '👥'}
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:16px;font-weight:700;">${roomInfo.name}</div>
+                    <div style="font-size:12px;color:var(--text-dim);">${roomInfo.type === 'channel' ? 'Канал' : 'Группа'} · ${roomInfo.member_count} участников · ${roomInfo.is_public ? '🌍 Публичный' : '🔒 Приватный'}</div>
+                    ${roomInfo.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">${roomInfo.description}</div>` : ''}
+                </div>
+                <button onclick="document.getElementById('group-settings-modal').remove()"
+                    style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:4px;">✕</button>
+            </div>
+
+            <!-- Invite section (admin only) -->
+            ${isAdmin ? `
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border-metal);">
+                <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:8px;">🔗 ПРИГЛАСИТЬ</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <div style="flex:1;background:rgba(0,255,65,0.07);border:1px solid rgba(0,255,65,0.2);border-radius:8px;padding:8px 12px;font-size:12px;font-family:monospace;color:#0f0;word-break:break-all;" id="invite-link-display">
+                        ${window.location.origin}/join/${roomInfo.invite_code}
+                    </div>
+                    <button onclick="window.copyInviteLink('${roomInfo.invite_code}')"
+                        style="background:rgba(0,255,65,0.1);border:1px solid rgba(0,255,65,0.3);color:#0f0;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:12px;">
+                        📋 Копировать
+                    </button>
+                </div>
+                <button onclick="window.generateNewInvite(${roomId})"
+                    style="margin-top:8px;background:none;border:1px solid var(--border-metal);color:var(--text-dim);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">
+                    ↻ Создать новую ссылку
+                </button>
+            </div>` : ''}
+
+            <!-- Add member button (admin only) -->
+            ${isAdmin ? `
+            <div style="padding:12px 20px;border-bottom:1px solid var(--border-metal);">
+                <button onclick="document.getElementById('group-settings-modal').remove(); window.openAddMemberModal();"
+                    style="width:100%;background:rgba(0,175,255,0.1);border:1px solid rgba(0,175,255,0.3);color:#0af;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;">
+                    ➕ Добавить участников
+                </button>
+            </div>` : ''}
+
+            <!-- Members list -->
+            <div>
+                <div style="padding:12px 20px 8px;font-size:11px;letter-spacing:0.1em;color:var(--text-dim);">
+                    👥 УЧАСТНИКИ (${members.length})
+                </div>
+                <div id="group-members-list">
+                    ${membersHTML}
+                </div>
+            </div>
+
+            <!-- Settings (admin only) -->
+            ${isAdmin ? `
+            <div style="padding:16px 20px;border-top:1px solid var(--border-metal);">
+                <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:10px;">⚙️ НАСТРОЙКИ</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <span style="font-size:13px;">Публичный доступ</span>
+                    <label style="position:relative;display:inline-block;width:44px;height:22px;">
+                        <input type="checkbox" id="group-public-toggle" ${roomInfo.is_public ? 'checked' : ''}
+                            onchange="window.toggleGroupPublic(${roomId}, this.checked)"
+                            style="opacity:0;width:0;height:0;">
+                        <span style="position:absolute;cursor:pointer;inset:0;background:${roomInfo.is_public ? '#0f0' : '#333'};border-radius:22px;transition:.3s;"></span>
+                        <span style="position:absolute;content:'';height:16px;width:16px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;transform:${roomInfo.is_public ? 'translateX(22px)' : 'none'};"></span>
+                    </label>
+                </div>
+            </div>` : ''}
+
+            <!-- Danger zone / Leave -->
+            <div style="padding:16px 20px;border-top:1px solid rgba(255,50,50,0.2);">
+                ${isOwner ? `
+                <button onclick="window.confirmDeleteRoom(${roomId}, '${roomInfo.name}')"
+                    style="width:100%;background:rgba(255,50,50,0.1);border:1px solid rgba(255,50,50,0.4);color:#ff5555;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:8px;">
+                    🗑️ Удалить группу навсегда
+                </button>` : ''}
+                <button onclick="window.leaveCurrentRoom(${roomId})"
+                    style="width:100%;background:rgba(255,150,0,0.08);border:1px solid rgba(255,150,0,0.3);color:#ffaa00;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;">
+                    🚪 Покинуть группу
+                </button>
+            </div>
+        </div>`;
+
+        document.body.appendChild(overlay);
+    };
+
+    // ─── Group management helper functions ──────────────────────────────────
+
+    window.copyInviteLink = function(code) {
+        const url = `${window.location.origin}/join/${code}`;
+        navigator.clipboard.writeText(url).then(() => addLog('✅ Ссылка скопирована', 'success'));
+    };
+
+    window.generateNewInvite = async function(roomId) {
+        try {
+            const inv = await apiRequest(`/chat/rooms/${roomId}/invite`, 'POST', { max_uses: null, expires_hours: null });
+            const el = document.getElementById('invite-link-display');
+            if (el) el.textContent = `${window.location.origin}/join/${inv.invite_code}`;
+            addLog('✅ Новая инвайт-ссылка создана', 'success');
+        } catch (e) { addLog('Ошибка создания инвайта', 'error'); }
+    };
+
+    window.kickMember = async function(roomId, userId, username) {
+        if (!confirm(`Исключить ${username} из группы?`)) return;
+        try {
+            await apiRequest(`/chat/rooms/${roomId}/members/${userId}`, 'DELETE');
+            addLog(`✅ ${username} исключён`, 'success');
+            // Refresh modal
+            window.openGroupSettings();
+        } catch (e) { addLog('Ошибка исключения', 'error'); }
+    };
+
+    window.updateMemberRole = async function(roomId, userId, newRole) {
+        try {
+            await apiRequest(`/chat/rooms/${roomId}/members/${userId}/role`, 'PUT', { role: newRole });
+            addLog(`✅ Роль обновлена`, 'success');
+        } catch (e) {
+            addLog('Ошибка изменения роли', 'error');
+            window.openGroupSettings(); // revert UI
+        }
+    };
+
+    window.toggleGroupPublic = async function(roomId, isPublic) {
+        try {
+            await apiRequest(`/chat/rooms/${roomId}/settings`, 'PUT', { is_public: isPublic });
+            addLog(`✅ Доступ: ${isPublic ? 'публичный' : 'приватный'}`, 'success');
+        } catch (e) { addLog('Ошибка изменения настроек', 'error'); }
+    };
+
+    window.confirmDeleteRoom = async function(roomId, name) {
+        if (!confirm(`Удалить группу «${name}» навсегда? Это действие нельзя отменить.`)) return;
+        try {
+            await apiRequest(`/chat/rooms/${roomId}`, 'DELETE');
+            const modal = document.getElementById('group-settings-modal');
+            if (modal) modal.remove();
+            addLog('✅ Группа удалена', 'success');
+            // Return to sidebar
+            const chatMain = document.querySelector('.chat-main');
+            if (chatMain) chatMain.classList.remove('active');
+            state.chat.currentRoomId = null;
+            await loadChatRooms();
+        } catch (e) { addLog('Ошибка удаления', 'error'); }
+    };
+
+    window.leaveCurrentRoom = async function(roomId) {
+        const name = state.chat.currentRoomName || 'группу';
+        if (!confirm(`Покинуть ${name}?`)) return;
+        try {
+            await apiRequest(`/chat/rooms/${roomId}/leave`, 'POST');
+            const modal = document.getElementById('group-settings-modal');
+            if (modal) modal.remove();
+            addLog('✅ Вы покинули группу', 'info');
+            const chatMain = document.querySelector('.chat-main');
+            if (chatMain) chatMain.classList.remove('active');
+            state.chat.currentRoomId = null;
+            await loadChatRooms();
+        } catch (e) { addLog('Ошибка выхода из группы', 'error'); }
+    };
+
+    // ─── Join by invite code ────────────────────────────────────────────────
+
+    window.openJoinByInviteModal = function() {
+        const existing = document.getElementById('join-invite-modal');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'join-invite-modal';
+        overlay.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:9999;`;
+        overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+        overlay.innerHTML = `
+        <div style="background:var(--bg-panel);border:1px solid var(--border-metal);border-radius:16px;width:min(420px,92vw);padding:24px;">
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px;">🔗 ВСТУПИТЬ ПО ССЫЛКЕ</div>
+            <input id="join-invite-input" type="text" placeholder="Вставьте инвайт-ссылку или код..."
+                style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);border-radius:8px;padding:10px 12px;color:var(--text-primary);font-size:14px;box-sizing:border-box;margin-bottom:12px;">
+            <div style="display:flex;gap:8px;">
+                <button onclick="document.getElementById('join-invite-modal').remove()"
+                    style="flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);color:var(--text-secondary);padding:10px;border-radius:8px;cursor:pointer;">
+                    Отмена
+                </button>
+                <button onclick="window.submitJoinInvite()"
+                    style="flex:1;background:linear-gradient(135deg,#0f0,#0af);border:none;color:#000;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;">
+                    Вступить
+                </button>
+            </div>
+        </div>`;
+        document.body.appendChild(overlay);
+        setTimeout(() => document.getElementById('join-invite-input')?.focus(), 50);
+    };
+
+    window.submitJoinInvite = async function() {
+        const input = document.getElementById('join-invite-input');
+        if (!input) return;
+        let code = input.value.trim();
+        // Extract code from full URL if pasted
+        const match = code.match(/\/join\/([A-Za-z0-9_-]+)/);
+        if (match) code = match[1];
+        if (!code) { addLog('Введите инвайт-код', 'error'); return; }
+
+        try {
+            const res = await apiRequest(`/chat/join/${code}`, 'POST');
+            document.getElementById('join-invite-modal')?.remove();
+            addLog(`✅ ${res.status}: ${res.room_name}`, 'success');
+            await loadChatRooms();
+            if (res.room_id) selectChatRoom(res.room_id, res.room_name, res.room_type, null, 'member');
+        } catch (e) {
+            addLog(e.message || 'Неверная или устаревшая ссылка', 'error');
+        }
+    };
+
+
 
     // --- ADD MEMBER LOGIC ---
     let addMemberSelectedIds = new Set();
@@ -2935,16 +3549,50 @@ function toggleSidebarSearch(show) {
     }
 }
 
-// Settings Avatar Preview
-window.previewAvatar = function(input) {
-    if (input.files && input.files[0]) {
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById("settings-avatar-preview").src = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
+
+// Settings Avatar Preview + Upload
+window.previewAvatar = async function(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+
+    // Immediate local preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('settings-avatar-preview');
+        if (preview) preview.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to server
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const resp = await fetch(`${API_BASE_URL}/api/me/avatar/upload`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${state.user.token}` },
+            body: formData
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.detail || 'Upload failed');
+        }
+        const data = await resp.json();
+        const avatarUrl = data.avatar_url;
+
+        // Update sidebar and dashboard avatars
+        const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
+        if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
+        const dashAvatar = document.getElementById('dash-avatar');
+        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
+
+        addLog('✅ Аватарка загружена и сохранена!', 'success');
+    } catch (e) {
+        console.error('Avatar upload error:', e);
+        addLog(`❌ Ошибка загрузки аватарки: ${e.message}`, 'error');
     }
 };
+
+
 
 // --- MODULE: CHANNEL/GROUP MEMBER MANAGEMENT ---
 window.openAddMemberModal = async function() {
@@ -3120,3 +3768,81 @@ if (mobileToggle && sidePanel) {
         });
     });
 }
+
+// =============================================================================
+// PWA NATIVE FEEL: Dynamic viewport height + Back button navigation
+// =============================================================================
+
+/**
+ * Fix #1 — Address bar overlap
+ * Yandex Browser (and Chrome/Firefox on Android) shrink the visual viewport
+ * when the address bar appears. We keep --app-height in sync with the actual
+ * visible area so nothing gets hidden behind the browser chrome.
+ */
+(function setupViewportHeight() {
+    function setAppHeight() {
+        // visualViewport.height is the visible area excluding browser UI
+        const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', h + 'px');
+    }
+
+    setAppHeight();
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setAppHeight);
+        window.visualViewport.addEventListener('scroll', setAppHeight);
+    }
+    window.addEventListener('resize', setAppHeight);
+    window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 300));
+})();
+
+/**
+ * Fix #2 — Back button behavior
+ * Without history management, any back press exits the PWA.
+ * We push a state entry on each view/chat navigation so the browser
+ * back button navigates within the app instead of closing it.
+ */
+(function setupHistoryBackNav() {
+    // Push initial state so there's always a "home" entry
+    if (!history.state || !history.state.skufia) {
+        history.replaceState({ skufia: true, view: 'home', chat: false }, '');
+    }
+
+    // Patch switchView to push history
+    const _originalSwitchView = window._switchViewInternal;
+
+    window.addEventListener('popstate', (event) => {
+        const s = event.state;
+        if (!s || !s.skufia) return;
+
+        if (s.chat) {
+            // Was in chat — close the chat panel, go back to room list
+            const chatMain = document.querySelector('.chat-main');
+            const chatLayout = document.querySelector('.chat-layout');
+            if (chatLayout) chatLayout.classList.remove('chat-open');
+            if (chatMain) chatMain.classList.remove('active');
+            return;
+        }
+
+        if (s.view && s.view !== 'home') {
+            // Switch to previous view without pushing new state (we're going back)
+            const views = document.querySelectorAll('.view');
+            const navBtns = document.querySelectorAll('.nav-btn');
+            views.forEach(v => v.classList.remove('active'));
+            navBtns.forEach(b => b.classList.remove('active'));
+            const targetView = document.getElementById(`view-${s.view}`);
+            if (targetView) targetView.classList.add('active');
+            const targetBtn = document.querySelector(`.nav-btn[data-view="${s.view}"]`);
+            if (targetBtn) targetBtn.classList.add('active');
+        }
+        // If view === 'home' or no view: the app stays open (we have replaceState for home)
+    });
+
+    // Intercept nav button clicks to push state
+    document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const viewId = btn.dataset.view;
+            history.pushState({ skufia: true, view: viewId, chat: false }, '', `#${viewId}`);
+        });
+    });
+})();

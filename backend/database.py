@@ -98,10 +98,26 @@ class ChatRoom(Base):
     __tablename__ = 'chat_rooms'
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
     room_type = Column(String, default='private') # private, group, channel
-    is_public = Column(Boolean, default=False) # True = public, False = invite-only
-    invite_code = Column(String, unique=True, nullable=True) # Unique join link
+    is_public = Column(Boolean, default=False)    # True = public, False = invite-only
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    invite_code = Column(String, unique=True, nullable=True) # Primary invite link
+    avatar_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomInvite(Base):
+    """One-time or unlimited invite links for private rooms."""
+    __tablename__ = 'room_invites'
+    id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'), nullable=False)
+    created_by = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    code = Column(String, unique=True, nullable=False, index=True)
+    max_uses = Column(Integer, nullable=True)  # None = unlimited
+    uses = Column(Integer, default=0)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class ChatRoomMember(Base):
     __tablename__ = 'chat_room_members'
@@ -248,6 +264,26 @@ class WikiLike(Base):
     article_id = Column(Integer, ForeignKey('wiki_articles.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomKeyBundle(Base):
+    """
+    Stores the AES-256 session key for a chat room, encrypted with each
+    participant's RSA public key (RSA-OAEP). Each user gets their own
+    encrypted copy so only they can decrypt it with their private key.
+    This is the core of the E2EE key exchange mechanism.
+    """
+    __tablename__ = 'room_key_bundles'
+    id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    # The AES session key, wrapped (encrypted) with the user's RSA public key
+    wrapped_key = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('room_id', 'user_id', name='uix_room_user_key'),
+    )
 
 def init_db():
     # Import models explicitly here if not imported elsewhere,

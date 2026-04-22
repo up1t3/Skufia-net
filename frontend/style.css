@@ -15,6 +15,10 @@
     --crt-display: block;
     --backdrop-blur: none;
     --chat-bubble-radius: 2px;
+    /* Dynamic viewport height — updated by JS visualViewport listener.
+       Falls back to 100dvh which already excludes retractable browser UI. */
+    --app-height: 100dvh;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 [data-theme="telegram"] {
@@ -100,7 +104,9 @@ body {
     color: var(--text-main);
     font-family: var(--font-main);
     overflow: hidden;
-    height: 100dvh;
+    /* Use --app-height so JS can keep it in sync with visualViewport */
+    height: var(--app-height);
+    max-height: var(--app-height);
     margin: 0;
     padding: 0;
     background-image: 
@@ -142,8 +148,8 @@ body::after {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: 100dvh;
-    width: 100vw;
+    height: var(--app-height);
+    width: 100%;
     overflow: hidden;
     padding: 20px;
     gap: 20px;
@@ -320,7 +326,8 @@ nav {
 .main-interface {
     flex: 1;
     display: flex;
-    height: calc(100vh - 120px);
+    /* flex: 1 + min-height: 0 is correct — no static calc needed */
+    min-height: 0;
     gap: 20px;
     overflow: hidden;
 }
@@ -665,7 +672,8 @@ input {
 /* SECURE CHANNEL / MESSAGES VIEW */
 .chat-container {
     display: flex;
-    height: calc(100vh - 120px);
+    flex: 1;
+    min-height: 0;
     background: #0d131a;
     border: 2px solid var(--border-metal);
     box-shadow: var(--panel-shadow);
@@ -754,11 +762,14 @@ input {
 
 .chat-input-area {
     padding: 8px 12px;
+    /* Pad above iOS Home Bar / Android gesture zone */
+    padding-bottom: calc(8px + var(--safe-bottom));
     background: #111820;
     border-top: 1px solid var(--border-metal);
     display: flex;
     gap: 8px;
     align-items: flex-end;
+    flex-shrink: 0;
 }
 
 #msg-input {
@@ -2210,8 +2221,10 @@ body.super-user .nav-btn.active {
     }
 
     .main-interface {
-        height: calc(100vh - 100px);
+        /* flex: 1 + min-height: 0 from base rule is enough; no static calc needed */
+        height: auto;
     }
+
     
     header {
         flex-direction: row;

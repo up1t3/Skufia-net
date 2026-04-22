@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File as FastAPIFile
 import uuid
 import os
+import secrets
 from sqlalchemy.orm import Session
-from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Message, GlobalNotification, PostLike, WikiLike, ChatRoom, ChatRoomMember
+from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Message, GlobalNotification, PostLike, WikiLike, ChatRoom, ChatRoomMember, RoomKeyBundle, RoomInvite
 from auth import get_current_user, oauth2_scheme
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -50,6 +51,20 @@ class RoomCreate(BaseModel):
     room_type: str = 'group' # private, group, channel
     is_public: bool = False
     target_user_id: Optional[int] = None
+
+class GroupCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    room_type: str = 'group'  # group or channel
+    is_public: bool = False   # False = invite-only (private)
+    initial_members: List[int] = []  # User IDs to add immediately
+
+class InviteCreate(BaseModel):
+    max_uses: Optional[int] = None     # None = unlimited
+    expires_hours: Optional[int] = None  # None = no expiry
+
+class MemberRoleUpdate(BaseModel):
+    role: str  # admin, member, banned
 
 class RoomMembersAdd(BaseModel):
     user_ids: List[int]
@@ -348,6 +363,81 @@ def update_my_key(data: KeyUpdate, current_user: User = Depends(get_current_user
     db.commit()
     return {"status": "Public key registered in the Cyber-Vault"}
 
+# --- E2EE ROOM KEY EXCHANGE ---
+
+class RoomKeyBundleSchema(BaseModel):
+    """Payload for distributing the wrapped session key to all participants."""
+    # Dict mapping user_id (str) -> wrapped_key (base64 RSA-OAEP encrypted AES key)
+    keys: dict  # {"12": "base64wrapped...", "34": "base64wrapped..."}
+
+class RoomKeyBundleSingle(BaseModel):
+    wrapped_key: str
+
+@router.post('/chat/rooms/{room_id}/key')
+def store_room_keys(
+    room_id: int,
+    payload: RoomKeyBundleSchema,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Called by the session key initiator after opening a private/group chat.
+    Stores a separate RSA-wrapped copy of the AES session key for each
+    room participant, keyed by their user_id.
+    Only room members can call this.
+    """
+    membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    for uid_str, wrapped_key in payload.keys.items():
+        try:
+            uid = int(uid_str)
+        except ValueError:
+            continue
+        # Upsert: update if exists, insert if not
+        existing = db.query(RoomKeyBundle).filter(
+            RoomKeyBundle.room_id == room_id,
+            RoomKeyBundle.user_id == uid
+        ).first()
+        if existing:
+            existing.wrapped_key = wrapped_key
+        else:
+            db.add(RoomKeyBundle(room_id=room_id, user_id=uid, wrapped_key=wrapped_key))
+
+    db.commit()
+    return {"status": "Keys stored", "count": len(payload.keys)}
+
+@router.get('/chat/rooms/{room_id}/key')
+def get_room_key(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves the current user's RSA-wrapped copy of the AES session key
+    for the given room. Returns 404 if no key has been distributed yet
+    (initiator hasn't opened the chat yet).
+    """
+    membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    bundle = db.query(RoomKeyBundle).filter(
+        RoomKeyBundle.room_id == room_id,
+        RoomKeyBundle.user_id == current_user.id
+    ).first()
+    if not bundle:
+        raise HTTPException(status_code=404, detail="No key bundle found for this room")
+
+    return {"wrapped_key": bundle.wrapped_key}
+
 # --- SECURE CHANNEL (Private Messaging) ---
 
 # --- SKUFIA-NET CHAT HUB ---
@@ -487,11 +577,538 @@ def create_room(room: RoomCreate, current_user: User = Depends(get_current_user)
         db.add(db_room)
         db.commit()
         db.refresh(db_room)
-        
         db_member = ChatRoomMember(room_id=db_room.id, user_id=current_user.id, role='admin')
         db.add(db_member)
         db.commit()
         return {"id": db_room.id, "status": "Канал/группа созданы. Вы назначены администратором."}
+
+# ============================================================
+# PRIVATE GROUPS & CHANNELS — FULL MANAGEMENT API
+# ============================================================
+
+def _is_room_admin(db: Session, room_id: int, user_id: int) -> bool:
+    """Check if user is admin or owner of the room."""
+    m = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == user_id,
+        ChatRoomMember.role.in_(['admin', 'owner'])
+    ).first()
+    return m is not None
+
+def _assert_member(db: Session, room_id: int, user_id: int):
+    m = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == user_id
+    ).first()
+    if not m:
+        raise HTTPException(status_code=403, detail="Нет доступа к этой комнате")
+    return m
+
+def _assert_admin(db: Session, room_id: int, user_id: int):
+    m = _assert_member(db, room_id, user_id)
+    if m.role not in ('admin', 'owner'):
+        raise HTTPException(status_code=403, detail="Требуются права администратора")
+    return m
+
+def _room_info(room: ChatRoom, my_role: str, member_count: int) -> dict:
+    return {
+        "id": room.id,
+        "name": room.name,
+        "description": room.description,
+        "type": room.room_type,
+        "is_public": room.is_public,
+        "owner_id": room.owner_id,
+        "avatar_url": room.avatar_url,
+        "invite_code": room.invite_code,
+        "member_count": member_count,
+        "my_role": my_role,
+        "created_at": room.created_at.isoformat() if room.created_at else None,
+    }
+
+# ── Create private group or channel ──────────────────────────────────────────
+
+@router.post('/chat/groups')
+def create_group(
+    req: GroupCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new private group (type=group) or channel (type=channel).
+    Creator becomes owner+admin. Optional initial_members list is invited immediately.
+    is_public=False (default) = invite-only; is_public=True = anyone can join.
+    """
+    if req.room_type not in ('group', 'channel'):
+        raise HTTPException(status_code=400, detail="room_type must be 'group' or 'channel'")
+    if not req.name.strip():
+        raise HTTPException(status_code=400, detail="Название не может быть пустым")
+
+    # Generate a primary invite code for the room
+    invite_code = secrets.token_urlsafe(12)
+
+    db_room = ChatRoom(
+        name=req.name.strip(),
+        description=req.description,
+        room_type=req.room_type,
+        is_public=req.is_public,
+        owner_id=current_user.id,
+        invite_code=invite_code,
+    )
+    db.add(db_room)
+    db.commit()
+    db.refresh(db_room)
+
+    # Add creator as owner/admin
+    db.add(ChatRoomMember(room_id=db_room.id, user_id=current_user.id, role='owner'))
+
+    # Add initial members
+    added = 0
+    for uid in req.initial_members:
+        if uid == current_user.id:
+            continue
+        user = db.query(User).filter(User.id == uid).first()
+        if user:
+            db.add(ChatRoomMember(room_id=db_room.id, user_id=uid, role='member'))
+            added += 1
+
+    db.commit()
+
+    member_count = 1 + added
+    return {
+        "id": db_room.id,
+        "status": "Создано",
+        "invite_code": invite_code,
+        "member_count": member_count,
+        **_room_info(db_room, 'owner', member_count)
+    }
+
+# ── Get room info ────────────────────────────────────────────────────────────
+
+@router.get('/chat/rooms/{room_id}/info')
+def get_room_info(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Full room metadata including member count and current user's role."""
+    membership = _assert_member(db, room_id, current_user.id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Комната не найдена")
+    count = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.role != 'banned'
+    ).count()
+    return _room_info(room, membership.role, count)
+
+# ── Update room settings (admin only) ────────────────────────────────────────
+
+class RoomUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_public: Optional[bool] = None
+    avatar_url: Optional[str] = None
+
+@router.put('/chat/rooms/{room_id}/settings')
+def update_room_settings(
+    room_id: int,
+    req: RoomUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update room name, description, visibility. Admin only."""
+    _assert_admin(db, room_id, current_user.id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Комната не найдена")
+    if req.name is not None:
+        room.name = req.name.strip()
+    if req.description is not None:
+        room.description = req.description
+    if req.is_public is not None:
+        room.is_public = req.is_public
+    if req.avatar_url is not None:
+        room.avatar_url = req.avatar_url
+    db.commit()
+    return {"status": "Настройки обновлены"}
+
+# ── Member list ───────────────────────────────────────────────────────────────
+
+@router.get('/chat/rooms/{room_id}/members')
+def list_room_members(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List all members with their roles. Any member can view."""
+    _assert_member(db, room_id, current_user.id)
+    memberships = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id
+    ).all()
+    result = []
+    for m in memberships:
+        u = db.query(User).filter(User.id == m.user_id).first()
+        if not u:
+            continue
+        result.append({
+            "user_id": u.id,
+            "username": get_display_name(u),
+            "handle": u.handle or u.username,
+            "avatar_url": u.profile.avatar_url if u.profile else None,
+            "role": m.role,
+            "joined_at": m.joined_at.isoformat() if m.joined_at else None,
+        })
+    # Sort: owners first, then admins, then members
+    role_order = {'owner': 0, 'admin': 1, 'member': 2, 'banned': 3}
+    result.sort(key=lambda x: role_order.get(x['role'], 99))
+    return result
+
+# ── Add member (admin only) ───────────────────────────────────────────────────
+
+@router.post('/chat/rooms/{room_id}/members')
+def add_room_members(
+    room_id: int,
+    req: RoomMembersAdd,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Add users to a private room. Admin/owner only."""
+    _assert_admin(db, room_id, current_user.id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Комната не найдена")
+
+    added = []
+    skipped = []
+    for uid in req.user_ids:
+        user = db.query(User).filter(User.id == uid).first()
+        if not user:
+            skipped.append({"id": uid, "reason": "Пользователь не найден"})
+            continue
+        existing = db.query(ChatRoomMember).filter(
+            ChatRoomMember.room_id == room_id,
+            ChatRoomMember.user_id == uid
+        ).first()
+        if existing:
+            if existing.role == 'banned':
+                skipped.append({"id": uid, "reason": "Пользователь заблокирован"})
+            else:
+                skipped.append({"id": uid, "reason": "Уже участник"})
+            continue
+        db.add(ChatRoomMember(room_id=room_id, user_id=uid, role='member'))
+        added.append({"id": uid, "username": get_display_name(user)})
+
+    db.commit()
+    return {"added": added, "skipped": skipped}
+
+# ── Remove member / kick (admin only) ────────────────────────────────────────
+
+@router.delete('/chat/rooms/{room_id}/members/{user_id}')
+def remove_room_member(
+    room_id: int,
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Remove a member from the room.
+    Admin can remove members. Owner can remove admins.
+    Nobody can remove the owner.
+    """
+    my_membership = _assert_admin(db, room_id, current_user.id)
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Нельзя удалить себя; используйте 'покинуть группу'")
+
+    target = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == user_id
+    ).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Участник не найден")
+
+    # Owners cannot be kicked
+    if target.role == 'owner':
+        raise HTTPException(status_code=403, detail="Нельзя исключить владельца группы")
+
+    # Admins can only be kicked by owner
+    if target.role == 'admin' and my_membership.role != 'owner':
+        raise HTTPException(status_code=403, detail="Только владелец может исключить администратора")
+
+    db.delete(target)
+    db.commit()
+    return {"status": "Участник удалён", "user_id": user_id}
+
+# ── Change member role (owner only) ──────────────────────────────────────────
+
+@router.put('/chat/rooms/{room_id}/members/{user_id}/role')
+def update_member_role(
+    room_id: int,
+    user_id: int,
+    req: MemberRoleUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Promote to admin, demote to member, or ban.
+    Only owner can change roles.
+    """
+    if req.role not in ('admin', 'member', 'banned'):
+        raise HTTPException(status_code=400, detail="role must be admin, member, or banned")
+
+    my_m = _assert_member(db, room_id, current_user.id)
+    if my_m.role != 'owner':
+        raise HTTPException(status_code=403, detail="Только владелец может изменять роли")
+
+    target = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == user_id
+    ).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Участник не найден")
+    if target.role == 'owner':
+        raise HTTPException(status_code=403, detail="Нельзя изменить роль владельца")
+
+    target.role = req.role
+    db.commit()
+    return {"status": "Роль обновлена", "user_id": user_id, "new_role": req.role}
+
+# ── Leave room (self) ─────────────────────────────────────────────────────────
+
+@router.post('/chat/rooms/{room_id}/leave')
+def leave_room(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Leave a group or channel. Owners must transfer ownership first."""
+    membership = _assert_member(db, room_id, current_user.id)
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+
+    if membership.role == 'owner':
+        # Auto-transfer ownership to oldest admin, else oldest member
+        next_admin = db.query(ChatRoomMember).filter(
+            ChatRoomMember.room_id == room_id,
+            ChatRoomMember.user_id != current_user.id,
+            ChatRoomMember.role == 'admin'
+        ).order_by(ChatRoomMember.joined_at).first()
+
+        next_member = db.query(ChatRoomMember).filter(
+            ChatRoomMember.room_id == room_id,
+            ChatRoomMember.user_id != current_user.id,
+            ChatRoomMember.role == 'member'
+        ).order_by(ChatRoomMember.joined_at).first()
+
+        successor = next_admin or next_member
+        if successor:
+            successor.role = 'owner'
+            if room:
+                room.owner_id = successor.user_id
+        else:
+            # Last member leaving — delete the room
+            db.delete(membership)
+            db.commit()
+            if room:
+                db.delete(room)
+                db.commit()
+            return {"status": "Комната удалена (последний участник покинул)"}
+
+    db.delete(membership)
+    db.commit()
+    return {"status": "Вы покинули группу"}
+
+# ── Delete room (owner only) ──────────────────────────────────────────────────
+
+@router.delete('/chat/rooms/{room_id}')
+def delete_room(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Permanently delete a room. Owner only."""
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Комната не найдена")
+
+    membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+
+    if not membership or (membership.role != 'owner' and not current_user.is_superadmin):
+        raise HTTPException(status_code=403, detail="Только владелец может удалить группу")
+
+    # Cascade deletes members, messages, key bundles via DB FK constraints
+    db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).delete()
+    db.query(RoomKeyBundle).filter(RoomKeyBundle.room_id == room_id).delete()
+    db.query(RoomInvite).filter(RoomInvite.room_id == room_id).delete()
+    db.query(Message).filter(Message.room_id == room_id).delete()
+    db.delete(room)
+    db.commit()
+    return {"status": "Группа удалена"}
+
+# ── Invite link management ────────────────────────────────────────────────────
+
+@router.post('/chat/rooms/{room_id}/invite')
+def create_invite_link(
+    room_id: int,
+    req: InviteCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate an invite link for the room. Admin only."""
+    _assert_admin(db, room_id, current_user.id)
+
+    code = secrets.token_urlsafe(16)
+    expires_at = None
+    if req.expires_hours:
+        expires_at = datetime.utcnow() + timedelta(hours=req.expires_hours)
+
+    invite = RoomInvite(
+        room_id=room_id,
+        created_by=current_user.id,
+        code=code,
+        max_uses=req.max_uses,
+        expires_at=expires_at,
+    )
+    db.add(invite)
+    db.commit()
+    db.refresh(invite)
+
+    return {
+        "invite_code": code,
+        "invite_url": f"/join/{code}",
+        "max_uses": req.max_uses,
+        "expires_at": expires_at.isoformat() if expires_at else None,
+    }
+
+@router.get('/chat/rooms/{room_id}/invites')
+def list_invites(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List all active invite links for the room. Admin only."""
+    _assert_admin(db, room_id, current_user.id)
+    invites = db.query(RoomInvite).filter(RoomInvite.room_id == room_id).all()
+    return [{
+        "id": inv.id,
+        "code": inv.code,
+        "invite_url": f"/join/{inv.code}",
+        "uses": inv.uses,
+        "max_uses": inv.max_uses,
+        "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
+        "created_at": inv.created_at.isoformat() if inv.created_at else None,
+    } for inv in invites]
+
+@router.delete('/chat/rooms/{room_id}/invites/{invite_id}')
+def revoke_invite(
+    room_id: int,
+    invite_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke (delete) an invite link. Admin only."""
+    _assert_admin(db, room_id, current_user.id)
+    invite = db.query(RoomInvite).filter(
+        RoomInvite.id == invite_id,
+        RoomInvite.room_id == room_id
+    ).first()
+    if not invite:
+        raise HTTPException(status_code=404, detail="Инвайт не найден")
+    db.delete(invite)
+    db.commit()
+    return {"status": "Инвайт отозван"}
+
+# ── Join by invite code ───────────────────────────────────────────────────────
+
+@router.post('/chat/join/{invite_code}')
+def join_by_invite(
+    invite_code: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Join a room using an invite link.
+    Validates: existence, expiry, usage limits, and banned status.
+    """
+    # Check primary invite_code on ChatRoom
+    room = db.query(ChatRoom).filter(ChatRoom.invite_code == invite_code).first()
+    invite = None
+
+    if not room:
+        # Check RoomInvite table
+        invite = db.query(RoomInvite).filter(RoomInvite.code == invite_code).first()
+        if not invite:
+            raise HTTPException(status_code=404, detail="Инвайт-ссылка не найдена или устарела")
+
+        # Validate invite
+        if invite.expires_at and invite.expires_at < datetime.utcnow():
+            raise HTTPException(status_code=410, detail="Инвайт-ссылка истекла")
+        if invite.max_uses and invite.uses >= invite.max_uses:
+            raise HTTPException(status_code=410, detail="Лимит использований исчерпан")
+
+        room = db.query(ChatRoom).filter(ChatRoom.id == invite.room_id).first()
+        if not room:
+            raise HTTPException(status_code=404, detail="Комната не найдена")
+
+    # Check if already a member
+    existing = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room.id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if existing:
+        if existing.role == 'banned':
+            raise HTTPException(status_code=403, detail="Вы заблокированы в этой группе")
+        member_count = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room.id).count()
+        return {"status": "Вы уже участник", "room_id": room.id, "room_name": room.name,
+                "member_count": member_count}
+
+    # Join
+    db.add(ChatRoomMember(room_id=room.id, user_id=current_user.id, role='member'))
+    if invite:
+        invite.uses += 1
+    db.commit()
+
+    member_count = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room.id).count()
+    return {
+        "status": "Добро пожаловать!",
+        "room_id": room.id,
+        "room_name": room.name,
+        "room_type": room.room_type,
+        "member_count": member_count,
+    }
+
+# ── Transfer ownership ────────────────────────────────────────────────────────
+
+@router.post('/chat/rooms/{room_id}/transfer-ownership/{new_owner_id}')
+def transfer_ownership(
+    room_id: int,
+    new_owner_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Transfer room ownership to another member. Current owner only."""
+    my_m = _assert_member(db, room_id, current_user.id)
+    if my_m.role != 'owner':
+        raise HTTPException(status_code=403, detail="Только владелец может передать права")
+
+    target = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == new_owner_id
+    ).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Пользователь не является участником группы")
+
+    # Transfer
+    my_m.role = 'admin'
+    target.role = 'owner'
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if room:
+        room.owner_id = new_owner_id
+    db.commit()
+    return {"status": "Владелец изменён", "new_owner_id": new_owner_id}
+
+
 
 @router.get('/chat/rooms/{room_id}/history')
 def get_room_history(
@@ -1253,7 +1870,82 @@ def kick_member(room_id: int, target_user_id: int, current_user: User = Depends(
 
     return {"status": "success"}
 
-# --- SKUFIA-NET CONTACTS API (Phase 6) ---
+@router.delete('/chat/rooms/{room_id}')
+def leave_or_delete_room(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Leave a room (private chat) or delete it (admin of group/channel).
+    - Private chat: removes current user's membership. If room becomes empty — deletes it.
+    - Group/channel: only admin can delete. Removes all members and messages.
+    """
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    my_membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not my_membership:
+        raise HTTPException(status_code=403, detail="You are not a member of this room")
+
+    is_admin = my_membership.role == 'admin'
+    is_global_admin = current_user.profile and current_user.profile.rank == 'admin'
+
+    if room.room_type in ('group', 'channel'):
+        # Only admin can delete group/channel
+        if not is_admin and not is_global_admin:
+            raise HTTPException(status_code=403, detail="Only room admin can delete this room")
+        # Delete all messages, members, then room
+        db.query(Message).filter(Message.room_id == room_id).delete(synchronize_session=False)
+        db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).delete(synchronize_session=False)
+        db.delete(room)
+    else:
+        # Private chat — just remove membership
+        db.delete(my_membership)
+        # If no members left, clean up the room
+        remaining = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).count()
+        if remaining == 0:
+            db.query(Message).filter(Message.room_id == room_id).delete(synchronize_session=False)
+            db.delete(room)
+
+    db.commit()
+    return {"status": "success", "message": "Room removed from your chat list"}
+
+@router.post('/me/avatar/upload')
+async def upload_avatar_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Upload a profile avatar image file (max 3 MB)"""
+    MAX_AVATAR_SIZE = 3 * 1024 * 1024
+    contents = await file.read()
+    if len(contents) > MAX_AVATAR_SIZE:
+        raise HTTPException(status_code=413, detail="Аватарка не должна превышать 3 МБ")
+
+    if not validate_magic_bytes(contents, expected_type="image"):
+        raise HTTPException(status_code=415, detail="Недопустимый формат изображения")
+
+    safe_filename = os.path.basename((file.filename or 'avatar').replace('\\', '/'))
+    ext = os.path.splitext(safe_filename)[1].lower() or '.jpg'
+    if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+        ext = '.jpg'
+
+    unique_name = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
+    os.makedirs(os.path.join('uploads', 'avatars'), exist_ok=True)
+    save_path = os.path.join('uploads', 'avatars', unique_name)
+
+    with open(save_path, 'wb') as f:
+        f.write(contents)
+
+    avatar_url = f"/api/uploads/avatars/{unique_name}"
+
+    # Save to profile
+    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
+    if not profile:
+        profile = Profile(user_id=current_user.id)
+        db.add(profile)
+    profile.avatar_url = avatar_url
+    db.commit()
+
+    return {"status": "ok", "avatar_url": avatar_url}
+
+
 from pydantic import BaseModel
 from typing import List, Optional
 
