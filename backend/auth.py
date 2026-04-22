@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import os
 from database import SessionLocal, User, Profile
 from sqlalchemy.orm import Session
+from rate_limit import RateLimiter
 
 # Configuration
 SECRET_KEY = os.getenv('SECRET_KEY', 'skufia_super_secret_cyber_key_2000')
@@ -79,7 +80,7 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
-@router.post('/register', status_code=status.HTTP_201_CREATED)
+@router.post('/register', status_code=status.HTTP_201_CREATED, dependencies=[Depends(RateLimiter(limit=5, window=60))])
 def register_user(req: RegisterRequest, db = Depends(get_db)):
     # [ФЗ-152] Reject registration if personal data consent is not given
     if not req.accepted_pd:
@@ -111,7 +112,7 @@ def register_user(req: RegisterRequest, db = Depends(get_db)):
     
     return {"message": "User registered successfully", "user_id": new_user.id}
 
-@router.post('/login')
+@router.post('/login', dependencies=[Depends(RateLimiter(limit=5, window=60))])
 def login_user(req: LoginRequest, db = Depends(get_db)):
     user = db.query(User).filter(User.username == req.username).first()
     if not user or not verify_password(req.password, user.hashed_password):
