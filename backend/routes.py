@@ -1,8 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File as FastAPIFile
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File as FastAPIFile, Header
 import uuid
 import os
 import secrets
 from sqlalchemy.orm import Session
+from cachetools import LRUCache
+
+idempotency_cache = LRUCache(maxsize=1000)
+
+async def validate_idempotency(x_idempotency_key: str = Header(..., alias="X-Idempotency-Key", description="Idempotency key for mutations")):
+    if x_idempotency_key in idempotency_cache:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": {
+                    "code": "MSG_DUPLICATE_IDEMPOTENCY",
+                    "message": "Message with this client_msg_id already processed.",
+                    "details": {"client_msg_id": x_idempotency_key}
+                }
+            }
+        )
+    idempotency_cache[x_idempotency_key] = True
+    return x_idempotency_key
 from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Message, GlobalNotification, PostLike, WikiLike, ChatRoom, ChatRoomMember, RoomKeyBundle, RoomInvite
 from auth import get_current_user, oauth2_scheme
 from typing import List, Optional
@@ -153,7 +171,7 @@ def get_wiki_detail(article_id: int, current_user: User = Depends(get_current_us
     }
 
 @router.post('/wiki/{article_id}/like')
-def like_wiki(article_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def like_wiki(article_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Pins a seal of approval (LIKE) on a wiki article"""
     existing_like = db.query(WikiLike).filter(WikiLike.article_id == article_id, WikiLike.user_id == current_user.id).first()
     if existing_like:
@@ -166,7 +184,7 @@ def like_wiki(article_id: int, current_user: User = Depends(get_current_user), d
     return {"status": "liked"}
 
 @router.post('/wiki')
-def create_article(article: WikiCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_article(article: WikiCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     db_article = WikiArticle(**article.model_dump(), author_id=current_user.id)
     db.add(db_article)
     update_karma(db, current_user.id, amount=20) # Wiki articles give more karma
@@ -180,7 +198,7 @@ def list_topics(current_user: User = Depends(get_current_user), db: Session = De
     return [{"id": t.id, "title": t.title, "author": get_display_name(t.author), "created_at": t.created_at} for t in topics]
 
 @router.post('/topics')
-def create_topic(topic: TopicCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_topic(topic: TopicCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Initializes a new forum thread"""
     db_topic = Topic(title=topic.title, category_id=topic.category_id, author_id=current_user.id)
     db.add(db_topic)
@@ -206,7 +224,7 @@ def get_posts(topic_id: int, current_user: User = Depends(get_current_user), db:
     return posts_data
 
 @router.post('/topics/{topic_id}/reply')
-def reply_topic(topic_id: int, post: PostCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def reply_topic(topic_id: int, post: PostCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Appends a new transmission to an existing topic"""
     db_post = Post(topic_id=topic_id, author_id=current_user.id, content=post.content)
     db.add(db_post)
@@ -215,7 +233,7 @@ def reply_topic(topic_id: int, post: PostCreate, current_user: User = Depends(ge
     return {"status": "Message transmitted to topic thread"}
 
 @router.post('/posts/{post_id}/like')
-def like_post(post_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def like_post(post_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Pins a seal of approval (LIKE) on a forum post"""
     existing_like = db.query(PostLike).filter(PostLike.post_id == post_id, PostLike.user_id == current_user.id).first()
     if existing_like:
@@ -270,7 +288,7 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
     }
 
 @router.post('/me/update')
-def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     # 1. Update User table (Username/Callsign)
     user_db = db.query(User).filter(User.id == current_user.id).first()
     if data.username and data.username != user_db.username:
@@ -312,7 +330,7 @@ class AvatarUpdate(BaseModel):
     avatar_url: str
 
 @router.post('/me/avatar')
-def update_avatar(data: AvatarUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_avatar(data: AvatarUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
     if profile and data.avatar_url:
         profile.avatar_url = data.avatar_url
@@ -329,7 +347,7 @@ class TelegramLink(BaseModel):
     telegram_id: str
 
 @router.post('/auth/link_telegram')
-def link_telegram(data: TelegramLink, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def link_telegram(data: TelegramLink, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Links the current authenticated user to their Telegram ID"""
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
@@ -357,7 +375,7 @@ class KeyUpdate(BaseModel):
     public_key: str
 
 @router.post('/me/key')
-def update_my_key(data: KeyUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_my_key(data: KeyUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Registers the operative's public key for secure transmissions"""
     user = db.query(User).filter(User.id == current_user.id).first()
     user.public_key = data.public_key
@@ -541,7 +559,7 @@ def delete_folder(folder_id: int, current_user: User = Depends(get_current_user)
     return {"status": "success"}
 
 @router.post('/chat/rooms')
-def create_room(room: RoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_room(room: RoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Creates a new chat room and adds the creator as a member"""
     if room.room_type == 'private':
         if not room.target_user_id:
@@ -1268,7 +1286,7 @@ def validate_magic_bytes(contents: bytes, expected_type: str = "all") -> bool:
             return False # Unknown binary blob
 
 @router.post('/chat/upload_audio')
-async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user)):
+async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), idem_key: str = Depends(validate_idempotency)):
     """Upload a voice message file (max 10 MB)"""
     contents = await file.read()
     if len(contents) > MAX_AUDIO_SIZE:
@@ -1297,7 +1315,7 @@ async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: U
     return {"audio_url": f"/api/uploads/voice/{unique_name}"}
 
 @router.post('/chat/upload')
-async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user)):
+async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), idem_key: str = Depends(validate_idempotency)):
     """Upload a file attachment for chat (max 5 MB)"""
     contents = await file.read()
     if len(contents) > MAX_FILE_SIZE:
@@ -1325,7 +1343,7 @@ async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: Us
     return {"file_url": f"/api/uploads/{unique_name}", "original_name": safe_filename, "size": len(contents)}
 
 @router.post('/chat/rooms/{room_id}/send')
-async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Enhanced messaging with real-time broadcasting via WebSocket"""
     from main import manager
     
@@ -1416,7 +1434,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     return {"status": "Message transmitted and broadcasted"}
 
 @router.put('/chat/messages/{message_id}')
-async def edit_message(message_id: int, req: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def edit_message(message_id: int, req: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Edit an existing message"""
     from main import manager
     msg = db.query(Message).filter(Message.id == message_id).first()
@@ -1446,7 +1464,7 @@ async def edit_message(message_id: int, req: dict, current_user: User = Depends(
     return {"status": "success"}
 
 @router.delete('/chat/messages/{message_id}')
-async def delete_message(message_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def delete_message(message_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Hard delete an existing message"""
     from main import manager
     msg = db.query(Message).filter(Message.id == message_id).first()
@@ -1519,7 +1537,7 @@ def get_global_notifications(current_user: User = Depends(get_current_user), db:
     return [{"id": n.id, "message": n.message, "level": n.level, "created_at": n.created_at} for n in notifs]
 
 @router.post('/notifications/broadcast')
-def broadcast_notification(notif: NotificationCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def broadcast_notification(notif: NotificationCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Broadcasts a system-wide alert to all operators (Admin only logic implied)"""
     if not current_user.profile or current_user.profile.rank != 'admin':
         raise HTTPException(status_code=403, detail="Not authorized")
@@ -1599,7 +1617,7 @@ def get_market_listings(
     }
 
 @router.post('/market')
-def create_market_listing(market: MarketCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_market_listing(market: MarketCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     db_market = MarketListing(
         title=market.title,
         price=market.price,
@@ -1676,7 +1694,7 @@ def update_market_status(item_id: int, update: MarketStatusUpdate, current_user:
     return {"status": "success"}
 
 @router.delete('/market/{item_id}')
-def delete_market_listing(item_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def delete_market_listing(item_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     item = db.query(MarketListing).filter(MarketListing.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Lot not found")
@@ -1716,7 +1734,7 @@ def get_events(current_user: User = Depends(get_current_user), db: Session = Dep
     return [{"id": e.id, "title": e.title, "date": e.event_date.isoformat(), "location": e.location, "description": e.description} for e in events]
 
 @router.post('/events')
-def create_event(event: EventCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_event(event: EventCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     db_event = Event(
         title=event.title,
         event_date=event.event_date,
@@ -1735,7 +1753,7 @@ class PrivateChatCreate(BaseModel):
     target_user_id: int
 
 @router.post('/chat/private')
-def get_or_create_private_room(req: PrivateChatCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_or_create_private_room(req: PrivateChatCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     target_user = db.query(User).filter(User.id == req.target_user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -1774,7 +1792,7 @@ def get_or_create_private_room(req: PrivateChatCreate, current_user: User = Depe
 # --- MESSENGER GROUP & INVITE MECHANICS ---
 
 @router.post('/chat/rooms/create')
-def create_room(room: RoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_room(room: RoomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     invite_code = uuid.uuid4().hex if room.room_type == 'group' else None
 
     # Use kwargs to avoid AttributeErrors if the properties are not mapped in database.py
@@ -1808,7 +1826,7 @@ def create_room(room: RoomCreate, current_user: User = Depends(get_current_user)
 
 
 @router.get('/chat/join/{invite_code}')
-def join_room(invite_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def join_room(invite_code: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     room = db.query(ChatRoom).filter(ChatRoom.invite_code == invite_code).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found or invalid invite code")
@@ -1850,7 +1868,7 @@ def add_members(room_id: int, req: RoomMembersAdd, current_user: User = Depends(
     return {"status": "success", "added_count": added_count}
 
 @router.delete('/chat/rooms/{room_id}/members/{target_user_id}')
-def kick_member(room_id: int, target_user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def kick_member(room_id: int, target_user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     # Check if current user is authorized to kick the member
     admin_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
     is_room_admin = admin_member and admin_member.role == 'admin'
@@ -1958,7 +1976,7 @@ class SyncContactsRequest(BaseModel):
     contacts: List[ContactItem]
 
 @router.post('/contacts/sync')
-def sync_contacts(req: SyncContactsRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def sync_contacts(req: SyncContactsRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Mock sync payload for contact parsing, handles local search and P2P prep"""
     matched = 0
     # In a real db schema, we would insert these into a `Contacts` table linked to user_id
