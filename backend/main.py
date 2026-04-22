@@ -12,6 +12,7 @@ import asyncio
 from broadcaster import Broadcast
 import os
 from auth import decode_token, router as auth_router
+from rate_limit import check_rate_limit
 try:
     from telegram_bot import run_bot
 except ImportError:
@@ -202,6 +203,12 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
             while True:
                 # We receive messages here for WebRTC signaling relay and other real-time events
                 text_data = await websocket.receive_text()
+
+                # Check rate limit (5 messages per second)
+                if not await check_rate_limit(f"ws:{user_id}", limit=5, window=1):
+                    await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Rate limit exceeded")
+                    return
+
                 try:
                     data = json.loads(text_data)
                     msg_type = data.get('type')
