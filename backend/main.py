@@ -12,6 +12,7 @@ import asyncio
 from broadcaster import Broadcast
 import os
 from auth import decode_token, router as auth_router
+from rate_limit import check_rate_limit
 try:
     from telegram_bot import run_bot
 except ImportError:
@@ -45,6 +46,11 @@ def run_migrations():
 
             # users
             add_column("users", "public_key", "TEXT")
+            add_column("users", "handle", "VARCHAR")
+            add_column("users", "is_superadmin", "BOOLEAN", default="0" if DATABASE_URL.startswith("sqlite") else "FALSE")
+            add_column("users", "recovery_email", "VARCHAR")
+            add_column("users", "phone_number", "VARCHAR")
+            add_column("users", "accepted_pd", "BOOLEAN", default="0" if DATABASE_URL.startswith("sqlite") else "FALSE")
             
             # messages
             add_column("messages", "encryption_iv", "TEXT")
@@ -119,7 +125,11 @@ app.add_middleware(
         "http://localhost:5551",
         "http://127.0.0.1:5551",
         "http://localhost:8007",
-        "http://127.0.0.1:8007"
+        "http://127.0.0.1:8007",
+        "https://skuf-net.ru",
+        "https://xn--e1afmapc3af.xn--p1ai",
+        "http://skuf-net.ru",
+        "http://xn--e1afmapc3af.xn--p1ai"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -193,9 +203,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
             while True:
                 # We receive messages here for WebRTC signaling relay and other real-time events
                 text_data = await websocket.receive_text()
+
+                # Check rate limit (5 messages per second)
+                if not await check_rate_limit(f"ws:{user_id}", limit=5, window=1):
+                    await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Rate limit exceeded")
+                    return
+
                 try:
                     data = json.loads(text_data)
-                    if data.get('type') == 'rtc_signal':
+                    msg_type = data.get('type')
+                    if msg_type == 'rtc_signal':
                         target_id = data.get('target')
                         if target_id:
                             relay_msg = {
@@ -224,6 +241,41 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 "room_id": data.get('room_id')
                             }
                             await manager.send_personal_message(relay_msg, target_id)
+                    elif msg_type == 'typing_status':
+                        room_id = data.get('room_id')
+                        if room_id:
+                            db = SessionLocal()
+                            from database import ChatRoomMember
+                            members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
+                            uids = [m.user_id for m in members if m.user_id != user_id]
+                            db.close()
+                            
+                            relay_msg = {
+                                "type": "typing_status",
+                                "sender_id": user_id,
+                                "room_id": room_id,
+                                "is_typing": data.get('status', True)
+                            }
+                            await manager.broadcast(relay_msg, user_ids=uids)
+                    elif msg_type == 'read_ack':
+                        message_id = data.get('message_id')
+                        room_id = data.get('room_id')
+                        if message_id:
+                            db = SessionLocal()
+                            from database import Message
+                            msg = db.query(Message).filter(Message.id == message_id).first()
+                            if msg and msg.sender_id != user_id:
+                                msg.is_read = True
+                                db.commit()
+                                
+                                relay_msg = {
+                                    "type": "read_ack",
+                                    "message_id": message_id,
+                                    "room_id": msg.room_id,
+                                    "reader_id": user_id
+                                }
+                                await manager.send_personal_message(relay_msg, msg.sender_id)
+                            db.close()
                 except json.JSONDecodeError:
                     pass
         except WebSocketDisconnect:
@@ -265,8 +317,7 @@ async def startup_event():
     if run_bot:
         print("Starting Telegram Support Bot...")
         asyncio.create_task(run_bot())
-# Include API routes (Forum, Market, Wiki, etc.)
-app.include_router(main_router, tags=["API"])
+# [FIX-04] Removed duplicate include_router (already included at line 142 with prefix='/api')
 
 @app.get("/", tags=["Health"])
 async def root():

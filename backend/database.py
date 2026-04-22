@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Index
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Index, Numeric, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import JSONB
@@ -33,7 +33,22 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     telegram_id = Column(String, unique=True, nullable=True)
     public_key = Column(Text, nullable=True) # RSA Public Key for E2EE
+    handle = Column(String, unique=True, nullable=True) # Short username like @up1t3rV
+    recovery_email = Column(String, nullable=True)
+    phone_number = Column(String, unique=True, index=True, nullable=True)
+    accepted_pd = Column(Boolean, default=False)
+    is_superadmin = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class UserContact(Base):
+    __tablename__ = 'user_contacts'
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    contact_name = Column(String, nullable=False)
+    contact_phone = Column(String, nullable=False)
+    linked_user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class Profile(Base):
     __tablename__ = 'profiles'
@@ -83,10 +98,26 @@ class ChatRoom(Base):
     __tablename__ = 'chat_rooms'
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
     room_type = Column(String, default='private') # private, group, channel
-    is_public = Column(Boolean, default=False) # True = public, False = invite-only
-    invite_code = Column(String, unique=True, nullable=True) # Unique join link
+    is_public = Column(Boolean, default=False)    # True = public, False = invite-only
+    owner_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    invite_code = Column(String, unique=True, nullable=True) # Primary invite link
+    avatar_url = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomInvite(Base):
+    """One-time or unlimited invite links for private rooms."""
+    __tablename__ = 'room_invites'
+    id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'), nullable=False)
+    created_by = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    code = Column(String, unique=True, nullable=False, index=True)
+    max_uses = Column(Integer, nullable=True)  # None = unlimited
+    uses = Column(Integer, default=0)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class ChatRoomMember(Base):
     __tablename__ = 'chat_room_members'
@@ -96,6 +127,22 @@ class ChatRoomMember(Base):
     role = Column(String, default='member') # admin, member, banned
     unread_count = Column(Integer, default=0)
     joined_at = Column(DateTime, default=datetime.utcnow)
+
+class ChatFolder(Base):
+    __tablename__ = 'chat_folders'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    name = Column(String, nullable=False)
+    icon = Column(String, nullable=True) # Emoji icon or SVG ref
+    order_index = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class ChatFolderMember(Base):
+    __tablename__ = 'chat_folder_members'
+    id = Column(Integer, primary_key=True, index=True)
+    folder_id = Column(Integer, ForeignKey('chat_folders.id', ondelete='CASCADE'))
+    room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'))
+    added_at = Column(DateTime, default=datetime.utcnow)
 
 # --- ENTERPRISE MODULES ---
 
@@ -114,7 +161,8 @@ class MarketListing(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(Text)
-    price = Column(String, nullable=True) # String to allow 'Trade' or 'Negotiable'
+    price = Column(Numeric(10, 2), nullable=False)
+    price_type = Column(String, default='fixed')
     category = Column(String, nullable=True, default='Разное')
     location = Column(String, nullable=True, default='Вся сеть')
     seller_id = Column(Integer, ForeignKey('users.id'))
@@ -124,6 +172,10 @@ class MarketListing(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+
+    __table_args__ = (
+        Index('ix_market_search', 'category', 'is_active', 'created_at'),
+    )
 
 class ListingImage(Base):
     __tablename__ = 'listing_images'
@@ -140,6 +192,10 @@ class ListingFavorite(Base):
     listing_id = Column(Integer, ForeignKey('market_listings.id', ondelete='CASCADE'))
     user_id = Column(Integer, ForeignKey('users.id'))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('listing_id', 'user_id', name='uix_user_listing_fav'),
+    )
 
 class Event(Base):
     __tablename__ = 'events'
@@ -208,6 +264,26 @@ class WikiLike(Base):
     article_id = Column(Integer, ForeignKey('wiki_articles.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomKeyBundle(Base):
+    """
+    Stores the AES-256 session key for a chat room, encrypted with each
+    participant's RSA public key (RSA-OAEP). Each user gets their own
+    encrypted copy so only they can decrypt it with their private key.
+    This is the core of the E2EE key exchange mechanism.
+    """
+    __tablename__ = 'room_key_bundles'
+    id = Column(Integer, primary_key=True, index=True)
+    room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    # The AES session key, wrapped (encrypted) with the user's RSA public key
+    wrapped_key = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint('room_id', 'user_id', name='uix_room_user_key'),
+    )
 
 def init_db():
     # Import models explicitly here if not imported elsewhere,

@@ -1,5 +1,8 @@
 import os
-from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Base, engine, ChatRoom, ChatRoomMember, Message
+from database import (SessionLocal, User, Profile, Category, Topic, Post,
+    WikiArticle, MarketListing, Event, Base, engine, ChatRoom, ChatRoomMember,
+    Message, ChatFolder, ChatFolderMember, UserContact, ListingImage,
+    ListingFavorite, PostLike, WikiLike, FCMToken, GlobalNotification)
 from datetime import datetime, timedelta
 from auth import get_password_hash
 
@@ -8,7 +11,21 @@ DEFAULT_PASSWORD = get_password_hash('password123')
 def seed_data():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
+    if db.query(User).count() > 0:
+        print("Database already seeded. Skipping initial data injection.")
+        db.close()
+        return
+
     # Clear data in FK-safe order (children before parents)
+    db.query(ChatFolderMember).delete()
+    db.query(ChatFolder).delete()
+    db.query(UserContact).delete()
+    db.query(ListingFavorite).delete()
+    db.query(ListingImage).delete()
+    db.query(PostLike).delete()
+    db.query(WikiLike).delete()
+    db.query(FCMToken).delete()
+    db.query(GlobalNotification).delete()
     db.query(Message).delete()
     db.query(ChatRoomMember).delete()
     db.query(ChatRoom).delete()
@@ -22,7 +39,13 @@ def seed_data():
     db.commit()
 
     print("Creating initial system administrator...")
-    admin = User(username="Admin_Skuf", email="overseer@skufia.net", hashed_password=DEFAULT_PASSWORD)
+    admin = User(
+        username="Vladimir Popov", 
+        email="overseer@skufia.net", 
+        hashed_password=DEFAULT_PASSWORD,
+        handle="@up1t3rV",
+        is_superadmin=True
+    )
     db.add(admin)
     db.commit()
     db.refresh(admin)
@@ -30,7 +53,7 @@ def seed_data():
     # Create admin profile
     admin_prof = db.query(Profile).filter(Profile.user_id == admin.id).first()
     if not admin_prof:
-        admin_prof = Profile(user_id=admin.id, rank="Верховный Скуф", karma=9999, bio="Хранитель цифрового архива.")
+        admin_prof = Profile(user_id=admin.id, nickname="Vladimir Popov", rank="Верховный Скуф", karma=9999, bio="Создатель и Хранитель Skufia-Net.")
         db.add(admin_prof)
 
     # 2. Create Archetypal Users
@@ -135,8 +158,8 @@ def seed_data():
 
     # 6. Seed Market Listings
     market_items = [
-        {"title": "Монитор Sony Trinitron", "desc": "В отличном состоянии, легкий засвет по углам.", "price": "Обмен на чай или 2000р", "seller": "CRT_Guru"},
-        {"title": "Механическая клавиатура IBM Model M", "desc": "Звучит как пулемет. Состояние: музейное.", "price": "5000р", "seller": "Old_School_Coder"},
+        {"title": "Монитор Sony Trinitron", "desc": "В отличном состоянии, легкий засвет по углам.", "price": 2000.0, "seller": "CRT_Guru"},
+        {"title": "Механическая клавиатура IBM Model M", "desc": "Звучит как пулемет. Состояние: музейное.", "price": 5000.0, "seller": "Old_School_Coder"},
     ]
     for item in market_items:
         user = db.query(User).filter(User.username == item['seller']).first()
