@@ -7,12 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const i = parseInt(idx);
             const col = i % 3;
             const row = Math.floor(i / 3);
-            
+
             element.style.backgroundImage = `url(${src})`;
             element.style.backgroundSize = '300% 300%'; // 3x3 grid
             element.style.backgroundPosition = `${(col / 2) * 100}% ${(row / 2) * 100}%`;
             element.style.backgroundRepeat = 'no-repeat';
-            
+
             if (element instanceof HTMLImageElement) {
                 element.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             }
@@ -33,11 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('skufia_theme', themeName);
     }
     window.changeTheme = changeTheme;
-    
+
     window.setAndCloseTheme = function(themeName) {
         changeTheme(themeName);
         document.getElementById('theme-switcher-modal').style.display = 'none';
-        
+
         // Add a nice cyber-glitch effect on save
         const heroText = document.querySelector('.glitch');
         if (heroText) {
@@ -78,18 +78,18 @@ document.addEventListener('DOMContentLoaded', () => {
         layout: 'grid',
         filters: { q: '', cat: 'Все', loc: 'Везде', sort: 'newest', min: null, max: null }
     };
-    window.updatePriceFilter = debounce(function(e, type) { 
-        window.marketState.filters[type] = e.target.value; 
-        window.marketState.page = 1; 
-        loadMarket(); 
+    window.updatePriceFilter = debounce(function(e, type) {
+        window.marketState.filters[type] = e.target.value;
+        window.marketState.page = 1;
+        loadMarket();
     }, 500);
     window.updateMarketSort = function(e) { window.marketState.filters.sort = e.target.value; window.marketState.page = 1; loadMarket(); };
     window.setMarketLayout = function(layout) { window.marketState.layout = layout; loadMarket(); };
 
     const state = {
         currentView: 'home',
-        user: { 
-            id: null, 
+        user: {
+            id: null,
             username: 'Guest',
             rank: 'Newborn',
             token: localStorage.getItem('skuf_token') || null
@@ -407,10 +407,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * Get or establish a session key for a given room.
      * Tries IndexedDB cache first, then server-stored wrapped bundle.
      * @param {number} roomId
-     * @param {number|null} receiverId
      * @returns {Promise<CryptoKey|null>}
      */
-    async function getOrEstablishSessionKey(roomId, receiverId) {
+    async function getOrEstablishSessionKey(roomId) {
         // 1. Check in-memory cache
         if (state.chat.sessionKeys[roomId]) {
             return state.chat.sessionKeys[roomId];
@@ -430,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!state.chat.keys.privateKey) return null;
 
         try {
-            const keyBundle = await apiRequest(`/chat/rooms/${roomId}/key`);
+            const keyBundle = await apiRequest(`/chat/rooms/${roomId}/keys`);
             if (keyBundle && keyBundle.wrapped_key) {
                 const sessionKey = await CryptoManager.unwrapKey(
                     state.chat.keys.privateKey,
@@ -446,45 +445,54 @@ document.addEventListener('DOMContentLoaded', () => {
             // 404 = no key yet — we are the initiator
         }
 
-        // 4. Generate new session key and distribute to both parties
-        if (!receiverId) return null;
+        // 4. Generate new session key and distribute to all room members
+        addLog(`🔑 Установка E2EE сессии для комнаты #${roomId}...`, 'info');
 
-        addLog(`🔑 Установка E2EE сессии с пользователем #${receiverId}...`, 'info');
-
-        // Fetch recipient's public key
-        const targetKeyData = await apiRequest(`/users/${receiverId}/key`).catch(() => null);
-        if (!targetKeyData || !targetKeyData.public_key) {
-            addLog('⚠️ Получатель ещё не зарегистрировал ключи E2EE', 'error');
+        // Fetch all room members' public keys
+        const targetKeysData = await apiRequest(`/chat/rooms/${roomId}/public_keys`).catch(() => null);
+        if (!targetKeysData || !targetKeysData.public_keys || Object.keys(targetKeysData.public_keys).length === 0) {
+            addLog('⚠️ Участники ещё не зарегистрировали ключи E2EE', 'error');
             return null;
         }
-
-        // Show fingerprint of recipient's key for MITM detection
-        const recipientFp = await CryptoManager.keyFingerprint(targetKeyData.public_key);
-        addLog(`🔍 Отпечаток ключа получателя: ${recipientFp.slice(0, 23)}...`, 'info');
 
         // Generate fresh AES-256-GCM session key
         const sessionKey = await CryptoManager.generateSessionKey();
         state.chat.sessionKeys[roomId] = sessionKey;
 
-        // Wrap session key for RECIPIENT using their RSA public key
-        const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
-        const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
-
-        // Wrap session key for OURSELVES (so we can decrypt our own sent messages)
-        const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
-        const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
-        const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
-
-        // Store both bundles on server (server cannot decrypt — only wrapped blobs)
+        // Wrap session key for each participant
         const keysPayload = {};
-        keysPayload[String(receiverId)] = wrappedForRecipient;
-        keysPayload[String(state.user.id)] = wrappedForSelf;
-        await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
+        for (const [userId, pubBase64] of Object.entries(targetKeysData.public_keys)) {
+            try {
+                const pubKey = await CryptoManager.importPublicKey(pubBase64);
+                keysPayload[userId] = await CryptoManager.wrapKey(pubKey, sessionKey);
+            } catch(e) {
+                console.warn(`Failed to wrap key for user ${userId}`);
+            }
+        }
+
+        // Ensure we wrapped the key for ourselves (if not returned by backend or another error)
+        if (!keysPayload[String(state.user.id)]) {
+            try {
+                const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
+                const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
+                keysPayload[String(state.user.id)] = await CryptoManager.wrapKey(myPubKey, sessionKey);
+            } catch(e) {
+                console.error("Could not wrap key for self");
+            }
+        }
+
+        if (Object.keys(keysPayload).length === 0) {
+            addLog('⚠️ Не удалось зашифровать сессионный ключ', 'error');
+            return null;
+        }
+
+        // Store bundles on server
+        await apiRequest(`/chat/rooms/${roomId}/keys`, 'POST', { keys: keysPayload });
 
         // Cache in IndexedDB
         await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
 
-        addLog(`✅ E2EE сессия установлена | Отпечаток: ${recipientFp.slice(0, 11)}...`, 'success');
+        addLog(`✅ E2EE сессия установлена для комнаты #${roomId}`, 'success');
         return sessionKey;
     }
 
@@ -492,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Use relative port for WebSocket (proxied via Nginx)
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const host = isLocalDev ? 'localhost:8007' : window.location.host; 
+    const host = isLocalDev ? 'localhost:8007' : window.location.host;
     const WS_URL = protocol + host;
 
     // --- Audio Engine ---
@@ -534,14 +542,14 @@ document.addEventListener('DOMContentLoaded', () => {
         entry.textContent = `> [${new Date().toLocaleTimeString()}] ${message}`;
         consoleLog.appendChild(entry);
         consoleLog.scrollTop = consoleLog.scrollHeight;
-        
+
         if (type === 'error') playSound('alert');
     }
     window.addLog = addLog; // Force global access immediately
 
 
     /**
-     * @param {string} endpoint 
+     * @param {string} endpoint
      * @param {string} method
      * @param {any} body
      * @returns {Promise<any>}
@@ -549,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function apiRequest(endpoint, method = 'GET', body = null) {
         const headers = { 'Content-Type': 'application/json' };
         if (state.user.token) headers['Authorization'] = `Bearer ${state.user.token}`;
-        
+
         try {
             const res = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method,
@@ -583,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeBtn = document.querySelector(`.nav-btn[data-view="${viewId}"]`);
             if (activeBtn) activeBtn.classList.add('active');
             addLog(`Switching to sector: ${viewId.toUpperCase().replace('_', ' ')}`);
-            
+
             // Trigger data loads based on view
             if (viewId === 'forum') loadForum();
             if (viewId === 'wiki') loadWiki();
@@ -601,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!container) return;
         container.innerHTML = '<div class="system-msg">Scanning forum sectors...</div>';
         try {
-            const data = await apiRequest('/topics'); 
+            const data = await apiRequest('/topics');
             container.innerHTML = '';
             if (data.length === 0) {
                 container.innerHTML = '<div class="system-msg">No active transmissions found in this sector.</div>';
@@ -781,7 +789,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadMarket() {
         const container = document.querySelector('.market-grid');
         if (!container) return;
-        
+
         container.className = 'market-grid ' + (window.marketState.layout === 'list' ? 'market-list-view' : '');
         container.innerHTML = '<div class="system-msg">Scanning trade frequencies...</div>';
         try {
@@ -818,7 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
             listings.forEach(/** @param {any} item */ item => {
                 const div = document.createElement('div');
                 div.className = 'market-card interactive';
-                
+
                 // Cover image
                 let coverImageHtml = '';
                 if (item.images && item.images.length > 0) {
@@ -1093,7 +1101,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`--- ГИПЕРТЕКСТОВАЯ БАЗА --- \n\n${art.title.toUpperCase()}\n\n${art.content}`);
         } catch (e) { addLog('Article data corrupted', 'error'); }
     }
-    
+
     // @ts-ignore
     window.toggleMarketForm = function() {
         const panel = document.getElementById('market-form-panel');
@@ -1198,9 +1206,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const descElem = document.getElementById('market-desc');
         const catElem = document.getElementById('market-cat');
         const locElem = document.getElementById('market-loc');
-        
+
         if (!titleElem || !priceElem || !descElem) return;
-        
+
         // @ts-ignore
         const title = titleElem.value;
         // @ts-ignore
@@ -1211,9 +1219,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const category = catElem?.value || 'Разное';
         // @ts-ignore
         const location = locElem?.value || 'Вся сеть';
-        
+
         if (!title || !price) { addLog('Validation Error: Заполните название и цену', 'error'); return; }
-        
+
         try {
             await apiRequest('/market', 'POST', {
                 title,
@@ -1252,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 avatar.className = 'registry-avatar';
                 applyAvatarDisplay(avatar, u.avatar_url);
                 avatarCell.appendChild(avatar);
-                
+
                 const td1 = document.createElement('td');
                 const spanId = document.createElement('span');
                 spanId.className = 'id-tag';
@@ -1379,7 +1387,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const locElem = document.getElementById('event-location');
         const descElem = document.getElementById('event-desc');
         if (!titleElem || !dateElem || !locElem || !descElem) return;
-        
+
         // @ts-ignore
         const title = titleElem.value;
         // @ts-ignore
@@ -1388,9 +1396,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const location = locElem.value;
         // @ts-ignore
         const description = descElem.value;
-        
+
         if (!title) { addLog('Validation Error: Укажите название', 'error'); return; }
-        
+
         try {
             await apiRequest('/events', 'POST', { title, event_date, location, description });
             addLog('Событие анонсировано', 'success');
@@ -1425,14 +1433,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await apiRequest('/me');
             state.user.username = data.display_name || data.username;
             state.user.id = data.id;
-            
+
             document.getElementById('dash-id').textContent = data.id || '???';
             document.getElementById('dash-username-display').textContent = data.display_name || data.username;
             document.getElementById('dash-rank').textContent = data.rank;
             document.getElementById('dash-karma').textContent = data.karma;
             document.getElementById('dash-bio').value = data.bio || '';
             document.getElementById('dash-callsign-input').value = data.nickname || data.username;
-            
+
             if (data.avatar_url) {
                 const dashAvatar = document.getElementById('dash-avatar');
                 applyAvatarDisplay(dashAvatar, data.avatar_url);
@@ -1448,7 +1456,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sidebarName = document.querySelector('.side-panel .username');
         const sidebarRank = document.querySelector('.side-panel .rank');
         const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
-        
+
         if (sidebarName) sidebarName.textContent = `Оператор: ${data.display_name || data.username}`;
         if (sidebarRank) sidebarRank.textContent = data.rank;
         if (sidebarAvatar && data.avatar_url) {
@@ -1461,13 +1469,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const bioEl = document.getElementById('dash-bio');
         const callsignEl = document.getElementById('dash-callsign-input');
         if (!bioEl || !callsignEl) return;
-        
+
         try {
             // @ts-ignore
             const bio = bioEl.value;
             // @ts-ignore
             const nickname = callsignEl.value;
-            
+
             const result = await apiRequest('/me/update', 'POST', { bio, nickname });
             if (result && result.display_name) {
                 state.user.username = result.display_name;
@@ -1486,22 +1494,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const modal = document.getElementById('avatar-modal');
         const grid = document.getElementById('avatar-selector-grid');
         if (!modal || !grid) return;
-        
+
         grid.innerHTML = '';
-        
+
         // 35 Heroes mapped to 4 full 3x3 sheets and 8 characters from 5th sheet
         for (let i = 0; i < 35; i++) {
             const setNum = Math.floor(i / 9) + 1;
             const idxInSet = i % 9;
             const url = `SPRITE:assets/avatars/set_${setNum}.png:${idxInSet}`;
-            
+
             const btn = document.createElement('div');
             btn.className = 'avatar-option';
             btn.style.width = '80px';
             btn.style.height = '80px';
             btn.style.border = '2px solid var(--neon-cyan)';
             btn.style.cursor = 'pointer';
-            
+
             applyAvatarDisplay(btn, url);
             btn.onclick = () => {
                 window.selectAvatar(url);
@@ -1523,7 +1531,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await apiRequest('/me/update', 'POST', { avatar_url: url });
             const dashAvatar = document.getElementById('dash-avatar');
             if (dashAvatar) applyAvatarDisplay(dashAvatar, url);
-            
+
             addLog('Аватар обновлен: Канал связи активен ✅', 'success');
             window.closeAvatarModal();
             loadDashboard(); // Refresh UI
@@ -1552,7 +1560,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function connectWebSocket() {
         if (state.chat.socket) return;
-        
+
         const token = state.user.token;
         state.chat.socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
 
@@ -1570,17 +1578,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (data.type === 'new_message') {
                 const msg = data;
-                
+
                 // --- E2EE DECRYPTION ---
-                if (msg.iv && state.chat.sessionKeys[msg.room_id]) {
-                    try {
-                        msg.content = await CryptoManager.decryptMessage(
-                            state.chat.sessionKeys[msg.room_id],
-                            msg.content,
-                            msg.iv
-                        );
-                        msg.is_secure = true;
-                    } catch (e) {
+                if (msg.iv) {
+                    if (!state.chat.sessionKeys[msg.room_id]) {
+                        await getOrEstablishSessionKey(msg.room_id).catch(() => null);
+                    }
+                    if (state.chat.sessionKeys[msg.room_id]) {
+                        try {
+                            msg.content = await CryptoManager.decryptMessage(
+                                state.chat.sessionKeys[msg.room_id],
+                                msg.content,
+                                msg.iv
+                            );
+                            msg.is_secure = true;
+                        } catch (e) {
+                            msg.content = "[ ДАННЫЕ ЗАШИФРОВАНЫ // ОШИБКА РАСШИФРОВКИ ]";
+                        }
+                    } else {
                         msg.content = "[ ДАННЫЕ ЗАШИФРОВАНЫ // КЛЮЧ НЕ НАЙДЕН ]";
                     }
                 }
@@ -1591,7 +1606,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (msg.sender !== state.user.username) {
                     playSound('alert');
                 }
-                
+
                 // Update sidebar snippet
                 loadChatRooms();
             } else if (data.type === 'edit_message') {
@@ -1601,10 +1616,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (txtEl) {
                         let decryptedContent = data.content;
                         if (data.iv && state.chat.sessionKeys[data.room_id]) {
-                            try { decryptedContent = await CryptoManager.decryptMessage(state.chat.sessionKeys[data.room_id], data.content, data.iv); } 
+                            try { decryptedContent = await CryptoManager.decryptMessage(state.chat.sessionKeys[data.room_id], data.content, data.iv); }
                             catch(e) {}
                         }
-                        txtEl.innerText = decryptedContent; 
+                        txtEl.innerText = decryptedContent;
                     }
                     if (!el.querySelector('.is-edited')) {
                         const mheader = el.querySelector('.msg-header');
@@ -1654,7 +1669,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const list = document.getElementById('chat-rooms-list');
         if (!list) return;
         list.innerHTML = '';
-        
+
         let roomsToRender = state.chat.rooms || [];
         if (state.chat.currentFolderId !== 'all') {
             const folder = state.chat.folders.find(f => f.id == state.chat.currentFolderId);
@@ -1668,10 +1683,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = `sidebar-item ${state.chat.currentRoomId === room.id ? 'active' : ''}`;
             div.dataset.name = (room.name || '').toLowerCase();
-            
+
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'sidebar-item-avatar';
-            
+
             if (room.avatar_url) {
                 const img = document.createElement('img');
                 img.src = room.avatar_url;
@@ -1779,7 +1794,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     div.style.gap = '10px';
                     div.style.padding = '8px';
                     div.style.borderBottom = '1px solid var(--border-metal)';
-                    
+
                     div.innerHTML = `<input type="checkbox" id="folder-room-${room.id}" value="${room.id}" style="width:16px; height:16px; cursor:pointer;">
                         <label for="folder-room-${room.id}" style="color:var(--text-main); cursor:pointer;">${room.name}</label>`;
                     container.appendChild(div);
@@ -1792,10 +1807,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.submitFolderCreate = async function() {
         const name = document.getElementById('folder-name-input').value.trim();
         if (!name) return addLog('Введите имя папки', 'error');
-        
+
         const checkboxes = document.querySelectorAll('#folder-rooms-selection input[type="checkbox"]:checked');
         const roomIds = Array.from(checkboxes).map(c => parseInt(c.value));
-        
+
         try {
             const resp = await apiRequest('/chat/folders', 'POST', { name: name, rooms: roomIds });
             addLog('Папка ' + name + ' создана', 'success');
@@ -1818,15 +1833,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderFoldersTabs() {
         const tabsContainer = document.getElementById('chat-folders-tabs');
         if (!tabsContainer) return;
-        
+
         tabsContainer.innerHTML = '';
-        
+
         const allTab = document.createElement('div');
         allTab.className = 'folder-tab' + (state.chat.currentFolderId === 'all' ? ' active' : '');
         allTab.setAttribute('onclick', "window.selectFolder('all', this)");
         allTab.innerText = 'Все чаты';
         tabsContainer.appendChild(allTab);
-        
+
         (state.chat.folders || []).forEach(folder => {
              const fTab = document.createElement('div');
              fTab.className = 'folder-tab' + (state.chat.currentFolderId == folder.id ? ' active' : '');
@@ -1834,14 +1849,14 @@ document.addEventListener('DOMContentLoaded', () => {
              fTab.innerText = folder.name;
              tabsContainer.appendChild(fTab);
         });
-        
+
         const addBtn = document.createElement('button');
         addBtn.className = 'add-folder-btn';
         addBtn.setAttribute('onclick', "window.openFolderModal()");
         addBtn.title = "Создать папку";
         addBtn.innerText = "+";
         tabsContainer.appendChild(addBtn);
-        
+
         renderChatRooms();
     }
 
@@ -1853,9 +1868,9 @@ document.addEventListener('DOMContentLoaded', () => {
         renderChatRooms();
     };
 
-    /** 
-     * @param {number} roomId 
-     * @param {string} roomName 
+    /**
+     * @param {number} roomId
+     * @param {string} roomName
      * @param {string} [type]
      * @param {number} [receiverId]
      * @param {string} [myRole]
@@ -1875,7 +1890,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatHistoryEl = document.getElementById('chat-history');
         const inputArea = document.querySelector('.chat-input-area');
 
-        
+
         if (inputArea) {
             if (type === 'channel' && myRole !== 'admin') {
                 inputArea.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim); font-style:italic; background:var(--bg-black); border-top:1px solid #333; width:100%;">Только администраторы могут писать в этот канал</div>`;
@@ -1887,7 +1902,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </button>
                         <input type="file" id="file-input" style="display:none" onchange="uploadFileAndSend()">
                         <textarea id="chat-input" rows="1" placeholder="Сообщение..." oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.sendChatMessage(); }"></textarea>
-                        
+
                         <div class="action-buttons" style="display: flex; align-items: flex-end; gap: 4px;">
                             <button class="capsule-btn" title="Смайлы">
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
@@ -1908,11 +1923,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        
+
         if (header) {
             const headerAvatar = document.getElementById('header-avatar');
             const headerTitle = document.getElementById('chat-header-title');
-            
+
             if (headerAvatar) {
                 headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
                 headerAvatar.style.background = 'transparent';
@@ -1924,7 +1939,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const headerStatus = document.getElementById('chat-header-status');
             const statusDot = header.querySelector('.status-dot');
-            if (headerStatus) headerStatus.textContent = ''; 
+            if (headerStatus) headerStatus.textContent = '';
             if (statusDot) statusDot.style.display = 'none';
 
             let badgeDiv = document.getElementById('chat-encryption-status');
@@ -1945,7 +1960,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const badge = document.getElementById('chat-encryption-status');
             try {
                 await ensureKeys();
-                const sessionKey = await getOrEstablishSessionKey(roomId, receiverId);
+                const sessionKey = await getOrEstablishSessionKey(roomId);
                 if (sessionKey) {
                     const myFp = state.chat.keyFingerprint || '';
                     if (badge) {
@@ -1976,7 +1991,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
 
-        
+
         // Highlight active room in sidebar
         document.querySelectorAll('.sidebar-item').forEach(el => {
             const nameEl = el.querySelector('.sidebar-item-name');
@@ -1996,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnAddMember) btnAddMember.style.display = (isGroupOrChannel && isAdminOrOwner) ? 'block' : 'none';
         if (btnGroupSettings) btnGroupSettings.style.display = isGroupOrChannel ? 'block' : 'none';
 
-        
+
         const chatLayout = document.querySelector('.chat-layout');
         if (chatLayout) chatLayout.classList.add('chat-open');
 
@@ -2011,15 +2026,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 // @ts-ignore
                 for (const m of messages) {
                     // Try decrypting history if we have the key
-                    if (m.iv && state.chat.sessionKeys[roomId]) {
-                        try {
-                            m.text = await CryptoManager.decryptMessage(
-                                state.chat.sessionKeys[roomId],
-                                m.text,
-                                m.iv
-                            );
-                            m.is_secure = true;
-                        } catch(e) { m.text = "[ ЗАШИФРОВАНО ]"; }
+                    if (m.iv) {
+                        if (!state.chat.sessionKeys[roomId]) {
+                            await getOrEstablishSessionKey(roomId).catch(() => null);
+                        }
+                        if (state.chat.sessionKeys[roomId]) {
+                            try {
+                                m.text = await CryptoManager.decryptMessage(
+                                    state.chat.sessionKeys[roomId],
+                                    m.text,
+                                    m.iv
+                                );
+                                m.is_secure = true;
+                            } catch(e) { m.text = "[ ЗАШИФРОВАНО ]"; }
+                        } else {
+                            m.text = "[ ЗАШИФРОВАНО ]";
+                        }
                     }
                     renderChatMessage(m);
                 }
@@ -2040,7 +2062,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         const isMe = msg.sender_id === state.user.id || msg.sender === state.user.username;
         div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
-        
+
         const timeStr = msg.timestamp || '00:00';
 
         const fileUrl = msg.file_url || null;
@@ -2056,7 +2078,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         div.id = `msg-${msg.id}`;
-        
+
         let replyHtml = '';
         if (msg.reply_to_id) {
             replyHtml = `<div class="reply-badge" onclick="document.getElementById('msg-${msg.reply_to_id}')?.scrollIntoView({behavior:'smooth'})">Ответ на сообщение</div>`;
@@ -2091,7 +2113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timeSpan.innerHTML = `${timeStr} `;
         if (isMe) {
             const isRead = msg.is_read;
-            const checkSvg = isRead 
+            const checkSvg = isRead
                 ? '<svg viewBox="0 0 24 24" width="14" height="14" style="color:var(--accent-cyan)"><path d="M7 11.5L10 14.5L17 7.5"></path><path d="M11 11.5L14 14.5L21 7.5" fill="none" stroke="currentColor"></path></svg>'
                 : '<svg viewBox="0 0 24 24" width="14" height="14" style="color:var(--text-dim)"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor"></path></svg>';
             timeSpan.insertAdjacentHTML('beforeend', checkSvg);
@@ -2121,7 +2143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         div.appendChild(footerDiv);
-        
+
         // Context menu logic
         div.oncontextmenu = (e) => {
             e.preventDefault();
@@ -2130,7 +2152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             menu.className = 'msg-context-menu';
             menu.style.left = `${e.pageX}px`;
             menu.style.top = `${e.pageY}px`;
-            
+
             // @ts-ignore
             let cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
             menu.innerHTML = '';
@@ -2154,7 +2176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(menu);
             setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
         };
-        
+
         history.appendChild(div);
         history.scrollTop = history.scrollHeight;
     }
@@ -2162,7 +2184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function sendChatMsg() {
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
         if (!input || !input.value.trim() || !state.chat.currentRoomId) return;
-        
+
         let content = input.value.trim();
         localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
 
@@ -2170,10 +2192,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const receiverId = state.chat.currentReceiverId;
 
         // --- E2EE: Lazy key establishment ---
-        // Try to get/establish session key (private chats only)
+        // Try to get/establish session key
         let sessionKey = null;
-        if (receiverId) {
-            sessionKey = await getOrEstablishSessionKey(roomId, receiverId).catch(() => null);
+        if (roomId) {
+            sessionKey = await getOrEstablishSessionKey(roomId).catch(() => null);
         }
 
         let payload;
@@ -2266,7 +2288,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('fab-hub-modal').style.display = 'flex';
         const contactList = document.getElementById('fab-contacts-list');
         contactList.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430...</div>';
-        
+
         // Load all users initially
         apiRequest('/users/list').then(users => {
             state.contacts = users.filter(u => u.id !== state.user.id);
@@ -2350,21 +2372,21 @@ document.addEventListener('DOMContentLoaded', () => {
             contactList.appendChild(empty);
             return;
         }
-        
+
         users.forEach(u => {
             const div = document.createElement('div');
             div.className = 'sidebar-item';
             div.style.cursor = 'pointer';
-            
+
             const initial = (u.username || '?').charAt(0).toUpperCase();
             const charCode = initial.charCodeAt(0) || 65;
             const hue = (charCode * 137) % 360;
-            const avatarHtml = u.avatar_url 
-                ? `<img src="${u.avatar_url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` 
+            const avatarHtml = u.avatar_url
+                ? `<img src="${u.avatar_url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">`
                 : `<div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;">${initial}</div>`;
             const onlineDot = u.is_online ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00f2ff;margin-left:5px;vertical-align:middle;"></span>` : '';
             const handleText = u.handle ? `<span style="color:var(--text-dim);font-size:11px;">${u.handle}</span>` : '';
-            
+
             div.innerHTML = `
                 ${avatarHtml}
                 <div class="sidebar-item-info">
@@ -2738,10 +2760,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const query = (document.getElementById('add-member-search').value || '').toLowerCase();
         const list = document.getElementById('add-member-list');
         if (!list) return;
-        
+
         list.innerHTML = '';
         const contacts = state.contacts || [];
-        const filtered = contacts.filter(c => 
+        const filtered = contacts.filter(c =>
             (c.name && c.name.toLowerCase().includes(query)) ||
             (c.phone && c.phone.includes(query)) ||
             (c.username && c.username.toLowerCase().includes(query))
@@ -2760,9 +2782,9 @@ document.addEventListener('DOMContentLoaded', () => {
             div.style.justifyContent = 'space-between';
             div.style.padding = '8px';
             div.style.borderBottom = '1px solid var(--border-metal)';
-            
+
             const isSelected = addMemberSelectedIds.has(c.id);
-            
+
             div.innerHTML = `
                 <div style="display:flex; alignItems:center; gap:10px;">
                     <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${c.name || 'User'}" style="width:30px; height:30px; border-radius:50%; background:var(--bg-panel);">
@@ -2773,21 +2795,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
             `;
-            
+
             div.onclick = () => {
                 const cb = div.querySelector('input[type="checkbox"]');
                 cb.checked = !cb.checked;
                 if(cb.checked) addMemberSelectedIds.add(c.id);
                 else addMemberSelectedIds.delete(c.id);
             };
-            
+
             list.appendChild(div);
         });
     };
 
     window.submitAddMembers = async function() {
         if (!state.chat.currentRoomId || addMemberSelectedIds.size === 0) return;
-        
+
         const userIds = Array.from(addMemberSelectedIds);
         try {
             await apiRequest(`/chat/rooms/${state.chat.currentRoomId}/members`, 'POST', { user_ids: userIds });
@@ -2846,9 +2868,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // @ts-ignore
             await apiRequest(`/chat/messages/${id}`, 'DELETE');
-        } catch(e) { 
+        } catch(e) {
             // @ts-ignore
-            addLog('Удаление не удалось', 'error'); 
+            addLog('Удаление не удалось', 'error');
         }
     }
 
@@ -2934,7 +2956,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.btn.addEventListener('mouseleave', () => { if(this.isRecording) this.stop(); });
             }
         }
-        
+
         async start() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -2962,14 +2984,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 addLog('Микрофон недоступен: ' + e.message, 'error');
             }
         }
-        
+
         stop() {
             if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
                 this.mediaRecorder.stop();
                 this.isRecording = false;
             }
         }
-        
+
         async uploadAudio(blob) {
             const formData = new FormData();
             formData.append('file', blob, 'voice_msg.webm');
@@ -2983,7 +3005,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 if (!resp.ok) throw new Error('Upload failed');
                 const data = await resp.json();
-                
+
                 const msgInput = document.getElementById('chat-input');
                 const originalVal = msgInput.value;
                 state.pendingFile = { url: data.audio_url, name: 'Voice Message' };
@@ -3002,11 +3024,11 @@ document.addEventListener('DOMContentLoaded', () => {
             this.btn = document.querySelector('.emoji-btn');
             this.input = document.getElementById('chat-input');
             if(!this.btn || !this.input) return;
-            
+
             this.picker = document.createElement('div');
             this.picker.className = 'emoji-picker premium-scroll';
             this.picker.style.display = 'none';
-            
+
             const emojis = ['😀','😂','🥰','😎','🤔','😡','👍','👎','❤️','🔥','🎉','👀','💯','🤡','🥺','💀','🤓','🧠','🍺','🍕'];
             emojis.forEach(emo => {
                 const span = document.createElement('span');
@@ -3018,16 +3040,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 this.picker.appendChild(span);
             });
-            
+
             // Append relative to the input row
             const row = document.querySelector('.chat-input-row');
             if(row) row.appendChild(this.picker);
-            
+
             this.btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.picker.style.display = this.picker.style.display === 'none' ? 'flex' : 'none';
             });
-            
+
             document.addEventListener('click', () => {
                 if(this.picker) this.picker.style.display = 'none';
             });
@@ -3064,7 +3086,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             loadDashboard();
             connectWebSocket(); // Establish real-time link
-            
+
             // Phase 5: PWA Service Worker Registration
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('chat-sw.js').then(reg => {
@@ -3141,7 +3163,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTHENTICATION LISTENERS ---
     const authOverlay = document.getElementById('auth-overlay');
-    
+
     document.getElementById('toggle-to-register').addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('login-form').style.display = 'none';
@@ -3171,12 +3193,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Login failed');
-            
+
             localStorage.setItem('skuf_token', data.access_token);
             state.user.token = data.access_token;
             authOverlay.style.display = 'none';
             addLog('Аутентификация успешна', 'system');
-            
+
             // Re-bind auth logic on boot system
             bootSystem();
         } catch (err) {
@@ -3204,7 +3226,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Registration failed');
-            
+
             document.getElementById('register-form').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
             document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
@@ -3239,7 +3261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openSettingsBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             settingsModal.style.display = 'flex';
-            
+
             // Fetch profile data
             try {
                 const profile = await apiRequest('/me');
@@ -3292,7 +3314,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const props = ['name', 'tel'];
                     const opts = { multiple: true };
                     const contacts = await navigator.contacts.select(props, opts);
-                    
+
                     if (contacts && contacts.length > 0) {
                         const payload = contacts.map(c => ({ name: c.name[0], phone: c.tel ? c.tel[0] : '' }));
                         const resp = await fetch(`${API_BASE_URL}/api/contacts/sync`, {
@@ -3302,7 +3324,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         if (resp.ok) {
                             addLog(`Успешно подтянуто абонентов: ${contacts.length}`, 'success');
-                            loadChatRooms(); // refresh sidebar 
+                            loadChatRooms(); // refresh sidebar
                         } else throw new Error();
                     } else {
                         addLog('Контакты не выбраны', 'info');
@@ -3336,7 +3358,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.getElementById('skufenger-heading');
         const viewMessages = document.getElementById('view-messages');
         const chatLayout = viewMessages ? viewMessages.querySelector('.chat-layout') : null;
-        
+
         if (sidePanel) sidePanel.style.display = 'none';
         if (header) header.style.display = 'none';
         if (footer) footer.style.display = 'none';
@@ -3362,7 +3384,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const authTitle = document.getElementById('auth-title');
         const loginBtn = document.querySelector('#login-form button[type="submit"]');
         const regBtn = document.querySelector('#register-form button[type="submit"]');
-        
+
         if (authTitle) authTitle.textContent = 'ВХОД В SKUFENGER';
         if (loginBtn) loginBtn.textContent = 'ВОЙТИ В МЕССЕНДЖЕР';
         if (regBtn) regBtn.textContent = 'СОЗДАТЬ АККАУНТ';
@@ -3398,7 +3420,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatLayout = document.querySelector('.chat-layout');
         if (chatLayout) chatLayout.classList.remove('chat-open');
     };
-    
+
     const contactSearchInput = document.getElementById('contact-search');
     if (contactSearchInput) {
         contactSearchInput.addEventListener('input', function() {
@@ -3598,12 +3620,12 @@ window.previewAvatar = async function(input) {
 window.openAddMemberModal = async function() {
     const roomId = state.chat.activeRoomId;
     if (!roomId) return;
-    
+
     document.getElementById('add-member-modal').style.display = 'flex';
     document.getElementById('add-member-search').value = '';
     const listContainer = document.getElementById('add-member-list');
     listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>';
-    
+
     try {
         const contacts = await apiRequest('/contacts');
         state.contacts = contacts || [];
@@ -3618,23 +3640,23 @@ window.filterAddMemberContacts = function() {
     const query = document.getElementById('add-member-search').value.toLowerCase();
     const listContainer = document.getElementById('add-member-list');
     listContainer.innerHTML = '';
-    
-    const filtered = state.contacts.filter(c => 
-        c.username.toLowerCase().includes(query) || 
+
+    const filtered = state.contacts.filter(c =>
+        c.username.toLowerCase().includes(query) ||
         (c.display_name && c.display_name.toLowerCase().includes(query))
     );
-    
+
     if (filtered.length === 0) {
         listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Ничего не найдено</div>';
         return;
     }
-    
+
     filtered.forEach(contact => {
         const div = document.createElement('div');
         div.className = 'sidebar-item';
         div.style.marginBottom = '5px';
         const initial = (contact.display_name || contact.username).charAt(0).toUpperCase();
-        
+
         div.innerHTML = `
             <div class="sidebar-item-avatar">${contact.avatar_url ? `<img src="${API_BASE_URL}${contact.avatar_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : initial}</div>
             <div class="sidebar-item-info">
@@ -3650,15 +3672,15 @@ window.filterAddMemberContacts = function() {
 window.submitAddMembers = async function() {
     const roomId = state.chat.activeRoomId;
     if (!roomId) return;
-    
+
     const checkboxes = document.querySelectorAll('.add-member-checkbox:checked');
     const userIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-    
+
     if (userIds.length === 0) {
         addLog('Выберите хотя бы один контакт', 'error');
         return;
     }
-    
+
     try {
         for (let uid of userIds) {
             await apiRequest(`/chat/rooms/${roomId}/members`, 'POST', { user_id: uid });
@@ -3735,8 +3757,8 @@ if (mobileToggle && sidePanel) {
     const backdrop = document.createElement('div');
     backdrop.id = 'mobile-backdrop';
     backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:998; opacity:0; transition:opacity 0.3s ease;';
-    
-    // Append to app-container to share stacking context with side-panel 
+
+    // Append to app-container to share stacking context with side-panel
     const container = document.querySelector('.app-container') || document.body;
     container.appendChild(backdrop);
 
@@ -3845,4 +3867,4 @@ if (mobileToggle && sidePanel) {
             history.pushState({ skufia: true, view: viewId, chat: false }, '', `#${viewId}`);
         });
     });
-})();
+})();

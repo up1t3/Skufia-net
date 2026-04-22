@@ -392,7 +392,7 @@ class RoomKeyBundleSchema(BaseModel):
 class RoomKeyBundleSingle(BaseModel):
     wrapped_key: str
 
-@router.post('/chat/rooms/{room_id}/key')
+@router.post('/chat/rooms/{room_id}/keys')
 def store_room_keys(
     room_id: int,
     payload: RoomKeyBundleSchema,
@@ -430,7 +430,31 @@ def store_room_keys(
     db.commit()
     return {"status": "Keys stored", "count": len(payload.keys)}
 
-@router.get('/chat/rooms/{room_id}/key')
+@router.get('/chat/rooms/{room_id}/public_keys')
+def get_room_public_keys(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Fetches the public RSA keys of all members in the given room.
+    """
+    membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
+    keys = {}
+    for member in members:
+        if member.user and member.user.public_key:
+            keys[str(member.user_id)] = member.user.public_key
+
+    return {"public_keys": keys}
+
+@router.get('/chat/rooms/{room_id}/keys')
 def get_room_key(
     room_id: int,
     current_user: User = Depends(get_current_user),
