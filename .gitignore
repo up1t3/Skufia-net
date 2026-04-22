@@ -12,3 +12,11 @@ proxy_log.txt
 error.txt
 frontend/node_modules/
 venv/
+
+# Секреты — НИКОГДА не коммитить!
+.env
+*.env
+
+# Node.js
+node_modules/
+npm-debug.log*

@@ -64,3 +64,85 @@
 [data-theme="light-ios"] .modal {
     background: rgba(0, 0, 0, 0.2) !important;
 }
+
+/* --- MOBILE NATIVE APP ADAPTATION (ACTION SHEET) --- */
+@media (max-width: 768px) {
+    .modal {
+        align-items: flex-end !important;
+        justify-content: center !important;
+        padding: 0 !important;
+    }
+    
+    .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border-radius: 28px 28px 0 0 !important;
+        padding: 30px 24px 80px !important; /* Extra bottom padding for iOS home bar safety */
+        border-bottom: none !important;
+        border-left: none !important;
+        border-right: none !important;
+        animation: slideUpModal 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    }
+
+    /* SPECIFIC FIX: Keep the login screen exactly in the center and scrollable if small height */
+    #auth-overlay.modal, .auth-modal-custom, #auth-overlay.modal.auth-modal-custom {
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 20px !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+    }
+    
+    #auth-overlay .modal-content, .auth-content {
+        margin: auto !important;
+        max-width: 400px !important;
+        width: 100% !important;
+        padding: 30px 24px !important;
+        border-radius: 20px !important;
+        border: 1px solid var(--border-metal) !important;
+        animation: scaleInModal 0.3s forwards cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-sizing: border-box !important;
+    }
+    
+    @keyframes slideUpModal {
+        from { transform: translateY(100%); opacity: 0.5; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    
+    /* Make inputs slightly larger for easier tapping on mobile */
+    .modal-content input[type="text"],
+    .modal-content input[type="password"],
+    .modal-content input[type="email"] {
+        height: 52px !important;
+        font-size: 16px !important; /* Prevents iOS auto-zoom */
+    }
+}
+
+/* --- OVERSIZED PREMIUM CYBER BUTTON FOR AUTH --- */
+.auth-main-btn {
+    width: 100% !important;
+    height: 56px !important;            /* Taller for fat fingers */
+    border-radius: 28px !important;     /* Pill shape / highly rounded */
+    font-size: 16px !important;
+    font-weight: bold !important;
+    text-transform: uppercase !important;
+    background: linear-gradient(90deg, rgba(0,242,255,0.1) 0%, rgba(0,242,255,0.3) 50%, rgba(0,242,255,0.1) 100%) !important;
+    border: 2px solid var(--accent-cyan) !important;
+    box-shadow: 0 0 15px rgba(0, 242, 255, 0.4), inset 0 0 10px rgba(0, 242, 255, 0.2) !important;
+    color: #fff !important;
+    text-shadow: 0 0 5px var(--accent-cyan);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 2px;
+}
+
+.auth-main-btn:hover, .auth-main-btn:active {
+    background: var(--accent-cyan) !important;
+    color: #000 !important;
+    text-shadow: none !important;
+    box-shadow: 0 0 25px rgba(0, 242, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5) !important;
+    transform: scale(1.02) !important;
+}
