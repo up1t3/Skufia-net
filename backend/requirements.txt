@@ -10,7 +10,7 @@ websockets
 blurhash
 Pillow
 celery
-redis
+redis>=4.2.0
 requests
 numpy
 aioboto3
