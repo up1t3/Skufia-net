@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 router = APIRouter()
 
 def get_display_name(user: User):
-    return user.profile.nickname if user.profile and user.profile.nickname else user.username
+    profile = user.profile[0] if isinstance(user.profile, list) and user.profile else (user.profile if not isinstance(user.profile, list) else None)
+    return profile.nickname if profile and getattr(profile, 'nickname', None) else user.username
 
 # --- Schemas ---
 class WikiCreate(BaseModel):
