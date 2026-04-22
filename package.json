@@ -1,0 +1,19 @@
+{
+  "name": "skufia-deploy",
+  "version": "1.0.0",
+  "description": "Smart local CI/CD pipeline для Скуфия",
+  "scripts": {
+    "deploy": "node deploy.js",
+    "deploy:skip-tests": "node deploy.js --skip-tests",
+    "test:unit": ".venv/Scripts/python -m pytest tests/backend/unit -v",
+    "test:api": ".venv/Scripts/python -m pytest tests/backend/integration -v",
+    "test:e2e": "npx playwright test"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ssh2": "^1.15.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1"
+  }
+}

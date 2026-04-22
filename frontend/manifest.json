@@ -2,10 +2,14 @@
   "name": "Skufia-Net Enterprise",
   "short_name": "Skufia",
   "description": "Secure Real-Time Enterprise Communications Platform",
-  "start_url": ".",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
   "background_color": "#0a0e14",
-  "theme_color": "#00f2ff",
+  "theme_color": "#0a0e14",
+  "categories": ["communication", "productivity"],
   "icons": [
     {
       "src": "./favicon.png",
@@ -19,5 +23,7 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [],
+  "prefer_related_applications": false
 }

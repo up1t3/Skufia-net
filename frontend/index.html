@@ -2,13 +2,18 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SKUFIA | Enterprise Command Center</title>
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style-modal.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Skufia">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0e14" media="(prefers-color-scheme: dark)">
     <meta name="theme-color" content="#0a0e14">
 </head>
 <body data-theme="telegram">
@@ -16,8 +21,8 @@
     <div class="scanline"></div>
 
     <!-- Auth Overlay -->
-    <div id="auth-overlay" class="modal" style="display: flex;">
-        <div class="modal-content" style="max-width: 400px; padding: 30px;">
+    <div id="auth-overlay" class="modal auth-modal-custom" style="display: flex;">
+        <div class="modal-content auth-content">
             <div class="modal-header">
                 <h2 id="auth-title">АВТОРИЗАЦИЯ</h2>
             </div>
@@ -30,12 +35,16 @@
                 </div>
                 <div class="form-group">
                     <label>ПАРОЛЬ ДЛЯ СВЯЗИ</label>
-                    <input type="password" id="login-password" required>
+                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
+                        <input type="password" id="login-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
+                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('login-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
+                    </div>
                 </div>
-                <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
-                <button type="submit" class="cyber-btn primary-btn" style="width: 100%;">ВОЙТИ В СЕТЬ</button>
-                <div style="text-align: center; margin-top: 15px;">
-                    Нет доступа? <a href="#" id="toggle-to-register" style="color: var(--accent-color);">Получить ID</a>
+                <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
+                <button type="submit" class="cyber-btn primary-btn auth-main-btn">ВОЙТИ В СЕТЬ</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; font-size: 13px;">
+                    <a href="#" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;" onclick="alert('Доступ восстанавливается через Супер Админа: @up1t3rV (Super Admin)'); return false;">Забыли пароль?</a>
+                    <span>Нет доступа? <a href="#" id="toggle-to-register" style="color: var(--accent-cyan); text-decoration: none;">Получить ID</a></span>
                 </div>
             </form>
 
@@ -51,12 +60,27 @@
                 </div>
                 <div class="form-group">
                     <label>ПАРОЛЬ (ЗАПОМНИ!)</label>
-                    <input type="password" id="reg-password" required>
+                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
+                        <input type="password" id="reg-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
+                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reg-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
+                    </div>
                 </div>
-                <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 10px;"></div>
-                <button type="submit" class="cyber-btn primary-btn" style="width: 100%;">АКТИВИРОВАТЬ АККАУНТ</button>
-                <div style="text-align: center; margin-top: 15px;">
-                    Уже есть ID? <a href="#" id="toggle-to-login" style="color: var(--accent-color);">Авторизация</a>
+                <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
+
+                <!-- ФЗ-152: Personal Data Consent -->
+                <div style="background: rgba(0,242,255,0.05); border: 1px solid rgba(0,242,255,0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 12px; color: var(--text-dim); line-height: 1.5;">
+                        <input type="checkbox" id="reg-pd-consent" style="width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--accent-cyan);" onchange="document.getElementById('reg-submit-btn').disabled = !this.checked;">
+                        <span>Я даю согласие на обработку моих персональных данных в соответствии с 
+                            <strong style="color: var(--accent-cyan);">Федеральным законом № 152-ФЗ</strong>
+                            «О персональных данных». Данные используются исключительно для обеспечения работы платформы Skufia-Net и не передаются третьим лицам.
+                        </span>
+                    </label>
+                </div>
+
+                <button type="submit" id="reg-submit-btn" class="cyber-btn primary-btn auth-main-btn" disabled style="opacity: 0.5; cursor: not-allowed; transition: opacity 0.3s;">АКТИВИРОВАТЬ АККАУНТ</button>
+                <div style="text-align: center; margin-top: 15px; font-size: 13px;">
+                    Уже есть ID? <a href="#" id="toggle-to-login" style="color: var(--accent-cyan); text-decoration: none;">Авторизация</a>
                 </div>
             </form>
         </div>
@@ -64,41 +88,166 @@
     
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px; padding: 25px;">
+        <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 16px;">
             <div class="modal-header">
-                <h2>НАСТРОЙКИ</h2>
-                <button class="close-btn" onclick="document.getElementById('settings-modal').style.display='none'">×</button>
+                <h2>Настройки</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('settings-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
+            
             <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
                 
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label>Изменить Аватар</label>
-                    <input type="file" id="settings-avatar-upload" accept="image/*" style="font-size: 13px; margin-top: 5px;">
+                <!-- Avatar Upload Section -->
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <div class="avatar-upload-container" style="position: relative; cursor: pointer; transition: transform 0.2s ease;" onclick="document.getElementById('settings-avatar-upload').click()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=Admin&background=1f2937&color=00f2ff" alt="Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-cyan); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                        <div class="avatar-overlay" style="position: absolute; bottom: 0; right: 0; background: var(--accent-cyan); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
+                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                        </div>
+                    </div>
+                    <input type="file" id="settings-avatar-upload" accept="image/*" style="display: none;" onchange="window.previewAvatar(this)">
+                    <span style="font-size: 12px; color: var(--text-dim); font-weight: 500;">Установить фото профиля</span>
+                </div>
+
+                <!-- Formally had theme select here, moved to dedicated modal -->
+
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="settings-handle" style="font-size: 14px; margin-bottom: 5px; display: block; color: var(--text-dim);">Короткое имя (Handle)</label>
+                    <div style="display: flex; gap: 10px;">
+                        <span style="display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border-metal); border-radius: 8px; padding: 0 12px; color: var(--text-dim);">@</span>
+                        <input type="text" id="settings-handle" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="username">
+                    </div>
+                    <small style="color: var(--text-dim); font-size: 11px; margin-top: 4px; display: block;">По этой ссылке вас смогут найти другие.</small>
+                </div>
+
+                <!-- Toggles Section -->
+                <div style="background: var(--bg-accent); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border-metal);">
+                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
+                        <label style="margin: 0; font-size: 14px;">Звуковые уведомления</label>
+                        <input type="checkbox" id="settings-sound-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
+                        <label style="margin: 0; font-size: 14px;">Push-уведомления (PWA)</label>
+                        <input type="checkbox" id="settings-push-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
+                        <label style="margin: 0; font-size: 14px;">Отправка по Enter</label>
+                        <input type="checkbox" id="settings-enter-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
+                        <label style="margin: 0; font-size: 14px;">Автозагрузка медиа</label>
+                        <input type="checkbox" id="settings-media-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 0;">
-                    <label>Тема Оформления</label>
-                    <select id="settings-theme-select" class="cyber-input" style="width: 100%; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main); padding: 8px; border-radius: 4px; margin-top: 5px;">
-                        <option value="cyber">Skufia Cyber (Neon)</option>
-                        <option value="telegram">Telegram Dark</option>
-                    </select>
+                    <button id="sync-contacts-btn" class="cyber-btn" style="width: 100%; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+                        Синхронизация контактов
+                    </button>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                    <label style="margin: 0;">Звуковые уведомления</label>
-                    <input type="checkbox" id="settings-sound-toggle" checked style="width: 18px; height: 18px;">
+                <div style="margin-top: 15px; text-align: center; color: var(--text-dim); font-size: 11px; line-height: 1.4; opacity: 0.7;">
+                    © 2026 
+                    <span id="matrix-brand" class="scramble-text" data-text="Skufia-Net" style="color: var(--neon-cyan); font-weight: bold;">Skufia-Net</span>
+                    <span class="scramble-text" data-text=". All rights reserved.">. All rights reserved.</span>
+                    <a href="#" onclick="window.openCreatorPlaque(event)" style="color: var(--text-dim); text-decoration: underline;"><span class="scramble-text" data-text="By Vladimir Popov">By Vladimir Popov</span></a><br>
+                    <span class="scramble-text" data-text="Version 1.0.0 Enterprise | Created by Vladimir Popov">Version 1.0.0 Enterprise | Created by Vladimir Popov</span>
                 </div>
-
-                <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                    <label style="margin: 0;">Отправка по Enter</label>
-                    <input type="checkbox" id="settings-enter-toggle" checked style="width: 18px; height: 18px;">
-                </div>
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <button id="sync-contacts-btn" class="cyber-btn secondary-btn" style="width: 100%; margin-top: 5px;">СИНХРОНИЗИРОВАТЬ КОНТАКТЫ</button>
-                </div>
-
             </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Switcher Modal -->
+    <div id="theme-switcher-modal" class="modal" style="display: none; z-index: 9999;">
+        <div class="modal-content glass-panel" style="max-width: 450px; padding: 25px; border-radius: 16px;">
+            <div class="modal-header">
+                <h2>Выбор Темы</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('theme-switcher-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="theme-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                <div class="theme-card" onclick="window.setAndCloseTheme('cyber')" style="cursor:pointer; background: #001111; border: 2px solid var(--accent-cyan); border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0, 242, 255, 0.2); transition: transform 0.2s ease;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">🟢</div>
+                    <div style="color: #00f2ff; font-weight: bold;">Skufia Cyber</div>
+                    <small style="color: #448888;">Neon/Glass</small>
+                </div>
+                <div class="theme-card" onclick="window.setAndCloseTheme('telegram')" style="cursor:pointer; background: #1c242d; border: 2px solid #5b6571; border-radius: 12px; padding: 15px; text-align: center; transition: transform 0.2s ease;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">🌙</div>
+                    <div style="color: #e4e6eb; font-weight: bold;">Telegram Dark</div>
+                    <small style="color: #8c96a3;">Classic App</small>
+                </div>
+                <div class="theme-card" onclick="window.setAndCloseTheme('light-ios')" style="cursor:pointer; background: #ffffff; border: 2px solid #d1d1d6; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">☀️</div>
+                    <div style="color: #000000; font-weight: bold;">Light OS</div>
+                    <small style="color: #8e8e93;">Apple Style</small>
+                </div>
+                <div class="theme-card" onclick="window.setAndCloseTheme('gold')" style="cursor:pointer; background: #1a1500; border: 2px solid #ffcc00; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255, 204, 0, 0.2); transition: transform 0.2s ease;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">👑</div>
+                    <div style="color: #ffcc00; font-weight: bold;">Cyber Gold</div>
+                    <small style="color: #a38b22;">Premium</small>
+                </div>
+            </div>
+            <style>
+                .theme-card:hover { transform: translateY(-3px); }
+            </style>
+        </div>
+    </div>
+    <div id="creator-plaque-modal" class="modal" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
+        <div class="modal-content glass-panel" style="max-width: 320px; padding: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(0, 242, 255, 0.3); box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);">
+            <div style="background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(0,0,0,0)); padding: 25px 20px 15px; text-align: center; position: relative;">
+                <button class="close-btn-svg" onclick="document.getElementById('creator-plaque-modal').style.display='none'" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border-radius: 50%;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 15px; border: 2px solid var(--neon-cyan); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 0 15px rgba(0,242,255,0.4);">
+                    <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--neon-cyan)" stroke-width="1.5" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #fff;">Vladimir Popov</h3>
+                <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 5px; background: rgba(0, 242, 255, 0.15); border: 1px solid rgba(0, 242, 255, 0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; color: var(--neon-cyan); letter-spacing: 0.5px;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+                    SUPER ADMIN
+                </div>
+            </div>
+            <div style="padding: 20px; background: var(--bg-surface);">
+                <p style="font-size: 13px; color: var(--text-dim); text-align: center; margin-top: 0; margin-bottom: 20px; line-height: 1.5;">
+                    Создатель и Хранитель платформы Skufia-Net. Enterprise Edition.
+                </p>
+                <a href="https://t.me/up1t3rV" target="_blank" class="cyber-btn primary-btn" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; text-decoration: none; padding: 12px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    Contact in Telegram
+                </a>
+                <div style="margin-top: 15px; text-align: center;">
+                    <span style="font-size: 12px; color: var(--neon-cyan); font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">@up1t3rV</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="folder-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 16px;">
+            <div class="modal-header">
+                <h2>Создать папку</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('folder-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <div class="form-group" style="margin-top: 10px;">
+                <input type="text" id="folder-name-input" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="Название папки...">
+            </div>
+            <div class="form-group" style="margin-top: 15px;">
+                <label style="font-size: 13px; color: var(--text-dim); margin-bottom: 5px; display: block;">Выберите чаты</label>
+                <div id="folder-rooms-selection" class="sidebar-list premium-scroll" style="max-height: 200px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 8px; padding: 5px;">
+                    <!-- Rooms checkboxes injected here -->
+                </div>
+            </div>
+            
+            <button class="cyber-btn primary-btn" style="width: 100%; margin-top: 15px;" onclick="window.submitFolderCreate()">СОХРАНИТЬ ПАПКУ</button>
         </div>
     </div>
 
@@ -106,20 +255,44 @@
     <div id="fab-hub-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 400px; padding: 25px;">
             <div class="modal-header">
-                <h2>НОВЫЙ ЧАТ</h2>
-                <button class="close-btn" onclick="document.getElementById('fab-hub-modal').style.display='none'">×</button>
+                <h2>Новый чат</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('fab-hub-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             
-            <div style="display: flex; gap:10px; margin-bottom:15px;">
-                <button class="cyber-btn" style="flex:1;" onclick="window.openCreateRoomModal('channel')">📢 Канал</button>
-                <button class="cyber-btn" style="flex:1;" onclick="window.openCreateRoomModal('group')">👥 Группа</button>
+            <div class="action-menu-items" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
+                <button class="menu-action-btn" onclick="window.openCreateRoomModal('channel')">
+                    <div class="icon-circle" style="background: rgba(255, 215, 0, 0.15); color: #FFD700;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                    </div>
+                    <span>Создать канал</span>
+                </button>
+                <button class="menu-action-btn" onclick="window.openCreateRoomModal('group')">
+                    <div class="icon-circle" style="background: rgba(0, 242, 255, 0.15); color: #00f2ff;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </div>
+                    <span>Создать группу</span>
+                </button>
+                <button class="menu-action-btn" onclick="document.getElementById('fab-contact-search').focus()">
+                    <div class="icon-circle" style="background: rgba(255, 140, 0, 0.15); color: #FF8C00;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </div>
+                    <span>Приватный чат</span>
+                </button>
+                <button class="menu-action-btn" onclick="document.getElementById('fab-hub-modal').style.display='none'; window.openJoinByInviteModal()">
+                    <div class="icon-circle" style="background: rgba(0, 255, 65, 0.12); color: #00ff41;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                    </div>
+                    <span>🔗 Вступить по ссылке</span>
+                </button>
             </div>
             
             <div class="form-group" style="margin-bottom: 10px;">
-                <input type="text" id="fab-contact-search" class="cyber-input" style="width: 100%; border-radius: 6px;" placeholder="Поиск контактов..." oninput="window.filterFabContacts()">
+                <input type="text" id="fab-contact-search" class="cyber-input" style="width: 100%; border-radius: 6px;" placeholder="Имя, @ник, номер телефона..." oninput="window.filterFabContacts()">
             </div>
             
-            <div id="fab-contacts-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px;">
+            <div id="fab-contacts-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 6px; padding: 5px;">
                 <!-- Contacts rendered here -->
                 <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>
             </div>
@@ -130,17 +303,53 @@
     <div id="create-room-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 350px; padding: 25px;">
             <div class="modal-header">
-                <h2 id="create-room-title">СОЗДАТЬ</h2>
-                <button class="close-btn" onclick="document.getElementById('create-room-modal').style.display='none'">×</button>
+                <h2 id="create-room-title">Создать</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('create-room-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
             <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label id="create-room-label">Название</label>
-                    <input type="text" id="create-room-input" class="cyber-input" style="width: 100%; margin-top: 5px;" placeholder="Введите название...">
+                    <input type="text" id="create-room-input" class="cyber-input" style="width: 100%; margin-top: 5px; border-radius: 8px;" placeholder="Введите название...">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label style="font-size: 12px; color: var(--text-dim);">Описание (необязательно)</label>
+                    <input type="text" id="create-room-desc" class="cyber-input" style="width: 100%; margin-top: 5px; border-radius: 8px;" placeholder="О чём эта группа?">
+                </div>
+                <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; background: var(--bg-accent); border-radius: 8px; padding: 12px; border: 1px solid var(--border-metal);">
+                    <div>
+                        <label style="margin: 0; font-size: 14px;">Публичный доступ</label>
+                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">🔒 Выключено — только по инвайту</div>
+                    </div>
+                    <input type="checkbox" id="create-room-public" style="width: 18px; height: 18px; cursor: pointer;">
                 </div>
                 <input type="hidden" id="create-room-type" value="group">
-                <button id="create-room-confirm-btn" class="cyber-btn" style="width: 100%;" onclick="window.confirmCreateRoom()">СОЗДАТЬ</button>
+                <button id="create-room-confirm-btn" class="cyber-btn" style="width: 100%; border-radius: 8px;" onclick="window.confirmCreateRoom()">🔒 Создать приватную группу</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; padding: 25px;">
+            <div class="modal-header">
+                <h2>Добавить участника</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('add-member-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 10px;">
+                <input type="text" id="add-member-search" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="Поиск контактов..." oninput="window.filterAddMemberContacts()">
+            </div>
+            
+            <div id="add-member-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 8px; padding: 5px; margin-bottom: 15px;">
+                <!-- Contacts rendered here -->
+                <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>
+            </div>
+            
+            <button id="add-member-confirm-btn" class="cyber-btn" style="width: 100%; border-radius: 8px;" onclick="window.submitAddMembers()">ДОБАВИТЬ ВЫБРАННЫХ</button>
         </div>
     </div>
 
@@ -148,11 +357,19 @@
     <div class="app-container">
         <!-- Mobile Header / Top Bar -->
         <header class="system-header">
-            <div class="logo">SKUFIA <span class="version">v2.0_ENTERPRISE</span></div>
-            <div class="system-stats">
-                <span class="stat-item">СЕКТОР: <span class="highlight">RU-CENTRAL</span></span>
-                <span class="stat-item">СТАТУС: <span class="status-online">ONLINE</span></span>
-                <button id="mobile-menu-toggle" class="mobile-only">☰</button>
+            <!-- Left Controls: Menu & Theme -->
+            <div class="left-controls" style="display: flex; align-items: center; gap: 15px; width: 33%; justify-content: flex-start;">
+                <button id="mobile-menu-toggle" class="mobile-only" style="font-size: 24px; background: transparent; border: none; color: var(--accent-cyan); padding: 0 5px;">☰</button>
+                <button class="nav-btn theme-btn" onclick="document.getElementById('theme-switcher-modal').style.display='flex'" style="border: 1px solid var(--border-metal); background: var(--bg-accent); padding: 5px 10px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Сменить тему">☀️</button>
+            </div>
+            
+            <!-- Center: Logo -->
+            <div class="logo" style="width: 34%; text-align: center;">SKUFIA <span class="version">v2.0_ENTERPRISE</span></div>
+            
+            <!-- Right Controls: System Stats (Matrix Scramble) -->
+            <div class="system-stats" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; width: 33%;">
+                <span class="stat-item" style="font-size: 10px; opacity: 0.8; letter-spacing: 1px; color: var(--text-dim);">СЕКТОР: <span class="highlight scramble-text" data-text="RU-CENTRAL" style="color: var(--accent-cyan);">RU-CENTRAL</span></span>
+                <span class="stat-item" style="font-size: 10px; opacity: 0.8; letter-spacing: 1px; color: var(--text-dim);">СТАТУС: <span class="status-online scramble-text" data-text="ONLINE" style="color: #00ff00;">ONLINE</span></span>
             </div>
         </header>
 
@@ -165,7 +382,7 @@
                     <button class="nav-btn active" data-view="home">🏠 ГЛАВНАЯ</button>
                     <button class="nav-btn" data-view="forum">🌐 ФОРУМ</button>
                     <button class="nav-btn" data-view="wiki">📚 БАЗА ЗНАНИЙ</button>
-                    <button class="nav-btn" data-view="trade">💰 БИРЖА СКУФОВ</button>
+                    <button class="nav-btn" data-view="trade">🏪 БАРАХОЛКА</button>
                     <button class="nav-btn" data-view="registry">🆔 РЕЕСТР</button>
                     <button class="nav-btn" data-view="events">📅 СОБЫТИЯ</button>
                     <button class="nav-btn" onclick="openSkufenger()">💬 SKUFenger</button>
@@ -253,9 +470,21 @@
 
                 <!-- TRADE VIEW -->
                 <div class="view" id="view-trade">
-                    <h2 class="view-title">💰 БИРЖА СКУФОВ</h2>
-                    <div class="action-bar">
+                    <h2 class="view-title">🏪 БАРАХОЛКА</h2>
+                    <div class="action-bar" style="flex-wrap: wrap; gap: 10px;">
                         <button class="btn-primary" id="btn-market-new" onclick="toggleMarketForm()">+ ПРЕДЛОЖИТЬ ЛОТ</button>
+                        
+                        <input type="text" id="market-search" class="input-text" placeholder="Поиск лотов..." style="min-width: 150px; flex-grow: 1;">
+                        
+                        <input type="number" id="market-min-price" class="input-text" placeholder="Мин. ₽" style="width: 90px;" oninput="window.updatePriceFilter(event, 'min')">
+                        <input type="number" id="market-max-price" class="input-text" placeholder="Макс. ₽" style="width: 90px;" oninput="window.updatePriceFilter(event, 'max')">
+                        
+                        <select id="market-sort" class="input-text" style="width: auto;" onchange="window.updateMarketSort(event)">
+                            <option value="newest">Сначала новые</option>
+                            <option value="price_asc">Сначала дешевые</option>
+                            <option value="price_desc">Сначала дорогие</option>
+                        </select>
+
                         <select id="market-filter-cat" class="input-text" style="width: auto;" onchange="loadMarket()">
                             <option value="Все">Все тематики</option>
                             <option value="Электроника">Электроника</option>
@@ -264,12 +493,17 @@
                             <option value="Разное">Разное</option>
                         </select>
                         <select id="market-filter-loc" class="input-text" style="width: auto;" onchange="loadMarket()">
-                            <option value="Везде">Вся сеть (Везде)</option>
+                            <option value="Везде">Вся сеть</option>
                             <option value="Москва">Москва</option>
                             <option value="Скуфград">Скуфград</option>
                             <option value="Питер">Питер</option>
                             <option value="Завод">Завод</option>
                         </select>
+                        
+                        <div class="layout-controls" style="display: flex; gap: 5px;">
+                            <button id="btn-layout-grid" class="cyber-btn-small" onclick="window.setMarketLayout('grid')">▦ Плитка</button>
+                            <button id="btn-layout-list" class="cyber-btn-small" onclick="window.setMarketLayout('list')">☰ Список</button>
+                        </div>
                     </div>
                     <div class="form-panel" id="market-form-panel" style="display: none;">
                         <input type="text" id="market-title" class="input-text" placeholder="Название лота (Например: Монитор 17 ЭЛТ)" />
@@ -301,6 +535,7 @@
                     <div class="market-grid" id="market-list">
                         <div class="skeleton">Получение котировок...</div>
                     </div>
+                    <div id="market-pagination" class="pagination-controls" style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; align-items: center;"></div>
                 </div>
 
                 <!-- REGISTRY VIEW -->
@@ -335,7 +570,9 @@
                     <div class="modal-content" style="max-width: 600px;">
                         <div class="modal-header">
                             <h3 id="listing-detail-title">Детали лота</h3>
-                            <span class="close-btn" onclick="document.getElementById('listing-detail-modal').style.display='none'">&times;</span>
+                            <span class="close-btn" onclick="document.getElementById('listing-detail-modal').style.display='none'">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </span>
                         </div>
                         <div class="listing-detail-body">
                             <div id="listing-detail-gallery" class="listing-gallery"></div>
@@ -357,7 +594,9 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h3>ВЫБОР ОПЕРАТИВНИКА (AVATAR)</h3>
-                        <span class="close-btn" onclick="closeAvatarModal()">&times;</span>
+                        <span class="close-btn" onclick="closeAvatarModal()">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </span>
                     </div>
                     <div class="avatar-grid" id="avatar-selector-grid">
                         <!-- 35 Premium Avatars injected here -->
@@ -411,6 +650,8 @@
                                 <option value="telegram">Telegram Modern</option>
                                 <option value="neon">Neon Glassmorphism</option>
                                 <option value="retro">Cyber Retro (Classic)</option>
+                                <option value="light-ios">Light (iOS Style)</option>
+                                <option value="gold">Cyber Gold</option>
                             </select>
                         </div>
                     </div>
@@ -422,19 +663,36 @@
                     <div class="chat-layout">
                         <div class="chat-sidebar">
                             <!-- Premium Sidebar Header -->
-                            <div class="sidebar-header">
-                                <div class="sidebar-header-top">
+                            <div class="sidebar-header" id="sidebar-header-container">
+                                <!-- Default Mode -->
+                                <div class="sidebar-header-top" id="sidebar-default-header">
                                     <span class="sidebar-title" style="display: flex; align-items: center; gap: 8px;">SKUFenger <span id="global-status-indicator" class="status-dot online" style="position: static; margin-top: 2px;"></span></span>
-                                    <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8 1 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                    </button>
+                                    <div class="sidebar-actions" style="display: flex; gap: 4px;">
+                                        <button class="icon-btn" id="sidebar-search-toggle-btn" title="Поиск" onclick="toggleSidebarSearch(true)">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                        </button>
+                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8 1 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="sidebar-search-compact">
-                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                    <input type="text" id="contact-search" placeholder="Поиск..." autocomplete="off">
+                                <!-- Search Mode -->
+                                <div class="sidebar-search-compact" id="sidebar-active-search" style="display: none; padding: 4px 12px; border-radius: 20px; max-width: 65%; margin: 0 auto; animation: fadeIn 0.2s ease;">
+                                    <button class="icon-btn" style="margin-left: -8px; padding: 2px; color: var(--accent-cyan);" onclick="toggleSidebarSearch(false)">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                                    </button>
+                                    <input type="text" id="contact-search" placeholder="Поиск чатов..." autocomplete="off">
                                 </div>
                             </div>
-                            <div id="chat-rooms-list" class="sidebar-list">
+                            
+                            <!-- Chat Folders Tabs -->
+                            <div class="chat-folders-tabs" id="chat-folders-tabs">
+                                <div class="folder-tab active" onclick="window.selectFolder('all', this)">Все чаты</div>
+                                <!-- Folders will be loaded here -->
+                                <button class="add-folder-btn" onclick="window.openFolderModal()" title="Создать папку">+</button>
+                            </div>
+                            
+                            <div id="chat-rooms-list" class="sidebar-list premium-scroll">
                                 <div class="skeleton">Синхронизация...</div>
                             </div>
                             <button class="fab-create-btn" title="Новый чат" onclick="window.openFabHub()">
@@ -468,6 +726,8 @@
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
                                         </button>
                                         <div id="chat-options-dropdown" class="chat-options-dropdown" style="display:none;">
+                                            <button id="btn-add-member" onclick="window.openAddMemberModal()" style="display:none; color: var(--accent-cyan);">👥 Добавить участника</button>
+                                            <button id="btn-group-settings" onclick="window.openGroupSettings()" style="display:none; color: #f0b429;">⚙️ Управление группой</button>
                                             <button onclick="window.chatOptionAction('mute')">🔕 Без звука</button>
                                             <button onclick="window.chatOptionAction('search')">🔍 Поиск по чату</button>
                                             <button onclick="window.chatOptionAction('wallpaper')">🎨 Фон чата</button>
@@ -532,7 +792,9 @@
     
 
 
-    <script src="rtcManager.js"></script>
-    <script src="app.js"></script>
+    <script defer src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script defer src="db.js"></script>
+    <script defer src="rtcManager.js"></script>
+    <script defer src="app.js"></script>
 </body>
 </html>

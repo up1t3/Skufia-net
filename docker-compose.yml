@@ -1,10 +1,59 @@
 services:
+  postgres:
+    image: postgres:16
+    container_name: skufia-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-skufia}
+    volumes:
+      - skufia_pgdata:/var/lib/postgresql/data
+    restart: always
+
+  redis:
+    image: redis:alpine
+    container_name: skufia-redis
+    restart: always
+
+  celery:
+    build:
+      context: ./backend
+    container_name: skufia-celery
+    command: celery -A worker.celery_app worker --loglevel=info --concurrency=2
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+      - skufia_uploads:/app/uploads
+      - skufia_db:/app/data
+    restart: always
+
+  coturn:
+    image: coturn/coturn
+    container_name: skufia-coturn
+    restart: always
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+    command: turnserver --use-auth-secret --static-auth-secret=${TURN_SECRET:-skufia_secret} --realm=${TURN_REALM:-skufia.local}
+
   backend:
     build:
       context: ./backend
     container_name: skufia-api
     ports:
       - "8007:8007"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      - postgres
+      - redis
     volumes:
       - ./backend:/app
       - skufia_uploads:/app/uploads
@@ -16,10 +65,12 @@ services:
       context: ./frontend
     container_name: skufia-web
     ports:
-      - "5551:80"
+      - "8008:80"
+      - "8444:443"
     volumes:
       - ./frontend:/usr/share/nginx/html:ro
       - ./frontend/nginx_full.conf:/etc/nginx/nginx.conf
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - backend
     restart: always
@@ -27,3 +78,4 @@ services:
 volumes:
   skufia_uploads:
   skufia_db:
+  skufia_pgdata:

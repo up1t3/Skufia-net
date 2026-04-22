@@ -8,6 +8,7 @@ from pydantic import BaseModel
 import os
 from database import SessionLocal, User, Profile
 from sqlalchemy.orm import Session
+from rate_limit import RateLimiter
 
 # Configuration
 SECRET_KEY = os.getenv('SECRET_KEY', 'skufia_super_secret_cyber_key_2000')
@@ -60,8 +61,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or deleted",
+            headers={"WWW-Authenticate": "Bearer"}
         )
     return user
 
@@ -72,13 +74,21 @@ class RegisterRequest(BaseModel):
     username: str
     email: str
     password: str
+    accepted_pd: bool = False  # ФЗ-152: Personal data processing consent
 
 class LoginRequest(BaseModel):
     username: str
     password: str
 
-@router.post('/register', status_code=status.HTTP_201_CREATED)
+@router.post('/register', status_code=status.HTTP_201_CREATED, dependencies=[Depends(RateLimiter(limit=5, window=60))])
 def register_user(req: RegisterRequest, db = Depends(get_db)):
+    # [ФЗ-152] Reject registration if personal data consent is not given
+    if not req.accepted_pd:
+        raise HTTPException(
+            status_code=400, 
+            detail="Необходимо дать согласие на обработку персональных данных (ФЗ-152)"
+        )
+    
     if db.query(User).filter(User.username == req.username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
     if db.query(User).filter(User.email == req.email).first():
@@ -88,7 +98,8 @@ def register_user(req: RegisterRequest, db = Depends(get_db)):
     new_user = User(
         username=req.username,
         email=req.email,
-        hashed_password=hashed_pwd
+        hashed_password=hashed_pwd,
+        accepted_pd=True  # Confirmed consent at registration time
     )
     db.add(new_user)
     db.commit()
@@ -101,7 +112,7 @@ def register_user(req: RegisterRequest, db = Depends(get_db)):
     
     return {"message": "User registered successfully", "user_id": new_user.id}
 
-@router.post('/login')
+@router.post('/login', dependencies=[Depends(RateLimiter(limit=5, window=60))])
 def login_user(req: LoginRequest, db = Depends(get_db)):
     user = db.query(User).filter(User.username == req.username).first()
     if not user or not verify_password(req.password, user.hashed_password):
