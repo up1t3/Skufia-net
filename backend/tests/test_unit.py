@@ -89,7 +89,7 @@ def test_register_user_username_exists():
     db = MagicMock()
     db.query.return_value.filter.return_value.first.side_effect = [User(id=1)] # Username exists
 
-    req = RegisterRequest(username="test", email="test@test.com", password="pwd")
+    req = RegisterRequest(username="test", email="test@test.com", password="pwd", accepted_pd=True)
     with pytest.raises(HTTPException) as exc:
         register_user(req=req, db=db)
     assert exc.value.status_code == 400
@@ -99,7 +99,7 @@ def test_register_user_email_exists():
     db = MagicMock()
     db.query.return_value.filter.return_value.first.side_effect = [None, User(id=1)] # Email exists
 
-    req = RegisterRequest(username="test", email="test@test.com", password="pwd")
+    req = RegisterRequest(username="test", email="test@test.com", password="pwd", accepted_pd=True)
     with pytest.raises(HTTPException) as exc:
         register_user(req=req, db=db)
     assert exc.value.status_code == 400
@@ -109,7 +109,7 @@ def test_register_user_success():
     db = MagicMock()
     db.query.return_value.filter.return_value.first.side_effect = [None, None]
 
-    req = RegisterRequest(username="test", email="test@test.com", password="pwd")
+    req = RegisterRequest(username="test", email="test@test.com", password="pwd", accepted_pd=True)
     res = register_user(req=req, db=db)
 
     assert res["message"] == "User registered successfully"

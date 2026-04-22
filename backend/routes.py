@@ -430,6 +430,28 @@ def store_room_keys(
     db.commit()
     return {"status": "Keys stored", "count": len(payload.keys)}
 
+@router.post('/chat/rooms/{room_id}/key/reset')
+def reset_room_keys(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Deletes all RoomKeyBundle records for the given room_id.
+    Requires authentication and that the user is a member of the room.
+    """
+    membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    db.query(RoomKeyBundle).filter(RoomKeyBundle.room_id == room_id).delete()
+    db.commit()
+
+    return {"status": "Keys reset", "room_id": room_id}
+
 @router.get('/chat/rooms/{room_id}/key')
 def get_room_key(
     room_id: int,
