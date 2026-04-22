@@ -13,3 +13,11 @@ error.txt
 frontend/node_modules/
 node_modules/
 backend/mediasoup-worker/node_modules/
+venv/
+
+# Секреты — НИКОГДА не коммитить!
+.env
+*.env
+
+# Node.js
+npm-debug.log*

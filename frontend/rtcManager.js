@@ -12,11 +12,16 @@ class RTCManager {
         this.isCalling = false;
         this.isVideoCall = false;
         
-        // Ice Servers - Google STUN as fallback
+        // Ice Servers - Google STUN as fallback and local Coturn server
         this.iceServers = {
             iceServers: [
                 { urls: "stun:stun.l.google.com:19302" },
-                { urls: "stun:stun1.l.google.com:19302" }
+                { urls: "stun:stun1.l.google.com:19302" },
+                {
+                    urls: `turn:${window.location.hostname}:3478`,
+                    username: "guest",
+                    credential: "guest_password"
+                }
             ]
         };
         
@@ -108,23 +113,32 @@ class RTCManager {
     }
 
     handleIncomingSignal(type, payload, senderId) {
+        let parsedPayload = payload;
+        try {
+            if (typeof payload === 'string') {
+                parsedPayload = JSON.parse(payload);
+            }
+        } catch (e) {
+            console.error("Failed to parse RTC payload", e);
+        }
+
         if(type === 'offer') {
             if(this.isCalling) return; // Busy
             this.currentCallTarget = senderId;
             this.isCalling = true;
-            this.incomingOffer = payload;
-            this.isVideoCall = payload.sdp && payload.sdp.includes('m=video');
+            this.incomingOffer = parsedPayload;
+            this.isVideoCall = parsedPayload.sdp && parsedPayload.sdp.includes('m=video');
             this.showModal('Входящий вызов', 'User ' + senderId, true, this.isVideoCall);
         } else if(type === 'answer') {
             if(this.peerConnection) {
-                this.peerConnection.setRemoteDescription(new RTCSessionDescription(payload));
+                this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload));
                 this.statusText.textContent = 'Звонок активен';
                 this.startTimer();
                 this.showInCallControls();
             }
         } else if(type === 'candidate') {
             if(this.peerConnection) {
-                this.peerConnection.addIceCandidate(new RTCIceCandidate(payload));
+                this.peerConnection.addIceCandidate(new RTCIceCandidate(parsedPayload));
             }
         } else if(type === 'end') {
             this.endCall(false);
@@ -142,7 +156,7 @@ class RTCManager {
         await this.peerConnection.setLocalDescription(answer);
         
         if(window.sendSocketEvent) {
-             window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'answer', payload: answer });
+             window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'answer', payload: JSON.stringify(answer) });
         }
         this.statusText.textContent = 'Звонок активен';
         this.startTimer();
@@ -178,7 +192,7 @@ class RTCManager {
 
             this.peerConnection.onicecandidate = (event) => {
                 if (event.candidate && window.sendSocketEvent) {
-                    window.sendSocketEvent('rtc_signal', { target: targetId, signal_type: 'candidate', payload: event.candidate });
+                    window.sendSocketEvent('rtc_signal', { target: targetId, signal_type: 'candidate', payload: JSON.stringify(event.candidate) });
                 }
             };
 
@@ -197,7 +211,7 @@ class RTCManager {
                 const offer = await this.peerConnection.createOffer();
                 await this.peerConnection.setLocalDescription(offer);
                 if(window.sendSocketEvent) {
-                    window.sendSocketEvent('rtc_signal', { target: targetId, signal_type: 'offer', payload: offer });
+                    window.sendSocketEvent('rtc_signal', { target: targetId, signal_type: 'offer', payload: JSON.stringify(offer) });
                 }
             }
         } catch(e) {

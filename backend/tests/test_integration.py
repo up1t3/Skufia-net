@@ -196,7 +196,8 @@ def test_market_create_and_get(client, auth_headers):
     # Get listings
     response = client.get("/api/market?category=Электроника&location=Скуфград", headers=auth_headers)
     assert response.status_code == 200
-    listings = response.json()
+    data = response.json()
+    listings = data["items"]
     assert len(listings) > 0
     assert listings[0]["title"] == "Avito Скуф-Тест"
     
@@ -206,7 +207,7 @@ def test_market_create_and_get(client, auth_headers):
     
     # Verify deletion
     response = client.get("/api/market?category=Электроника&location=Скуфград", headers=auth_headers)
-    assert len(response.json()) == 0
+    assert len(response.json()["items"]) == 0
 
 def test_events_create_and_get(client, auth_headers):
     payload = {
@@ -234,3 +235,105 @@ def test_private_chat_create(client, auth_headers):
     data = response.json()
     assert data["room_type"] == "private"
     assert "test_user" in data["name"]
+
+def test_unauth_assertions(client):
+    # Unauth access on protected routes
+    assert client.get("/api/topics").status_code == 401
+    assert client.post("/api/topics", json={"title": "unauth", "category_id": 1}).status_code == 401
+    assert client.post("/api/market", json={"title": "unauth", "description": "desc"}).status_code == 401
+    assert client.delete("/api/market/1").status_code == 401
+    assert client.post("/api/chat/private", json={"target_user_id": 1}).status_code == 401
+    assert client.get("/api/chat/rooms/1/history").status_code == 401
+
+def test_topic_boundary(client, auth_headers):
+    # Missing required field
+    response = client.post("/api/topics", headers=auth_headers, json={
+        "title": "Missing category"
+    })
+    assert response.status_code == 422
+
+def test_market_unauth_delete(client, auth_headers):
+    # Setup second user via register
+    client.post("/api/auth/register", json={
+        "username": "second_user3",
+        "email": "second3@skufia.net",
+        "password": "password123"
+    })
+    r2 = client.post("/api/auth/login", json={
+        "username": "second_user3",
+        "password": "password123"
+    })
+    second_user_auth3 = {"Authorization": f"Bearer {r2.json()['access_token']}"}
+
+    # First user creates a listing
+    payload = {
+        "title": "My Listing",
+        "price": "500",
+        "description": "To be deleted by another",
+        "category": "Электроника",
+        "location": "Скуфград"
+    }
+    response = client.post("/api/market", headers=auth_headers, json=payload)
+    item_id = response.json()["id"]
+
+    # Second user attempts to delete it
+    response_del = client.delete(f"/api/market/{item_id}", headers=second_user_auth3)
+    assert response_del.status_code == 403
+    assert "Not authorized" in response_del.json()["detail"]
+
+def test_market_boundary(client, auth_headers):
+    # Missing required fields
+    response = client.post("/api/market", headers=auth_headers, json={
+        "title": "Missing fields"
+    })
+    assert response.status_code == 422
+
+def test_private_chat_boundaries(client, auth_headers):
+    r_me = client.get("/api/me", headers=auth_headers)
+    my_id = r_me.json()["id"]
+
+    # Self-chat
+    response = client.post("/api/chat/rooms", headers=auth_headers, json={"name": "test", "room_type": "private", "target_user_id": my_id})
+    assert response.status_code == 400
+    assert "самим собой" in response.json()["detail"]
+
+    # Non-existent user
+    response = client.post("/api/chat/private", headers=auth_headers, json={"target_user_id": 999999})
+    assert response.status_code == 404
+    assert "User not found" in response.json()["detail"]
+
+    # Missing target user id
+    response = client.post("/api/chat/rooms", headers=auth_headers, json={"name": "test", "room_type": "private"})
+    assert response.status_code == 400
+
+
+def test_topic_patch_unauth(client, auth_headers):
+    # Setup second user via register
+    client.post("/api/auth/register", json={
+        "username": "second_user4",
+        "email": "second4@skufia.net",
+        "password": "password123"
+    })
+    r2 = client.post("/api/auth/login", json={
+        "username": "second_user4",
+        "password": "password123"
+    })
+    second_user_auth4 = {"Authorization": f"Bearer {r2.json()['access_token']}"}
+
+    # Testing topics patch that shouldn't work
+    r = client.patch("/api/topics/1", headers=second_user_auth4, json={"title": "new"})
+    assert r.status_code in [404, 405]
+
+    r = client.delete("/api/topics/1", headers=second_user_auth4)
+    assert r.status_code in [404, 405]
+
+def test_missing_patch_delete(client, auth_headers):
+    # Testing endpoints that don't exist but checking proper behavior
+    r = client.patch("/api/topics/1", headers=auth_headers, json={"title": "new"})
+    assert r.status_code in [404, 405]
+
+    r = client.delete("/api/topics/1", headers=auth_headers)
+    assert r.status_code in [404, 405]
+
+    r = client.patch("/api/market/1", headers=auth_headers, json={"title": "new"})
+    assert r.status_code in [404, 405]

@@ -7,7 +7,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:8007',
+    baseURL: 'https://skuf-net.ru',
     trace: 'on-first-retry',
     // Fake devices to grant camera/mic permissions
     launchOptions: {
