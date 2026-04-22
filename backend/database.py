@@ -265,24 +265,39 @@ class WikiLike(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class RoomKeyBundle(Base):
-    """
-    Stores the AES-256 session key for a chat room, encrypted with each
-    participant's RSA public key (RSA-OAEP). Each user gets their own
-    encrypted copy so only they can decrypt it with their private key.
-    This is the core of the E2EE key exchange mechanism.
-    """
-    __tablename__ = 'room_key_bundles'
+class UserIdentityKey(Base):
+    """Long-term EdDSA or RSA key for signing pre-keys and authenticating the user."""
+    __tablename__ = 'user_identity_keys'
     id = Column(Integer, primary_key=True, index=True)
-    room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
-    # The AES session key, wrapped (encrypted) with the user's RSA public key
-    wrapped_key = Column(Text, nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, unique=True)
+    public_key = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+class UserSignedPreKey(Base):
+    """Medium-term ECDHE key, signed by the UserIdentityKey."""
+    __tablename__ = 'user_signed_prekeys'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    key_id = Column(Integer, nullable=False)
+    public_key = Column(Text, nullable=False)
+    signature = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
     __table_args__ = (
-        UniqueConstraint('room_id', 'user_id', name='uix_room_user_key'),
+        UniqueConstraint('user_id', 'key_id', name='uix_user_signed_prekey'),
+    )
+
+class UserOneTimePreKey(Base):
+    """One-time ECDHE keys consumed during X3DH session initialization."""
+    __tablename__ = 'user_onetime_prekeys'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    key_id = Column(Integer, nullable=False)
+    public_key = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'key_id', name='uix_user_onetime_prekey'),
     )
 
 def init_db():
