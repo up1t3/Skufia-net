@@ -1,17 +1,22 @@
     // --- MODULE: FORUM ---
+    window.forumState = {
+        currentTopicId: null,
+        currentTopicTitle: null
+    };
+
     async function loadForum() {
         const container = document.getElementById('forum-list');
+        const actionBar = document.getElementById('forum-action-bar');
         if (!container) return;
         
-        // Hide thread view if it exists
+        // Hide thread view if it exists, show action bar and list
         const threadView = document.getElementById('forum-thread-view');
         if (threadView) threadView.style.display = 'none';
+        if (actionBar) actionBar.style.display = 'flex';
         
         container.style.display = 'flex';
-        container.style.flexDirection = 'column';
-        container.style.gap = '15px';
-        
         container.innerHTML = '<div class="system-msg" style="animation: pulse 1.5s infinite;">Scanning forum sectors...</div>';
+
         try {
             const data = await apiRequest('/topics'); 
             container.innerHTML = '';
@@ -19,134 +24,225 @@
                 container.innerHTML = '<div class="system-msg">No active transmissions found in this sector.</div>';
                 return;
             }
+
             data.forEach(topic => {
-                const div = document.createElement('div');
-                div.className = 'forum-item glass-panel';
-                div.style.cursor = 'pointer';
-                div.style.padding = '15px 20px';
-                div.style.borderRadius = '12px';
-                div.style.borderLeft = '4px solid var(--accent-cyan)';
-                div.style.transition = 'transform 0.2s, box-shadow 0.2s';
-                div.style.display = 'flex';
-                div.style.justifyContent = 'space-between';
-                div.style.alignItems = 'center';
-                
-                div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 5px 15px rgba(0, 242, 255, 0.15)'; };
-                div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
-                div.onclick = () => loadTopicPosts(topic.id, topic.title);
+                const card = document.createElement('div');
+                card.className = 'forum-topic-card';
+                card.onclick = () => loadTopicPosts(topic.id, topic.title);
 
                 const infoDiv = document.createElement('div');
-                const strong = document.createElement('strong');
-                strong.textContent = topic.title;
-                strong.style.display = 'block';
-                strong.style.fontSize = '1.1em';
-                strong.style.color = 'var(--text-main)';
-                strong.style.marginBottom = '5px';
+                infoDiv.className = 'forum-topic-info';
                 
-                const span = document.createElement('span');
-                span.className = 'msg-meta';
-                span.innerHTML = `<span style="color: var(--accent-cyan);">@${topic.author}</span> • Ожидает ответов`;
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'forum-topic-title';
+                titleSpan.textContent = topic.title;
                 
-                infoDiv.appendChild(strong);
-                infoDiv.appendChild(span);
+                const metaSpan = document.createElement('span');
+                metaSpan.className = 'forum-topic-meta';
+
+                const safeDate = new Date(topic.created_at).toLocaleString();
+                metaSpan.innerHTML = `Автор: <span class="author">@${topic.author}</span> • Создано: ${safeDate}`;
+
+                infoDiv.appendChild(titleSpan);
+                infoDiv.appendChild(metaSpan);
                 
                 const arrow = document.createElement('div');
                 arrow.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-cyan)" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
                 
-                div.appendChild(infoDiv);
-                div.appendChild(arrow);
-                container.appendChild(div);
+                card.appendChild(infoDiv);
+                card.appendChild(arrow);
+                container.appendChild(card);
             });
         } catch (e) { container.innerHTML = '<div class="system-msg">ERROR: Unable to synchronize forum data.</div>'; }
     }
 
-    async function loadTopicPosts(topicId, title) {
-        const forumView = document.getElementById('view-forum');
+    window.closeThreadView = function() {
+        window.forumState.currentTopicId = null;
+        window.forumState.currentTopicTitle = null;
+        const threadView = document.getElementById('forum-thread-view');
         const listContainer = document.getElementById('forum-list');
-        listContainer.style.display = 'none'; // Hide the list
+        const actionBar = document.getElementById('forum-action-bar');
+
+        if (threadView) threadView.style.display = 'none';
+        if (listContainer) listContainer.style.display = 'flex';
+        if (actionBar) actionBar.style.display = 'flex';
+    };
+
+    async function loadTopicPosts(topicId, title) {
+        window.forumState.currentTopicId = topicId;
+        window.forumState.currentTopicTitle = title;
+
+        const listContainer = document.getElementById('forum-list');
+        const threadView = document.getElementById('forum-thread-view');
+        const actionBar = document.getElementById('forum-action-bar');
+        const breadcrumbs = document.getElementById('forum-breadcrumbs');
+        const postsContainer = document.getElementById('thread-posts-container');
+        const replyInput = document.getElementById('forum-reply-content');
+
+        if (listContainer) listContainer.style.display = 'none';
+        if (actionBar) actionBar.style.display = 'none';
+        if (threadView) threadView.style.display = 'flex';
         
-        let threadView = document.getElementById('forum-thread-view');
-        if (!threadView) {
-            threadView = document.createElement('div');
-            threadView.id = 'forum-thread-view';
-            threadView.style.display = 'flex';
-            threadView.style.flexDirection = 'column';
-            threadView.style.gap = '20px';
-            threadView.style.marginTop = '20px';
-            forumView.appendChild(threadView);
+        if (breadcrumbs) {
+            breadcrumbs.innerHTML = '';
+
+            const homeSpan = document.createElement('span');
+            homeSpan.textContent = 'Форум';
+            homeSpan.onclick = window.closeThreadView;
+
+            const sepSpan = document.createElement('span');
+            sepSpan.textContent = ' > ';
+            sepSpan.style.color = 'var(--text-secondary)';
+            sepSpan.style.pointerEvents = 'none';
+            sepSpan.style.textDecoration = 'none';
+
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = title;
+            titleSpan.style.pointerEvents = 'none';
+            titleSpan.style.color = 'var(--text-main)';
+            titleSpan.style.textDecoration = 'none';
+
+            breadcrumbs.appendChild(homeSpan);
+            breadcrumbs.appendChild(sepSpan);
+            breadcrumbs.appendChild(titleSpan);
         }
         
-        threadView.style.display = 'flex';
-        threadView.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px; border-bottom: 1px solid var(--border-metal); padding-bottom: 15px;">
-                <button class="cyber-btn-small" onclick="document.getElementById('forum-thread-view').style.display='none'; document.getElementById('forum-list').style.display='flex';" style="display: flex; align-items: center; gap: 5px;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> НАЗАД
-                </button>
-                <h3 style="margin: 0; color: var(--accent-cyan);">${title}</h3>
-            </div>
-            <div id="thread-posts-container" style="display: flex; flex-direction: column; gap: 15px;">
-                <div class="system-msg" style="animation: pulse 1.5s infinite;">Дешифровка ответов...</div>
-            </div>
-        `;
+        if (replyInput) replyInput.value = '';
         
-        try {
-            const posts = await apiRequest(`/topics/${topicId}/posts`);
-            const postsContainer = document.getElementById('thread-posts-container');
-            postsContainer.innerHTML = '';
+        if (postsContainer) {
+            postsContainer.innerHTML = '<div class="system-msg" style="animation: pulse 1.5s infinite;">Дешифровка ответов...</div>';
             
-            posts.forEach(post => {
-                const div = document.createElement('div');
-                div.className = 'post-item glass-panel';
-                div.style.padding = '20px';
-                div.style.borderRadius = '12px';
-                div.style.background = 'var(--bg-surface)';
-                div.style.border = '1px solid var(--border-metal)';
+            try {
+                const posts = await apiRequest(`/topics/${topicId}/posts`);
+                postsContainer.innerHTML = '';
                 
-                const metaDiv = document.createElement('div');
-                metaDiv.style.display = 'flex';
-                metaDiv.style.justifyContent = 'space-between';
-                metaDiv.style.alignItems = 'center';
-                metaDiv.style.borderBottom = '1px dashed var(--border-metal)';
-                metaDiv.style.paddingBottom = '10px';
-                metaDiv.style.marginBottom = '15px';
-                
-                const authorSpan = document.createElement('div');
-                authorSpan.innerHTML = `<strong style="color: var(--neon-cyan);">@${post.author}</strong> <span style="font-size: 0.85em; color: var(--text-dim); margin-left: 10px;">ID: ${post.id.substring(0,6)}</span>`;
-                
-                const actionsDiv = document.createElement('div');
-                actionsDiv.style.display = 'flex';
-                actionsDiv.style.alignItems = 'center';
-                actionsDiv.style.gap = '10px';
-                
-                const likesSpan = document.createElement('span');
-                likesSpan.id = `likes-${post.id}`;
-                likesSpan.style.color = 'var(--accent-green)';
-                likesSpan.style.fontWeight = 'bold';
-                likesSpan.textContent = post.likes;
-                
-                const btn = document.createElement('button');
-                btn.className = 'cyber-btn-small';
-                btn.innerHTML = '👍 +1';
-                btn.onclick = () => likePost(post.id);
-                
-                actionsDiv.appendChild(likesSpan);
-                actionsDiv.appendChild(btn);
-                
-                metaDiv.appendChild(authorSpan);
-                metaDiv.appendChild(actionsDiv);
-                
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'post-content';
-                contentDiv.style.lineHeight = '1.6';
-                contentDiv.style.whiteSpace = 'pre-wrap';
-                contentDiv.textContent = post.content;
-                
-                div.appendChild(metaDiv);
-                div.appendChild(contentDiv);
-                postsContainer.appendChild(div);
-            });
-        } catch (e) { document.getElementById('thread-posts-container').innerHTML = '<div class="system-msg">ERROR: Connection lost to this thread.</div>'; }
+                posts.forEach((post, index) => {
+                    const postDiv = document.createElement('div');
+                    postDiv.className = 'forum-post' + (index === 0 ? ' op' : '');
+
+                    const headerDiv = document.createElement('div');
+                    headerDiv.className = 'forum-post-header';
+
+                    const authorSpan = document.createElement('div');
+                    authorSpan.className = 'forum-post-author';
+                    authorSpan.textContent = '@' + post.author;
+
+                    const dateSpan = document.createElement('div');
+                    dateSpan.className = 'forum-post-date';
+                    dateSpan.textContent = new Date(post.created_at).toLocaleString();
+
+                    headerDiv.appendChild(authorSpan);
+                    headerDiv.appendChild(dateSpan);
+
+                    const bodyDiv = document.createElement('div');
+                    bodyDiv.className = 'forum-post-body';
+                    bodyDiv.textContent = post.content;
+
+                    const actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'forum-post-actions';
+
+                    const likesSpan = document.createElement('span');
+                    likesSpan.id = `likes-${post.id}`;
+                    likesSpan.style.color = 'var(--accent-green)';
+                    likesSpan.style.fontWeight = 'bold';
+                    likesSpan.style.display = 'flex';
+                    likesSpan.style.alignItems = 'center';
+                    likesSpan.textContent = post.likes;
+
+                    const btn = document.createElement('button');
+                    btn.className = 'cyber-btn-small';
+                    btn.innerHTML = '👍 +1';
+                    btn.onclick = () => window.likePost(post.id);
+
+                    actionsDiv.appendChild(likesSpan);
+                    actionsDiv.appendChild(btn);
+
+                    postDiv.appendChild(headerDiv);
+                    postDiv.appendChild(bodyDiv);
+                    postDiv.appendChild(actionsDiv);
+
+                    postsContainer.appendChild(postDiv);
+                });
+            } catch (e) {
+                postsContainer.innerHTML = '<div class="system-msg">ERROR: Connection lost to this thread.</div>';
+            }
+        }
     }
+
+    window.showCreateTopicModal = function() {
+        const modal = document.getElementById('create-topic-modal');
+        if (modal) modal.style.display = 'flex';
+    };
+
+    window.hideCreateTopicModal = function() {
+        const modal = document.getElementById('create-topic-modal');
+        if (modal) modal.style.display = 'none';
+
+        // Reset inputs
+        const titleEl = document.getElementById('topic-title');
+        const contentEl = document.getElementById('topic-content');
+        if (titleEl) titleEl.value = '';
+        if (contentEl) contentEl.value = '';
+    };
+
+    window.submitNewTopic = async function() {
+        const titleEl = document.getElementById('topic-title');
+        const categoryEl = document.getElementById('topic-category');
+        const contentEl = document.getElementById('topic-content');
+
+        if (!titleEl || !categoryEl || !contentEl) return;
+
+        const title = titleEl.value.trim();
+        const category_id = parseInt(categoryEl.value);
+        const content = contentEl.value.trim();
+
+        if (!title || !content) {
+            addLog('Title and Content are required.', 'error');
+            return;
+        }
+
+        try {
+            // First create the topic
+            const res = await apiRequest('/topics', 'POST', { title, category_id });
+
+            // Then create the initial post (OP)
+            if (res && res.id) {
+                await apiRequest(`/topics/${res.id}/reply`, 'POST', { content });
+                window.hideCreateTopicModal();
+                addLog('Тема успешно создана', 'success');
+                // Reload list or go directly to the topic
+                loadForum();
+                loadTopicPosts(res.id, title);
+            }
+        } catch (e) {
+            console.error('Create topic error:', e);
+            addLog('Failed to create topic.', 'error');
+        }
+    };
+
+    window.replyToTopic = async function() {
+        if (!window.forumState.currentTopicId) return;
+
+        const contentEl = document.getElementById('forum-reply-content');
+        if (!contentEl) return;
+
+        const content = contentEl.value.trim();
+        if (!content) {
+            addLog('Cannot send empty reply.', 'error');
+            return;
+        }
+
+        try {
+            await apiRequest(`/topics/${window.forumState.currentTopicId}/reply`, 'POST', { content });
+            contentEl.value = ''; // clear
+            addLog('Ответ отправлен', 'success');
+            // Reload the posts
+            loadTopicPosts(window.forumState.currentTopicId, window.forumState.currentTopicTitle);
+        } catch (e) {
+            console.error('Reply error:', e);
+            addLog('Failed to send reply.', 'error');
+        }
+    };
 
     window.likePost = async function(postId) {
         try {

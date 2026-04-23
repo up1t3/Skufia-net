@@ -462,11 +462,52 @@
                 <!-- FORUM VIEW -->
                 <div class="view" id="view-forum">
                     <h2 class="view-title">🌐 ГЛОБАЛЬНЫЙ ФОРУМ</h2>
-                    <div class="action-bar">
-                        <button class="btn-primary">+ Создать тему</button>
+                    <div class="action-bar" id="forum-action-bar">
+                        <button class="btn-primary" onclick="showCreateTopicModal()">+ Создать тему</button>
                     </div>
+
+                    <!-- Topic List View -->
                     <div class="content-list" id="forum-list">
                         <div class="skeleton">Загрузка данных из сети...</div>
+                    </div>
+
+                    <!-- Single Topic Thread View (Hidden by default) -->
+                    <div id="forum-thread-view" style="display: none; flex-direction: column; gap: 20px;">
+                        <div id="forum-breadcrumbs" class="forum-breadcrumbs">
+                            <!-- Injected by JS: Главная > Форум > Название Темы -->
+                        </div>
+                        <div id="thread-posts-container" style="display: flex; flex-direction: column; gap: 15px;">
+                            <!-- Posts injected here -->
+                        </div>
+                        <div id="forum-reply-box" class="forum-reply-box glass-panel">
+                            <textarea id="forum-reply-content" class="cyber-input" placeholder="Напишите ваш ответ..." rows="3"></textarea>
+                            <button class="btn-primary" onclick="window.replyToTopic()">Ответить</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CREATE TOPIC MODAL -->
+                <div id="create-topic-modal" class="modal" style="display: none;">
+                    <div class="modal-content" style="max-width: 600px; padding: 25px;">
+                        <div class="modal-header">
+                            <h3>НОВАЯ ТЕМА</h3>
+                            <button class="close-btn-svg" onclick="hideCreateTopicModal()">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
+                            <input type="text" id="topic-title" class="cyber-input" placeholder="Название темы (макс. 100 символов)" maxlength="100">
+                            <select id="topic-category" class="cyber-input">
+                                <option value="1">Общий раздел</option>
+                                <option value="2">Железо и Сборки</option>
+                                <option value="3">Ретро-гейминг</option>
+                            </select>
+                            <textarea id="topic-content" class="cyber-input" placeholder="Текст первого сообщения (ОП)..." rows="6"></textarea>
+                        </div>
+                        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                            <button class="btn-secondary" onclick="hideCreateTopicModal()">Отмена</button>
+                            <button class="btn-primary" onclick="window.submitNewTopic()">Создать</button>
+                        </div>
                     </div>
                 </div>
 
