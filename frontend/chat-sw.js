@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v35'; // Premium Fullscreen Glassmorphism UI
+const CACHE_NAME = 'skufia-chat-v36'; // Premium Fullscreen Glassmorphism UI
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -31,25 +31,40 @@ self.addEventListener('fetch', (event) => {
     // Skip WebSockets or API calls entirely (Fixes Unexpected token < in JSON)
     if (event.request.url.includes('/ws/') || event.request.url.includes('/api/')) return;
 
-    // Apply Stale-While-Revalidate strategy for auto-updating application on launch
-    event.respondWith(
-        caches.open(CACHE_NAME).then((cache) => {
-            return cache.match(event.request).then((cachedResponse) => {
-                const fetchedResponse = fetch(event.request).then((networkResponse) => {
-                    // Update cache for next time
-                    if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                        cache.put(event.request, networkResponse.clone());
-                    }
-                    return networkResponse;
-                }).catch(() => {
-                    console.log('Fetch failed, maybe offline.');
-                });
+    // Determine if it's an HTML request
+    const isHtml = event.request.headers.get('accept').includes('text/html');
 
-                // Return cached response immediately if available, otherwise wait for network
-                return cachedResponse || fetchedResponse;
-            });
-        })
-    );
+    if (isHtml) {
+        // Network First for HTML to ensure latest app.js and buttons are loaded
+        event.respondWith(
+            fetch(event.request).then((networkResponse) => {
+                if (networkResponse && networkResponse.status === 200) {
+                    const responseClone = networkResponse.clone();
+                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+                }
+                return networkResponse;
+            }).catch(() => {
+                return caches.match(event.request);
+            })
+        );
+    } else {
+        // Apply Stale-While-Revalidate strategy for JS/CSS/Assets
+        event.respondWith(
+            caches.open(CACHE_NAME).then((cache) => {
+                return cache.match(event.request).then((cachedResponse) => {
+                    const fetchedResponse = fetch(event.request).then((networkResponse) => {
+                        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+                            cache.put(event.request, networkResponse.clone());
+                        }
+                        return networkResponse;
+                    }).catch(() => {
+                        console.log('Fetch failed, maybe offline.');
+                    });
+                    return cachedResponse || fetchedResponse;
+                });
+            })
+        );
+    }
 });
 
 self.addEventListener('activate', (event) => {

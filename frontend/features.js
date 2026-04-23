@@ -2,7 +2,16 @@
     async function loadForum() {
         const container = document.getElementById('forum-list');
         if (!container) return;
-        container.innerHTML = '<div class="system-msg">Scanning forum sectors...</div>';
+        
+        // Hide thread view if it exists
+        const threadView = document.getElementById('forum-thread-view');
+        if (threadView) threadView.style.display = 'none';
+        
+        container.style.display = 'flex';
+        container.style.flexDirection = 'column';
+        container.style.gap = '15px';
+        
+        container.innerHTML = '<div class="system-msg" style="animation: pulse 1.5s infinite;">Scanning forum sectors...</div>';
         try {
             const data = await apiRequest('/topics'); 
             container.innerHTML = '';
@@ -12,69 +21,131 @@
             }
             data.forEach(topic => {
                 const div = document.createElement('div');
-                div.className = 'forum-item';
+                div.className = 'forum-item glass-panel';
                 div.style.cursor = 'pointer';
+                div.style.padding = '15px 20px';
+                div.style.borderRadius = '12px';
+                div.style.borderLeft = '4px solid var(--accent-cyan)';
+                div.style.transition = 'transform 0.2s, box-shadow 0.2s';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                
+                div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 5px 15px rgba(0, 242, 255, 0.15)'; };
+                div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
+                div.onclick = () => loadTopicPosts(topic.id, topic.title);
+
+                const infoDiv = document.createElement('div');
                 const strong = document.createElement('strong');
                 strong.textContent = topic.title;
+                strong.style.display = 'block';
+                strong.style.fontSize = '1.1em';
+                strong.style.color = 'var(--text-main)';
+                strong.style.marginBottom = '5px';
+                
                 const span = document.createElement('span');
                 span.className = 'msg-meta';
-                span.textContent = `by ${topic.author}`;
-                div.appendChild(strong);
-                div.appendChild(document.createTextNode(' '));
-                div.appendChild(span);
-                div.onclick = () => loadTopicPosts(topic.id, topic.title);
+                span.innerHTML = `<span style="color: var(--accent-cyan);">@${topic.author}</span> • Ожидает ответов`;
+                
+                infoDiv.appendChild(strong);
+                infoDiv.appendChild(span);
+                
+                const arrow = document.createElement('div');
+                arrow.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-cyan)" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+                
+                div.appendChild(infoDiv);
+                div.appendChild(arrow);
                 container.appendChild(div);
             });
         } catch (e) { container.innerHTML = '<div class="system-msg">ERROR: Unable to synchronize forum data.</div>'; }
     }
 
     async function loadTopicPosts(topicId, title) {
-        const container = document.getElementById('forum-list');
-        container.innerHTML = '';
-        const sysMsg = document.createElement('div');
-        sysMsg.className = 'system-msg';
-        sysMsg.textContent = `Accessing thread: ${title}...`;
-        container.appendChild(sysMsg);
+        const forumView = document.getElementById('view-forum');
+        const listContainer = document.getElementById('forum-list');
+        listContainer.style.display = 'none'; // Hide the list
+        
+        let threadView = document.getElementById('forum-thread-view');
+        if (!threadView) {
+            threadView = document.createElement('div');
+            threadView.id = 'forum-thread-view';
+            threadView.style.display = 'flex';
+            threadView.style.flexDirection = 'column';
+            threadView.style.gap = '20px';
+            threadView.style.marginTop = '20px';
+            forumView.appendChild(threadView);
+        }
+        
+        threadView.style.display = 'flex';
+        threadView.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px; border-bottom: 1px solid var(--border-metal); padding-bottom: 15px;">
+                <button class="cyber-btn-small" onclick="document.getElementById('forum-thread-view').style.display='none'; document.getElementById('forum-list').style.display='flex';" style="display: flex; align-items: center; gap: 5px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> НАЗАД
+                </button>
+                <h3 style="margin: 0; color: var(--accent-cyan);">${title}</h3>
+            </div>
+            <div id="thread-posts-container" style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="system-msg" style="animation: pulse 1.5s infinite;">Дешифровка ответов...</div>
+            </div>
+        `;
+        
         try {
             const posts = await apiRequest(`/topics/${topicId}/posts`);
-            container.innerHTML = '';
-            const h4 = document.createElement('h4');
-            h4.textContent = title;
-            const backLink = document.createElement('div');
-            backLink.className = 'back-link';
-            backLink.textContent = '<< Вернуться к списку';
-            backLink.onclick = loadForum;
-            container.appendChild(h4);
-            container.appendChild(backLink);
+            const postsContainer = document.getElementById('thread-posts-container');
+            postsContainer.innerHTML = '';
+            
             posts.forEach(post => {
                 const div = document.createElement('div');
-                div.className = 'post-item';
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'post-content';
-                contentDiv.textContent = post.content;
-
+                div.className = 'post-item glass-panel';
+                div.style.padding = '20px';
+                div.style.borderRadius = '12px';
+                div.style.background = 'var(--bg-surface)';
+                div.style.border = '1px solid var(--border-metal)';
+                
                 const metaDiv = document.createElement('div');
-                metaDiv.className = 'msg-meta';
-                metaDiv.textContent = `by ${post.author} | 👍 `;
-
+                metaDiv.style.display = 'flex';
+                metaDiv.style.justifyContent = 'space-between';
+                metaDiv.style.alignItems = 'center';
+                metaDiv.style.borderBottom = '1px dashed var(--border-metal)';
+                metaDiv.style.paddingBottom = '10px';
+                metaDiv.style.marginBottom = '15px';
+                
+                const authorSpan = document.createElement('div');
+                authorSpan.innerHTML = `<strong style="color: var(--neon-cyan);">@${post.author}</strong> <span style="font-size: 0.85em; color: var(--text-dim); margin-left: 10px;">ID: ${post.id.substring(0,6)}</span>`;
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.style.display = 'flex';
+                actionsDiv.style.alignItems = 'center';
+                actionsDiv.style.gap = '10px';
+                
                 const likesSpan = document.createElement('span');
                 likesSpan.id = `likes-${post.id}`;
+                likesSpan.style.color = 'var(--accent-green)';
+                likesSpan.style.fontWeight = 'bold';
                 likesSpan.textContent = post.likes;
-
+                
                 const btn = document.createElement('button');
-                btn.className = 'small-btn';
-                btn.textContent = 'Поддержать';
+                btn.className = 'cyber-btn-small';
+                btn.innerHTML = '👍 +1';
                 btn.onclick = () => likePost(post.id);
-
-                metaDiv.appendChild(likesSpan);
-                metaDiv.appendChild(document.createTextNode(' '));
-                metaDiv.appendChild(btn);
-
-                div.appendChild(contentDiv);
+                
+                actionsDiv.appendChild(likesSpan);
+                actionsDiv.appendChild(btn);
+                
+                metaDiv.appendChild(authorSpan);
+                metaDiv.appendChild(actionsDiv);
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'post-content';
+                contentDiv.style.lineHeight = '1.6';
+                contentDiv.style.whiteSpace = 'pre-wrap';
+                contentDiv.textContent = post.content;
+                
                 div.appendChild(metaDiv);
-                container.appendChild(div);
+                div.appendChild(contentDiv);
+                postsContainer.appendChild(div);
             });
-        } catch (e) { container.innerHTML = '<div class="system-msg">ERROR: Connection lost to this thread.</div>'; }
+        } catch (e) { document.getElementById('thread-posts-container').innerHTML = '<div class="system-msg">ERROR: Connection lost to this thread.</div>'; }
     }
 
     window.likePost = async function(postId) {
@@ -126,40 +197,74 @@
                 container.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: Поиск данных не дал результатов.</div>';
                 return;
             }
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.gap = '15px';
+            
             articles.forEach(art => {
                 const div = document.createElement('div');
-                div.className = 'wiki-card';
+                div.className = 'wiki-card glass-panel';
+                div.style.padding = '20px';
+                div.style.borderRadius = '12px';
+                div.style.borderLeft = '4px solid #f0b429';
+                div.style.display = 'flex';
+                div.style.flexDirection = 'column';
+                div.style.gap = '10px';
+                div.style.transition = 'transform 0.2s, box-shadow 0.2s';
+                
+                div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 5px 15px rgba(240, 180, 41, 0.15)'; };
+                div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
+
+                const headerRow = document.createElement('div');
+                headerRow.style.display = 'flex';
+                headerRow.style.justifyContent = 'space-between';
+                headerRow.style.alignItems = 'flex-start';
+
                 const h3 = document.createElement('h3');
                 h3.textContent = art.title;
+                h3.style.margin = '0';
+                h3.style.color = 'var(--text-main)';
+                h3.style.fontSize = '1.2em';
 
                 const metaDiv = document.createElement('div');
-                metaDiv.className = 'msg-meta';
-                metaDiv.textContent = '👍 ';
+                metaDiv.style.display = 'flex';
+                metaDiv.style.alignItems = 'center';
+                metaDiv.style.gap = '8px';
 
                 const likesSpan = document.createElement('span');
                 likesSpan.id = `wiki-likes-${art.id}`;
+                likesSpan.style.color = 'var(--accent-green)';
+                likesSpan.style.fontWeight = 'bold';
                 likesSpan.textContent = art.likes || 0;
 
                 const likeBtn = document.createElement('button');
-                likeBtn.className = 'small-btn';
-                likeBtn.textContent = 'Одобрить';
-                likeBtn.onclick = () => likeWiki(art.id);
+                likeBtn.className = 'cyber-btn-small';
+                likeBtn.innerHTML = '👍 +1';
+                likeBtn.onclick = (e) => { e.stopPropagation(); likeWiki(art.id); };
 
                 metaDiv.appendChild(likesSpan);
-                metaDiv.appendChild(document.createTextNode(' '));
                 metaDiv.appendChild(likeBtn);
+
+                headerRow.appendChild(h3);
+                headerRow.appendChild(metaDiv);
 
                 const p = document.createElement('p');
                 p.className = 'wiki-excerpt';
+                p.style.margin = '0';
+                p.style.color = 'var(--text-dim)';
+                p.style.lineHeight = '1.5';
                 p.textContent = art.content ? art.content.substring(0, 150) + '...' : 'Контент засекречен';
 
                 const openBtn = document.createElement('button');
                 openBtn.className = 'cyber-btn-small';
-                openBtn.textContent = 'ОТКРЫТЬ ДАННЫЕ';
+                openBtn.style.alignSelf = 'flex-start';
+                openBtn.style.marginTop = '5px';
+                openBtn.style.border = '1px solid #f0b429';
+                openBtn.style.color = '#f0b429';
+                openBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: middle; margin-right: 5px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>ЧИТАТЬ ДОКУМЕНТ';
                 openBtn.onclick = () => loadWikiArticle(art.id);
 
-                div.appendChild(h3);
-                div.appendChild(metaDiv);
+                div.appendChild(headerRow);
                 div.appendChild(p);
                 div.appendChild(openBtn);
                 container.appendChild(div);
@@ -493,7 +598,34 @@
     window.loadWikiArticle = async function(artId) {
         try {
             const art = await apiRequest(`/wiki/${artId}`);
-            alert(`--- ГИПЕРТЕКСТОВАЯ БАЗА --- \n\n${art.title.toUpperCase()}\n\n${art.content}`);
+            let modal = document.getElementById('wiki-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'wiki-modal';
+                modal.className = 'modal-overlay';
+                modal.style.zIndex = '9999';
+                modal.innerHTML = `
+                    <div class="modal-content glass-panel" style="max-width: 800px; width: 90%; background: var(--bg-panel); border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
+                        <div class="modal-header" style="border-bottom: 1px solid var(--border-metal); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                            <h2 id="wiki-modal-title" style="margin: 0; color: var(--accent-cyan); font-family: 'Orbitron', sans-serif;">TITLE</h2>
+                            <button class="icon-btn" onclick="document.getElementById('wiki-modal').style.display='none'" style="color: var(--text-dim);">✕</button>
+                        </div>
+                        <div id="wiki-modal-body" class="premium-scroll" style="max-height: 65vh; overflow-y: auto; text-align: left; padding-right: 15px; font-size: 1.05em; line-height: 1.7; white-space: pre-wrap; color: var(--text-main);">
+                            CONTENT
+                        </div>
+                        <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
+                            <button class="cyber-btn" onclick="document.getElementById('wiki-modal').style.display='none'">ЗАКРЫТЬ БАЗУ</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // Add fade-in animation
+                modal.style.animation = 'fadeIn 0.3s ease';
+            }
+            document.getElementById('wiki-modal-title').textContent = "📜 " + art.title.toUpperCase();
+            document.getElementById('wiki-modal-body').textContent = art.content;
+            modal.style.display = 'flex';
         } catch (e) { addLog('Article data corrupted', 'error'); }
     }
     
