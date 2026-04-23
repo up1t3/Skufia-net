@@ -2476,13 +2476,27 @@ body.skufenger-fullscreen::after {
 
 /* --- Phase 2: Full-viewport layout --- */
 body.skufenger-fullscreen .app-container {
-    padding: 0;
-    margin: 0;
+    padding: 0 !important;
+    margin: 0 !important;
     height: 100vh;
     height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    gap: 0 !important;
+}
+
+body.skufenger-fullscreen .main-interface {
+    gap: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+body.skufenger-fullscreen .main-panel {
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
 }
 
 body.skufenger-fullscreen .main-interface {
