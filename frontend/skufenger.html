@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SKUFenger | Installer</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="manifest" href="manifest-skufenger.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SKUFenger">
+    <style>
+        body { 
+            background: #0a0e14; 
+            color: #00f2ff; 
+            font-family: 'Courier New', monospace; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .cyber-btn { 
+            background: rgba(0, 242, 255, 0.1); 
+            border: 1px solid #00f2ff; 
+            color: #00f2ff; 
+            padding: 15px 30px; 
+            border-radius: 8px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            text-decoration: none; 
+            margin-top: 20px;
+            display: inline-block;
+        }
+        .cyber-btn:hover {
+            background: rgba(0, 242, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 242, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div style="text-align: center; max-width: 400px; padding: 20px;">
+        <svg viewBox="0 0 24 24" width="80" height="80" stroke="currentColor" stroke-width="1.5" fill="none" style="margin-bottom: 20px;">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <h2>SKUFenger Messenger</h2>
+        <p style="color: #8a94a2;">Добавьте эту страницу на домашний экран (Share -> Add to Home Screen), чтобы установить мессенджер как отдельное приложение.</p>
+        <br>
+        <a href="index.html?app=messenger" class="cyber-btn">ОТКРЫТЬ В БРАУЗЕРЕ</a>
+    </div>
+    <script>
+        // Check if running in standalone mode (already installed PWA)
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) {
+            window.location.replace("index.html?app=messenger");
+        }
+    </script>
+</body>
+</html>

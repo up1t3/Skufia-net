@@ -1,5 +1,12 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize Theme
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('app') === 'messenger') {
+        setTimeout(() => {
+            if (typeof window.openSkufenger === 'function') window.openSkufenger();
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }, 500);
+    }
     const savedTheme = localStorage.getItem('skufia_theme') || 'telegram';
     changeTheme(savedTheme);
     const themeSelector = document.getElementById('theme-selector');

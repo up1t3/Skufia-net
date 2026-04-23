@@ -14,7 +14,9 @@ conn.on('ready', () => {
             { local: 'frontend/index.html', remote: '/tmp/index.html' },
             { local: 'frontend/chat_core.js', remote: '/tmp/chat_core.js' },
             { local: 'frontend/chat-sw.js', remote: '/tmp/chat-sw.js' },
-            { local: 'frontend/features.js', remote: '/tmp/features.js' }
+            { local: 'frontend/features.js', remote: '/tmp/features.js' },
+            { local: 'frontend/manifest-skufenger.json', remote: '/tmp/manifest-skufenger.json' },
+            { local: 'frontend/skufenger.html', remote: '/tmp/skufenger.html' }
         ];
 
         let done = 0;
@@ -32,6 +34,8 @@ conn.on('ready', () => {
                         'docker cp /tmp/chat_core.js skufia-web:/usr/share/nginx/html/chat_core.js',
                         'docker cp /tmp/chat-sw.js skufia-web:/usr/share/nginx/html/chat-sw.js',
                         'docker cp /tmp/features.js skufia-web:/usr/share/nginx/html/features.js',
+                        'docker cp /tmp/manifest-skufenger.json skufia-web:/usr/share/nginx/html/manifest-skufenger.json',
+                        'docker cp /tmp/skufenger.html skufia-web:/usr/share/nginx/html/skufenger.html',
                         'echo "DEPLOY COMPLETE"',
                     ].join(' && ');
 
