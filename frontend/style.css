@@ -2205,11 +2205,8 @@ body.super-user .nav-btn.active {
         top: 0;
         left: 0;
         width: 100%;
-        /* dvh = dynamic viewport height, учитывает появление/скрытие адресной строки */
-        height: 100dvh;
-        /* Fallback для старых браузеров */
-        height: 100vh;
-        height: 100dvh;
+        height: 100%;
+        bottom: 0;
         z-index: 50;
         transform: translateX(100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);

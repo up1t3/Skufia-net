@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewId === 'wiki') loadWiki();
             if (viewId === 'trade') loadMarket();
             if (viewId === 'registry') loadRegistry();
-            if (viewId === 'messages') { loadChatRooms(); if (window.loadFolders) window.loadFolders(); }
+            if (viewId === 'messages') { if (window.loadChatRooms) window.loadChatRooms(); if (window.loadFolders) window.loadFolders(); }
             if (viewId === 'events') loadEvents();
             if (viewId === 'dashboard') loadDashboard();
         }
@@ -386,7 +386,7 @@ const handleInput = document.getElementById('settings-handle');
                         });
                         if (resp.ok) {
                             addLog(`Успешно подтянуто абонентов: ${contacts.length}`, 'success');
-                            loadChatRooms(); // refresh sidebar 
+                            if (window.loadChatRooms) window.loadChatRooms(); // refresh sidebar 
                         } else throw new Error();
                     } else {
                         addLog('Контакты не выбраны', 'info');
@@ -436,16 +436,10 @@ const handleInput = document.getElementById('settings-handle');
     window.loadWiki = loadWiki;
     window.loadMarket = loadMarket;
     window.loadRegistry = loadRegistry;
-    window.loadChatRooms = loadChatRooms;
-    window.loadFolders = loadFolders;
-    window.renderChatRooms = renderChatRooms;
     window.loadTopicPosts = loadTopicPosts;
     window.likePost = likePost;
     window.likeWiki = likeWiki;
     window.switchView = switchView;
-    window.selectChatRoom = selectChatRoom;
-    // [FIX-06] Alias: selectChatRoom renders new #chat-input with inline onclick="window.sendChatMessage()"
-    window.sendChatMessage = sendChatMsg;
     window.openSkufenger = function() {
         window.open(window.location.pathname + '?app=skufenger', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
     };
@@ -454,6 +448,44 @@ const handleInput = document.getElementById('settings-handle');
     window.closeChatMobile = function() {
         const chatLayout = document.querySelector('.chat-layout');
         if (chatLayout) chatLayout.classList.remove('chat-open');
+    };
+
+    // --- CONTACT PROFILE ---
+    window.openContactProfile = function() {
+        const modal = document.getElementById('contact-profile-modal');
+        if (!modal) return;
+        
+        const headerTitle = document.getElementById('chat-header-title');
+        const headerAvatar = document.getElementById('header-avatar');
+        const headerStatus = document.getElementById('chat-header-status');
+        
+        const name = headerTitle ? headerTitle.textContent : 'Неизвестно';
+        const cpAvatar = document.getElementById('cp-avatar');
+        const cpName = document.getElementById('cp-name');
+        const cpUsername = document.getElementById('cp-username');
+        const cpStatus = document.getElementById('cp-status');
+        const cpE2ee = document.getElementById('cp-e2ee');
+        
+        if (cpAvatar && headerAvatar) {
+            cpAvatar.innerHTML = headerAvatar.innerHTML;
+        }
+        if (cpName) cpName.textContent = name;
+        if (cpUsername) cpUsername.textContent = `@${name.toLowerCase().replace(/\s+/g, '_')}`;
+        
+        const isOnline = headerStatus && headerStatus.textContent === 'в сети';
+        if (cpStatus) {
+            cpStatus.innerHTML = isOnline 
+                ? '<span style="color:#0f6;">● В сети</span>'
+                : '<span style="color:var(--text-dim);">○ Не в сети</span>';
+        }
+        
+        if (cpE2ee && state.chat.keyFingerprint) {
+            cpE2ee.textContent = `🔐 E2EE Fingerprint: ${state.chat.keyFingerprint.substring(0, 16)}...`;
+        } else if (cpE2ee) {
+            cpE2ee.textContent = '⚠️ E2EE не установлено';
+        }
+        
+        modal.style.display = 'flex';
     };
 
     const contactSearchInput = document.getElementById('contact-search');
@@ -475,29 +507,34 @@ const handleInput = document.getElementById('settings-handle');
             addLog('Сначала выберите контакт для звонка', 'error');
             return;
         }
-        const targetId = state.chat.currentReceiverId || state.chat.currentRoomId;
-        if (!window.RTCManagerInstance) {
-            addLog('RTC модуль не инициализирован', 'error');
-            return;
-        }
-        addLog(`Инициация ${isVideo ? 'видео' : 'аудио'} звонка...`, 'info');
-        window.RTCManagerInstance.startCall(targetId, isVideo);
+        const callType = isVideo ? 'Видеозвонки' : 'Аудиозвонки';
+        showToast(`🚧 ${callType} — в разработке. Следите за обновлениями!`);
+        addLog(`${callType} пока недоступны (требуется TURN-сервер)`, 'warning');
     };
 
     // --- CHAT OPTIONS DROPDOWN ---
-    window.toggleChatOptions = function() {
+    window.toggleChatOptions = function(e) {
+        if (e) e.stopPropagation();
         const dd = document.getElementById('chat-options-dropdown');
         if (!dd) return;
         const isOpen = dd.style.display !== 'none';
         dd.style.display = isOpen ? 'none' : 'block';
     };
 
+    // Attach via addEventListener with stopPropagation (inline onclick doesn't pass event)
+    const optionsBtn = document.getElementById('btn-chat-options');
+    if (optionsBtn) {
+        optionsBtn.removeAttribute('onclick');
+        optionsBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.toggleChatOptions();
+        });
+    }
+
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
-
-const dd = document.getElementById('chat-options-dropdown');
-        const wrapper = e.target.closest('.chat-options-wrapper');
-        if (dd && !wrapper) {
+        const dd = document.getElementById('chat-options-dropdown');
+        if (dd && dd.style.display !== 'none') {
             dd.style.display = 'none';
         }
     });

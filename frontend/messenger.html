@@ -171,6 +171,26 @@
         </div>
     </div>
 
+    <!-- Contact Profile Modal -->
+    <div id="contact-profile-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:360px; padding:25px; border-radius:16px; text-align:center;">
+            <div class="modal-header" style="justify-content:flex-end;">
+                <button class="close-btn-svg" onclick="document.getElementById('contact-profile-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="cp-avatar" style="width:80px; height:80px; border-radius:50%; margin:0 auto 12px; border:2px solid var(--accent-cyan); overflow:hidden;"></div>
+            <div id="cp-name" style="font-size:18px; font-weight:600; color:var(--text-main); margin-bottom:4px;"></div>
+            <div id="cp-username" style="font-size:13px; color:var(--text-dim); margin-bottom:12px;"></div>
+            <div id="cp-status" style="font-size:12px; margin-bottom:16px;"></div>
+            <div id="cp-e2ee" style="font-size:11px; color:var(--accent-cyan); background:rgba(0,242,255,0.05); border:1px solid rgba(0,242,255,0.15); border-radius:8px; padding:8px; margin-bottom:16px;"></div>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <button class="cyber-btn" style="flex:1; padding:10px; border-radius:10px;" onclick="window.skufengerCall(false)">📞 Позвонить</button>
+                <button class="cyber-btn" style="flex:1; padding:10px; border-radius:10px;" onclick="document.getElementById('contact-profile-modal').style.display='none'">✕ Закрыть</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Theme Switcher Modal -->
     <div id="theme-switcher-modal" class="modal" style="display: none; z-index: 9999;">
         <div class="modal-content glass-panel" style="max-width: 450px; padding: 25px; border-radius: 16px;">
@@ -416,10 +436,10 @@
                         <div class="chat-main">
                             <!-- Premium Chat Header -->
                             <div id="chat-header" class="chat-info">
-                                <button class="mobile-back-btn" onclick="closeChatMobile()">
+                                <button class="mobile-back-btn" onclick="event.stopPropagation(); closeChatMobile()">
                                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
                                 </button>
-                                <div class="chat-header-profile">
+                                <div class="chat-header-profile" onclick="window.openContactProfile()" style="cursor:pointer;">
                                     <div class="header-avatar" id="header-avatar">?</div>
                                     <div class="header-text-block">
                                         <div id="chat-header-title">Выберите оператора...</div>

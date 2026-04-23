@@ -81,3 +81,26 @@ window.addLog = function(message, type = 'info') {
     
     if (type === 'error') window.playSound('alert');
 };
+
+window.showToast = function(message, duration = 3000) {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:99999; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none;';
+        document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.style.cssText = 'background:rgba(15,20,30,0.95); color:#fff; padding:12px 24px; border-radius:12px; font-size:14px; font-family:Inter,sans-serif; border:1px solid rgba(0,242,255,0.3); backdrop-filter:blur(12px); box-shadow:0 8px 32px rgba(0,0,0,0.4); opacity:0; transform:translateY(-10px); transition:all 0.3s ease; pointer-events:auto; max-width:90vw; text-align:center;';
+    toast.textContent = message;
+    container.appendChild(toast);
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+    });
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+};

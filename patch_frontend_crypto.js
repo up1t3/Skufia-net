@@ -16,6 +16,8 @@ const files = [
     { local: 'frontend/crypto.js', remote: '/tmp/crypto.js', container: '/usr/share/nginx/html/crypto.js' },
     { local: 'frontend/chat_core.js', remote: '/tmp/chat_core.js', container: '/usr/share/nginx/html/chat_core.js' },
     { local: 'frontend/messenger_app.js', remote: '/tmp/messenger_app.js', container: '/usr/share/nginx/html/messenger_app.js' },
+    { local: 'frontend/messenger.html', remote: '/tmp/messenger.html', container: '/usr/share/nginx/html/messenger.html' },
+    { local: 'frontend/ui.js', remote: '/tmp/ui.js', container: '/usr/share/nginx/html/ui.js' },
 ];
 
 console.log('🚀 Frontend Hot-Patch: crypto.js + chat_core.js');
