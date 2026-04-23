@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewId === 'registry') loadRegistry();
             if (viewId === 'messages') {
                 enterMessengerFullscreen();
-                loadChatRooms(); if (window.loadFolders) window.loadFolders();
+                loadChatRooms();
             } else {
                 exitMessengerFullscreen();
             }
@@ -151,7 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             addLog('System Online. Welcome, Operator.', 'success');
             // --- Initialization ---
-            const isStandalone = new URLSearchParams(window.location.search).get('app') === 'skufenger';
+            const appParam = new URLSearchParams(window.location.search).get('app');
+            const isStandalone = appParam === 'skufenger' || appParam === 'messenger';
             const isHashMessenger = window.location.hash === '#messenger';
             if (isStandalone || isHashMessenger) {
                 switchView('messages');
@@ -422,7 +423,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     // --- STANDALONE MODE FOR SKUFENGER ---
-    if (new URLSearchParams(window.location.search).get('app') === 'skufenger') {
+    const stParam = new URLSearchParams(window.location.search).get('app');
+    if (stParam === 'skufenger' || stParam === 'messenger') {
         const sidePanel = document.querySelector('.side-panel');
         const header = document.querySelector('.system-header');
         const footer = document.querySelector('.system-footer');
@@ -475,16 +477,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.loadWiki = loadWiki;
     window.loadMarket = loadMarket;
     window.loadRegistry = loadRegistry;
-    window.loadChatRooms = loadChatRooms;
-    window.loadFolders = loadFolders;
-    window.renderChatRooms = renderChatRooms;
+    
     window.loadTopicPosts = loadTopicPosts;
     window.likePost = likePost;
     window.likeWiki = likeWiki;
     window.switchView = switchView;
-    window.selectChatRoom = selectChatRoom;
-    // [FIX-06] Alias: selectChatRoom renders new #chat-input with inline onclick="window.sendChatMessage()"
-    window.sendChatMessage = sendChatMsg;
+    // Removed undefined exports
     window.openSkufenger = function() {
         switchView('messages');
     };
