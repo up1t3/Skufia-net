@@ -1328,6 +1328,7 @@ body.super-user .nav-btn.active {
 
 .chat-messages {
     flex-grow: 1;
+    min-height: 0;
     overflow-y: auto;
     padding: 24px;
     display: flex;

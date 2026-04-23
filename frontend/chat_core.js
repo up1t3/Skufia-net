@@ -40,9 +40,10 @@ window.initChatCore = function() {
                 // --- E2EE DECRYPTION (graceful) ---
                 if (msg.iv && msg.iv.length > 0) {
                     let decrypted = false;
+                    let keysArr = [];
                     const keys = state.chat.sessionKeys[msg.room_id];
                     if (keys) {
-                        const keysArr = Array.isArray(keys) ? keys : [keys];
+                        keysArr = Array.isArray(keys) ? keys : [keys];
                         for (let i = keysArr.length - 1; i >= 0; i--) {
                             try {
                                 msg.content = await window.CryptoManager.decryptMessage(keysArr[i], msg.content, msg.iv);
@@ -52,8 +53,23 @@ window.initChatCore = function() {
                             } catch (e) {}
                         }
                     }
+
+                    // Auto-healing: If all cached keys fail, fetch new bundle or renegotiate
+                    if (!decrypted && typeof window.refreshSessionKey === 'function') {
+                        const targetId = msg.sender_id;
+                        const newKey = await window.refreshSessionKey(msg.room_id, targetId);
+                        if (newKey) {
+                            try {
+                                msg.content = await window.CryptoManager.decryptMessage(newKey, msg.content, msg.iv);
+                                msg.is_secure = true;
+                                decrypted = true;
+                            } catch (e) {}
+                        }
+                    }
+
                     if (!decrypted) {
-                        msg.content = '🔒 Зашифрованное сообщение';
+                        msg.content = '🔒 Зашифрованное сообщение (ключ недоступен)';
+                        msg.text = msg.content;
                     }
                 }
                 // If msg.iv is empty/null, content is plaintext — show as-is
@@ -376,7 +392,14 @@ window.initChatCore = function() {
         if (btnGroupSettings) btnGroupSettings.style.display = isGroupOrChannel ? 'block' : 'none';
 
         const chatLayout = document.querySelector('.chat-layout');
-        if (chatLayout) chatLayout.classList.add('chat-open');
+        if (chatLayout && !chatLayout.classList.contains('chat-open')) {
+            chatLayout.classList.add('chat-open');
+            if (window.innerWidth <= 768) {
+                try {
+                    history.pushState({ skufia: true, view: 'messages', chat: true }, "Chat", "");
+                } catch(e) {}
+            }
+        }
 
         if (chatHistoryEl) {
             chatHistoryEl.innerHTML = `
@@ -392,6 +415,7 @@ window.initChatCore = function() {
                 const messages = response.messages || response; // backward compat
                 state.chat.hasMore = response.has_more || false;
                 state.chat.nextCursor = response.next_cursor || null;
+                let hasAttemptedRefresh = false;
                 // @ts-ignore
                 for (const m of messages) {
                     // Try decrypting history if we have the key
@@ -409,8 +433,23 @@ window.initChatCore = function() {
                                 } catch(e) {}
                             }
                         }
+
+                        // Try to auto-heal ONCE per batch if decryption fails
+                        if (!decrypted && typeof window.refreshSessionKey === 'function' && !hasAttemptedRefresh) {
+                            hasAttemptedRefresh = true;
+                            const targetId = m.sender_id == state.user.id ? state.chat.receiverId : m.sender_id;
+                            const newKey = await window.refreshSessionKey(roomId, targetId);
+                            if (newKey) {
+                                try {
+                                    m.text = await window.CryptoManager.decryptMessage(newKey, m.text, m.iv);
+                                    m.is_secure = true;
+                                    decrypted = true;
+                                } catch (e) {}
+                            }
+                        }
+
                         if (!decrypted) {
-                            m.text = '🔒 Зашифрованное сообщение';
+                            m.text = '🔒 Зашифрованное сообщение (ключ недоступен)';
                         }
                     }
                     // If iv is empty/null, m.text is plaintext — render as-is
@@ -434,6 +473,14 @@ window.initChatCore = function() {
     function renderChatMessage(msg) {
         const history = document.getElementById('chat-history');
         if (!history) return;
+
+        // Prevent duplicates (e.g. from optimistic render + WS echo)
+        let existingDiv = document.getElementById(`msg-${msg.id}`);
+        if (existingDiv) {
+            // For now, if we want to update read status, we can do it here. 
+            // Simple approach: avoid full re-render duplicate
+            return;
+        }
 
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
@@ -496,9 +543,9 @@ window.initChatCore = function() {
         timeSpan.innerHTML = `${timeStr} `;
         if (isMe) {
             const isRead = msg.is_read;
-            // Skufia Neon-style distinct ticks
+            // Skufia distinct ticks
             const checkSvg = isRead 
-                ? '<svg viewBox="0 0 24 24" width="18" height="18" style="color:#00ffaa; filter: drop-shadow(0px 0px 4px #00ffaa); margin-left:4px; vertical-align: middle;"><path d="M4 12l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M11 12l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
+                ? '<svg viewBox="0 0 24 24" width="18" height="18" style="color:#00ffaa; margin-left:4px; vertical-align: middle;"><path d="M2 12l4 4 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M8 12l4 4 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
                 : '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--text-dim); margin-left:3px; vertical-align: middle;"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
             timeSpan.insertAdjacentHTML('beforeend', checkSvg);
         } else if (!msg.is_read && state.chat.socket && state.chat.socket.readyState === 1) {

@@ -445,9 +445,14 @@ const handleInput = document.getElementById('settings-handle');
     };
 
     // --- CONTACT SEARCH FILTER ---
-    window.closeChatMobile = function() {
+    window.closeChatMobile = function(fromHistory = false) {
         const chatLayout = document.querySelector('.chat-layout');
-        if (chatLayout) chatLayout.classList.remove('chat-open');
+        if (chatLayout && chatLayout.classList.contains('chat-open')) {
+            chatLayout.classList.remove('chat-open');
+            if (fromHistory !== true && window.innerWidth <= 768) {
+                try { history.back(); } catch(e) {}
+            }
+        }
     };
 
     // --- CONTACT PROFILE ---
@@ -913,13 +918,18 @@ backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; 
         const s = event.state;
         if (!s || !s.skufia) return;
 
-        if (s.chat) {
-            // Was in chat — close the chat panel, go back to room list
-            const chatMain = document.querySelector('.chat-main');
+        if (!s.chat) {
+            // Not in chat — ensure chat panel is closed
             const chatLayout = document.querySelector('.chat-layout');
-            if (chatLayout) chatLayout.classList.remove('chat-open');
-            if (chatMain) chatMain.classList.remove('active');
-            return;
+            if (chatLayout && chatLayout.classList.contains('chat-open')) {
+                chatLayout.classList.remove('chat-open');
+            }
+        } else {
+            // In chat - ensure chat is open
+            const chatLayout = document.querySelector('.chat-layout');
+            if (chatLayout && !chatLayout.classList.contains('chat-open')) {
+                chatLayout.classList.add('chat-open');
+            }
         }
 
         if (s.view && s.view !== 'home') {

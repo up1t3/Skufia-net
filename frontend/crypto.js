@@ -459,21 +459,70 @@
     }
     window.getAllSessionKeys = getAllSessionKeys;
 
-    window.refreshSessionKey = async function(roomId) {
+    window.renegotiateSessionKey = async function(roomId, receiverId) {
+        if (!receiverId) return null;
+        try {
+            await ensureKeys();
+            const targetKeyData = await apiRequest(`/users/${receiverId}/key`).catch(() => null);
+            if (!targetKeyData || !targetKeyData.public_key) return null;
+
+            const sessionKey = await CryptoManager.generateSessionKey();
+            
+            // Append to our local array instead of replacing
+            let keys = await getAllSessionKeys(roomId);
+            keys.push(sessionKey);
+            state.chat.sessionKeys[roomId] = keys;
+
+            const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
+            const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
+
+            const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
+            if (!myPubBase64) throw new Error("Public key not found in vault");
+            
+            const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
+            const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
+
+            let myUserId = state.user?.id;
+            if (!myUserId) {
+                const me = await apiRequest('/me');
+                myUserId = me.id;
+                state.user.id = myUserId;
+            }
+
+            const keysPayload = {};
+            keysPayload[String(receiverId)] = wrappedForRecipient;
+            keysPayload[String(myUserId)] = wrappedForSelf;
+            
+            await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
+            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, keys).catch(() => {});
+            console.log(`Session key RENEGOTIATED and saved for room ${roomId}`);
+            return sessionKey;
+        } catch (e) {
+            console.error('Failed to renegotiate new session key:', e);
+            throw e;
+        }
+    };
+
+    window.refreshSessionKey = async function(roomId, receiverId) {
         try {
             await ensureKeys();
             const keyBundle = await apiRequest(`/chat/rooms/${roomId}/key`);
             if (keyBundle && keyBundle.wrapped_key) {
-                const sessionKey = await CryptoManager.unwrapKey(
-                    state.chat.keys.privateKey,
-                    keyBundle.wrapped_key
-                );
-                let keys = await getAllSessionKeys(roomId);
-                keys.push(sessionKey);
-                state.chat.sessionKeys[roomId] = keys;
-                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, keys).catch(() => {});
-                console.log(`Session key rotated and saved for room ${roomId}`);
-                return sessionKey;
+                try {
+                    const sessionKey = await CryptoManager.unwrapKey(
+                        state.chat.keys.privateKey,
+                        keyBundle.wrapped_key
+                    );
+                    let keys = await getAllSessionKeys(roomId);
+                    keys.push(sessionKey);
+                    state.chat.sessionKeys[roomId] = keys;
+                    await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, keys).catch(() => {});
+                    console.log(`Session key synced and saved for room ${roomId}`);
+                    return sessionKey;
+                } catch (unwrapErr) {
+                    console.warn("Failed to unwrap existing session key bundle (wrong RSA key). Triggering renegotiation.", unwrapErr);
+                    return await window.renegotiateSessionKey(roomId, receiverId);
+                }
             }
         } catch(e) {
             console.error('refreshSessionKey failed:', e);

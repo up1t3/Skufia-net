@@ -1208,7 +1208,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     if room_id:
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
         uids = [m.user_id for m in members]
-        await manager.broadcast(payload, user_ids=uids)
+        await manager.broadcast_msg(payload, user_ids=uids)
         
     # --- Скуф-GPT (Бот "База") Заглушка ---
     if msg.content and msg.content.strip().startswith('@baza '):
@@ -1245,7 +1245,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
             "room_id": room_id
         }
         if room_id:
-            await manager.broadcast(bot_payload, user_ids=uids)
+            await manager.broadcast_msg(bot_payload, user_ids=uids)
     
     return {"status": "Message transmitted and broadcasted", "id": db_msg.id}
 
@@ -1275,7 +1275,7 @@ async def edit_message(message_id: int, req: dict, current_user: User = Depends(
     if msg.room_id:
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == msg.room_id).all()
         uids = [m.user_id for m in members]
-        await manager.broadcast(payload, user_ids=uids)
+        await manager.broadcast_msg(payload, user_ids=uids)
         
     return {"status": "success"}
 
@@ -1310,7 +1310,7 @@ async def delete_message(message_id: int, current_user: User = Depends(get_curre
     if room_id:
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
         uids = [m.user_id for m in members]
-        await manager.broadcast(payload, user_ids=uids)
+        await manager.broadcast_msg(payload, user_ids=uids)
         
     return {"status": "success"}
 

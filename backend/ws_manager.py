@@ -37,14 +37,20 @@ class ConnectionManager:
         db.close()
 
     async def send_personal_message(self, message: dict, user_id: int):
-        await broadcast.publish(channel=f"channel:{user_id}", message=json.dumps(message))
+        try:
+            await broadcast.publish(channel=f"channel:{user_id}", message=json.dumps(message))
+        except Exception as e:
+            print(f"Personal broadcast error (Redis down?): {e}")
 
     async def broadcast_msg(self, message: dict, user_ids: List[int] = None):
         msg_str = json.dumps(message)
-        if user_ids:
-            for uid in user_ids:
-                await broadcast.publish(channel=f"channel:{uid}", message=msg_str)
-        else:
-            await broadcast.publish(channel="channel:global", message=msg_str)
+        try:
+            if user_ids:
+                for uid in user_ids:
+                    await broadcast.publish(channel=f"channel:{uid}", message=msg_str)
+            else:
+                await broadcast.publish(channel="channel:global", message=msg_str)
+        except Exception as e:
+            print(f"Broadcast error (Redis down?): {e}")
 
 manager = ConnectionManager()
