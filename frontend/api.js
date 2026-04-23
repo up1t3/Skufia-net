@@ -1,5 +1,6 @@
 window.isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-window.API_BASE_URL = window.isLocalDev ? 'http://localhost:8007/api' : '/api';
+window.BASE_URL = window.isLocalDev ? 'http://localhost:8007' : '';
+window.API_BASE_URL = `${window.BASE_URL}/api`;
 
 window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };

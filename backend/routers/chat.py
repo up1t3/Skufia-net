@@ -166,18 +166,25 @@ def get_user_key(user_id: int, current_user: User = Depends(get_current_user), d
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Operative not found in the archives")
-    return {"id": user.id, "public_key": user.public_key}
+    
+    result = {"id": user.id, "public_key": user.public_key}
+    if user_id == current_user.id:
+        result["encrypted_private_key"] = user.encrypted_private_key
+    return result
 
 class KeyUpdate(BaseModel):
     public_key: str
+    encrypted_private_key: Optional[str] = None
 
 @router.post('/me/key')
 def update_my_key(data: KeyUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    """Registers the operative's public key for secure transmissions"""
+    """Registers the operative's public key and encrypted private key for secure transmissions"""
     user = db.query(User).filter(User.id == current_user.id).first()
     user.public_key = data.public_key
+    if data.encrypted_private_key:
+        user.encrypted_private_key = data.encrypted_private_key
     db.commit()
-    return {"status": "Public key registered in the Cyber-Vault"}
+    return {"status": "Keys registered in the Cyber-Vault"}
 
 # --- E2EE ROOM KEY EXCHANGE ---
 

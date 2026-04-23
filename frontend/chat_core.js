@@ -325,14 +325,28 @@ window.initChatCore = function() {
             badgeDiv.innerHTML = '<span></span>';
         }
 
-        // --- E2EE: TEMPORARILY DISABLED ---
-        // Skip key exchange — all messages are plaintext for now
-        // Hide badge entirely to avoid confusing users
+        // --- E2EE: INITIALIZATION ---
         if (type === 'private') {
             const badge = document.getElementById('chat-encryption-status');
             if (badge) {
-                badge.innerHTML = '';
-                badge.style.display = 'none';
+                badge.style.display = 'flex';
+                badge.innerHTML = '<span style="color:var(--text-dim)">⏳ Установка E2EE...</span>';
+                
+                // Trigger Key Exchange!
+                if (typeof getOrEstablishSessionKey === 'function') {
+                    getOrEstablishSessionKey(roomId, receiverId).then(key => {
+                        if (key) {
+                            badge.innerHTML = '<span style="color:var(--accent-cyan)">🔒 E2EE Активно</span>';
+                        } else {
+                            badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ Собеседник без E2EE</span>';
+                        }
+                    }).catch(e => {
+                        console.error('E2EE Error:', e);
+                        badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ Ошибка E2EE</span>';
+                    });
+                } else {
+                    badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ E2EE Недоступно</span>';
+                }
             }
         }
 
@@ -421,10 +435,10 @@ window.initChatCore = function() {
         if (fileUrl) {
             const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
             if (isImage) {
-                fileHtml = `<a href="${API_BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${API_BASE_URL}${fileUrl}" alt="attachment"></a>`;
+                fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
             } else {
                 const fname = fileUrl.split('/').pop() || 'file';
-                fileHtml = `<a class="msg-file-attachment" href="${API_BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
+                fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
             }
         }
 
@@ -543,15 +557,30 @@ window.initChatCore = function() {
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
 
-        // --- E2EE: TEMPORARILY DISABLED ---
-        // Send all messages as plaintext until key exchange is stabilized
-        // Old encrypted messages will show placeholder in history
         let payload = {
             content,
             encryption_iv: '',
             file_url: state.pendingFile ? state.pendingFile.url : null,
             reply_to_id: state.chat.replyToId
         };
+
+        // --- E2EE: ENCRYPTION ---
+        let isEncrypted = false;
+        if (state.chat.currentRoomType === 'private' && typeof getOrEstablishSessionKey === 'function') {
+            const sessionKey = await getOrEstablishSessionKey(roomId, receiverId);
+            if (sessionKey) {
+                try {
+                    const encrypted = await CryptoManager.encryptMessage(sessionKey, content);
+                    payload.content = encrypted.content;
+                    payload.encryption_iv = encrypted.iv;
+                    isEncrypted = true;
+                } catch (e) {
+                    console.error('Failed to encrypt message:', e);
+                    addLog('⚠️ Ошибка шифрования, сообщение не отправлено', 'error');
+                    return; // Prevent fallback to plaintext if encryption fails!
+                }
+            }
+        }
 
         // Clear input IMMEDIATELY to prevent double-sends
         const savedContent = content;
@@ -578,8 +607,8 @@ window.initChatCore = function() {
                     sender_id: state.user.id,
                     text: savedContent,
                     content: savedContent,
-                    iv: null,
-                    is_secure: false,
+                    iv: isEncrypted ? payload.encryption_iv : null,
+                    is_secure: isEncrypted,
                     file_url: savedFile ? savedFile.url : null,
                     reply_to_id: savedReplyId,
                     is_edited: false,
@@ -611,7 +640,7 @@ window.initChatCore = function() {
             /** @type {Record<string, string>} */
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            const resp = await fetch(`${API_BASE_URL}/api/chat/upload`, {
+            const resp = await fetch(`${API_BASE_URL}/chat/upload`, {
                 method: 'POST',
                 headers,
                 body: formData
@@ -1358,7 +1387,7 @@ window.initChatCore = function() {
             try {
                 const headers = {};
                 if (state.user.token) headers['Authorization'] = `Bearer ${state.user.token}`;
-                const resp = await fetch(`${API_BASE_URL}/api/chat/upload_audio`, {
+                const resp = await fetch(`${API_BASE_URL}/chat/upload_audio`, {
                     method: 'POST',
                     headers,
                     body: formData

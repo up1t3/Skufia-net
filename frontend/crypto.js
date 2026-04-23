@@ -83,7 +83,7 @@
                     publicExponent: new Uint8Array([1, 0, 1]),
                     hash: 'SHA-256',
                 },
-                false,                            // ← extractable: FALSE (private key protected!)
+                true,                             // ← extractable: TRUE (required for multi-device export)
                 ['encrypt', 'decrypt']
             );
         }
@@ -222,17 +222,135 @@
             );
             return new TextDecoder().decode(decrypted);
         }
+
+        // ── Identity Export / Import (PBKDF2 + AES-GCM) ───────────────────────────
+
+        /**
+         * Export the RSA private key, encrypting it with a user-provided password.
+         * @param {CryptoKey} rsaPrivateKey 
+         * @param {string} password 
+         * @returns {Promise<string>} Base64 encoded JSON string containing salt, iv, and encrypted JWK
+         */
+        static async exportIdentityWithPassword(rsaPrivateKey, password) {
+            if (!rsaPrivateKey.extractable) {
+                throw new Error("Текущий приватный ключ не поддерживает экспорт. Вам необходимо перегенерировать ключи.");
+            }
+            
+            // 1. Export key to JWK
+            const jwk = await window.crypto.subtle.exportKey('jwk', rsaPrivateKey);
+            const jwkString = JSON.stringify(jwk);
+            
+            // 2. Generate PBKDF2 salt and derive AES key
+            const salt = window.crypto.getRandomValues(new Uint8Array(16));
+            const enc = new TextEncoder();
+            const passKey = await window.crypto.subtle.importKey(
+                'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+            );
+            
+            const aesKey = await window.crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                passKey,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt']
+            );
+            
+            // 3. Encrypt the JWK
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const ciphertext = await window.crypto.subtle.encrypt(
+                { name: 'AES-GCM', iv },
+                aesKey,
+                enc.encode(jwkString)
+            );
+            
+            // 4. Return combined package
+            const payload = {
+                salt: btoa(String.fromCharCode(...salt)),
+                iv: btoa(String.fromCharCode(...iv)),
+                ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertext)))
+            };
+            return btoa(JSON.stringify(payload));
+        }
+
+        /**
+         * Import an RSA private key from a password-encrypted export payload.
+         * @param {string} payloadBase64 
+         * @param {string} password 
+         * @returns {Promise<{privateKey: CryptoKey, publicKey: string}>}
+         */
+        static async importIdentityWithPassword(payloadBase64, password) {
+            const payload = JSON.parse(atob(payloadBase64));
+            const salt = Uint8Array.from(atob(payload.salt), c => c.charCodeAt(0));
+            const iv = Uint8Array.from(atob(payload.iv), c => c.charCodeAt(0));
+            const ciphertext = Uint8Array.from(atob(payload.ciphertext), c => c.charCodeAt(0));
+            
+            // 1. Derive AES key from password
+            const enc = new TextEncoder();
+            const passKey = await window.crypto.subtle.importKey(
+                'raw', enc.encode(password), { name: 'PBKDF2' }, false, ['deriveKey']
+            );
+            
+            const aesKey = await window.crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                passKey,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['decrypt']
+            );
+            
+            // 2. Decrypt JWK
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: 'AES-GCM', iv },
+                aesKey,
+                ciphertext
+            );
+            const jwkString = new TextDecoder().decode(decrypted);
+            const jwk = JSON.parse(jwkString);
+            
+            // 3. Import back into CryptoKey (keeping it extractable: true for future exports)
+            const privateKey = await window.crypto.subtle.importKey(
+                'jwk',
+                jwk,
+                { name: 'RSA-OAEP', hash: 'SHA-256' },
+                true,
+                ['decrypt']
+            );
+            
+            // Generate corresponding public key JWK by stripping private fields
+            const pubJwk = {
+                kty: jwk.kty,
+                n: jwk.n,
+                e: jwk.e,
+                alg: jwk.alg,
+                ext: true
+            };
+            
+            const pubKey = await window.crypto.subtle.importKey(
+                'jwk',
+                pubJwk,
+                { name: 'RSA-OAEP', hash: 'SHA-256' },
+                true,
+                ['encrypt']
+            );
+            
+            const publicKeyBase64 = await CryptoManager.exportPublicKey(pubKey);
+            
+            return { privateKey, publicKey: publicKeyBase64 };
+        }
     }
 
     // ── Key Vault: persist identity + session keys in IndexedDB ──────────────
 
-    /**
-     * Get or generate the user's RSA identity key pair.
-     * Private key is stored as a NON-EXTRACTABLE CryptoKey in IndexedDB.
-     * Public key is stored as base64 (it's public).
-     * If keys exist: loads them from IndexedDB.
-     * If not: generates new pair, saves to IndexedDB, registers pubKey on server.
-     */
     async function ensureKeys() {
         if (state.chat.keys.publicKey && state.chat.keys.privateKey) return;
 
@@ -242,69 +360,81 @@
             const storedPriv = await vaultGet(IDB_STORE_KEYS, 'priv_cryptokey');
 
             if (storedPub && storedPriv) {
-                // storedPriv is the non-extractable CryptoKey object saved in IDB
-                addLog('🔐 Загрузка ключей из защищённого хранилища...', 'info');
+                addLog('🔐 Ключи загружены локально', 'info');
                 state.chat.keys.publicKey = await CryptoManager.importPublicKey(storedPub);
-                state.chat.keys.privateKey = storedPriv; // already a CryptoKey
-                // Always re-register pubKey in case server restarted
+                state.chat.keys.privateKey = storedPriv;
+                // Sync with server if needed
                 await apiRequest('/me/key', 'POST', { public_key: storedPub }).catch(() => {});
-                const fp = await CryptoManager.keyFingerprint(storedPub);
-                state.chat.keyFingerprint = fp;
-                addLog(`🔑 Ключи восстановлены | Отпечаток: ${fp.slice(0, 23)}...`, 'success');
-                // Clear old insecure localStorage keys if present
-                localStorage.removeItem('skufia_pub_spki');
-                localStorage.removeItem('skufia_priv_pkcs8');
+                state.chat.keyFingerprint = await CryptoManager.keyFingerprint(storedPub);
                 return;
             }
         } catch (e) {
-            addLog('⚠️ Ошибка чтения хранилища, генерируем новые ключи...', 'info');
-            try {
-                await vaultDelete(IDB_STORE_KEYS, 'pub_base64');
-                await vaultDelete(IDB_STORE_KEYS, 'priv_cryptokey');
-            } catch (err) {
-                console.warn('Failed to clear vault:', err);
-            }
+            console.warn('IDB access failed:', e);
         }
 
-        // Generate fresh RSA-4096 identity key pair
-        addLog('⚙️ Генерация RSA-4096 ключевой пары...', 'info');
+        // If not in IDB, check server
+        addLog('🔍 Поиск ключей в облачном хранилище...', 'info');
+        try {
+            const myKeys = await apiRequest(`/users/${state.user.id}/key`);
+            if (myKeys && myKeys.encrypted_private_key && myKeys.public_key) {
+                // Found in cloud!
+                const password = state.user.password;
+                if (password) {
+                    addLog('☁️ Ключи найдены в облаке. Синхронизация...', 'info');
+                    const { privateKey, publicKey } = await CryptoManager.importIdentityWithPassword(myKeys.encrypted_private_key, password);
+                    
+                    // Save to IDB
+                    await vaultPut(IDB_STORE_KEYS, 'pub_base64', publicKey);
+                    await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', privateKey);
+                    
+                    // Load to memory
+                    state.chat.keys.publicKey = await CryptoManager.importPublicKey(publicKey);
+                    state.chat.keys.privateKey = privateKey;
+                    state.chat.keyFingerprint = await CryptoManager.keyFingerprint(publicKey);
+                    addLog('✅ Ключи восстановлены из облака', 'success');
+                    return;
+                } else {
+                    addLog('⚠️ Требуется пароль для расшифровки облачного ключа', 'warning');
+                }
+            }
+        } catch (err) {
+            console.error('Cloud key check failed:', err);
+        }
+
+        // If neither local nor cloud, generate new
+        addLog('⚙️ Создание новой цифровой личности (E2EE)...', 'info');
         const pair = await CryptoManager.generateKeyPair();
+        const pubBase64 = await CryptoManager.exportPublicKey(pair.publicKey);
+        
         state.chat.keys.publicKey = pair.publicKey;
         state.chat.keys.privateKey = pair.privateKey;
+        state.chat.keyFingerprint = await CryptoManager.keyFingerprint(pubBase64);
 
-        // Export ONLY the public key (private stays inside WebCrypto engine)
-        const pubBase64 = await CryptoManager.exportPublicKey(pair.publicKey);
+        // Save to IDB
+        await vaultPut(IDB_STORE_KEYS, 'pub_base64', pubBase64);
+        await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', pair.privateKey);
 
-        // Save to IndexedDB:
-        try {
-            await vaultPut(IDB_STORE_KEYS, 'pub_base64', pubBase64);
-            await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', pair.privateKey);
-        } catch (err) {
-            console.warn('Failed to save keys to IDB:', err);
+        // Upload to server
+        const password = state.user.password;
+        let encryptedPrivate = null;
+        if (password) {
+            try {
+                encryptedPrivate = await CryptoManager.exportIdentityWithPassword(pair.privateKey, password);
+            } catch (e) {
+                console.error('Encryption failed', e);
+            }
         }
-
-        // Register public key on server (server NEVER sees private key)
-        await apiRequest('/me/key', 'POST', { public_key: pubBase64 });
-
-        const fp = await CryptoManager.keyFingerprint(pubBase64);
-        state.chat.keyFingerprint = fp;
-        addLog(`✅ E2EE ключи созданы и защищены | Отпечаток: ${fp.slice(0, 23)}...`, 'success');
+        
+        await apiRequest('/me/key', 'POST', { 
+            public_key: pubBase64,
+            encrypted_private_key: encryptedPrivate
+        }).catch(() => {});
+        
+        addLog('✅ Личность создана и сохранена в облаке', 'success');
     }
 
-    /**
-     * Get or establish a session key for a given room.
-     * Tries IndexedDB cache first, then server-stored wrapped bundle.
-     * @param {number} roomId
-     * @param {number|null} receiverId
-     * @returns {Promise<CryptoKey|null>}
-     */
     async function getOrEstablishSessionKey(roomId, receiverId) {
-        // 1. Check in-memory cache
-        if (state.chat.sessionKeys[roomId]) {
-            return state.chat.sessionKeys[roomId];
-        }
-
-        // 2. Check IndexedDB session cache
+        if (state.chat.sessionKeys[roomId]) return state.chat.sessionKeys[roomId];
         try {
             const cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
             if (cached) {
@@ -313,7 +443,6 @@
             }
         } catch(e) {}
 
-        // 3. Try to fetch wrapped key from server and unwrap locally
         await ensureKeys();
         if (!state.chat.keys.privateKey) return null;
 
@@ -324,70 +453,55 @@
                     state.chat.keys.privateKey,
                     keyBundle.wrapped_key
                 );
-                // Cache in memory and IndexedDB
                 state.chat.sessionKeys[roomId] = sessionKey;
                 await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
-                addLog(`🔓 Сессионный ключ восстановлен для комнаты #${roomId}`, 'success');
                 return sessionKey;
             }
-        } catch (e) {
-            // 404 = no key yet — we are the initiator
-        }
+        } catch (e) {}
 
-        // 4. Generate new session key and distribute to both parties
         if (!receiverId) return null;
 
-        addLog(`🔑 Установка E2EE сессии с пользователем #${receiverId}...`, 'info');
-
-        // Fetch recipient's public key
         const targetKeyData = await apiRequest(`/users/${receiverId}/key`).catch(() => null);
-        if (!targetKeyData || !targetKeyData.public_key) {
-            addLog('⚠️ Получатель ещё не зарегистрировал ключи E2EE', 'error');
-            return null;
-        }
+        if (!targetKeyData || !targetKeyData.public_key) return null;
 
-        // Show fingerprint of recipient's key for MITM detection
-        const recipientFp = await CryptoManager.keyFingerprint(targetKeyData.public_key);
-        addLog(`🔍 Отпечаток ключа получателя: ${recipientFp.slice(0, 23)}...`, 'info');
-
-        // Generate fresh AES-256-GCM session key
         const sessionKey = await CryptoManager.generateSessionKey();
         state.chat.sessionKeys[roomId] = sessionKey;
 
-        // Wrap session key for RECIPIENT using their RSA public key
-        let recipientPubKey;
-        let wrappedForRecipient;
-        try {
-            recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
-            wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
-        } catch (err) {
-            console.warn("Invalid recipient public key:", err);
-            addLog('⚠️ Публичный ключ получателя поврежден', 'error');
-            return null;
-        }
+        const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
+        const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
 
-        // Wrap session key for OURSELVES (so we can decrypt our own sent messages)
-        let myPubBase64 = null;
-        try { myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64'); } catch(e) {}
-        if (!myPubBase64 && state.chat.keys.publicKey) {
-            myPubBase64 = await CryptoManager.exportPublicKey(state.chat.keys.publicKey);
-        }
-        if (!myPubBase64) throw new Error("Our public key not found");
+        const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
         const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
         const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
 
-        // Store both bundles on server (server cannot decrypt — only wrapped blobs)
         const keysPayload = {};
         keysPayload[String(receiverId)] = wrappedForRecipient;
         keysPayload[String(state.user.id)] = wrappedForSelf;
         await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
 
-        // Cache in IndexedDB
         await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
-
-        addLog(`✅ E2EE сессия установлена | Отпечаток: ${recipientFp.slice(0, 11)}...`, 'success');
         return sessionKey;
     }
 
+    window.resetIdentityKeys = async function() {
+        if (!confirm('ВНИМАНИЕ! Ваши текущие ключи будут удалены. Продолжить?')) return;
+        try {
+            await vaultDelete(IDB_STORE_KEYS, 'pub_base64');
+            await vaultDelete(IDB_STORE_KEYS, 'priv_cryptokey');
+            state.chat.keys = { publicKey: null, privateKey: null };
+            state.chat.keyFingerprint = null;
+            await apiRequest('/me/key', 'POST', { public_key: "", encrypted_private_key: "" }).catch(() => {});
+            await ensureKeys();
+            alert('Ключи успешно сброшены!');
+            if (document.getElementById('settings-modal')) document.getElementById('settings-modal').style.display = 'none';
+        } catch (e) {
+            alert('Ошибка: ' + e.message);
+        }
+    };
 
-
+    window.vaultGet = vaultGet;
+    window.vaultPut = vaultPut;
+    window.vaultDelete = vaultDelete;
+    window.ensureKeys = ensureKeys;
+    window.getOrEstablishSessionKey = getOrEstablishSessionKey;
+})();

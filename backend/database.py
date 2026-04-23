@@ -33,6 +33,7 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     telegram_id = Column(String, unique=True, nullable=True)
     public_key = Column(Text, nullable=True) # RSA Public Key for E2EE
+    encrypted_private_key = Column(Text, nullable=True) # RSA Private Key encrypted with user password
     handle = Column(String, unique=True, nullable=True) # Short username like @up1t3rV
     recovery_email = Column(String, nullable=True)
     phone_number = Column(String, unique=True, index=True, nullable=True)

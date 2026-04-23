@@ -1,12 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize Theme
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('app') === 'messenger') {
-        setTimeout(() => {
-            if (typeof window.openSkufenger === 'function') window.openSkufenger();
-            window.history.replaceState({}, document.title, window.location.pathname);
-        }, 500);
-    }
     const savedTheme = localStorage.getItem('skufia_theme') || 'telegram';
     changeTheme(savedTheme);
     const themeSelector = document.getElementById('theme-selector');
@@ -85,42 +78,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const activeBtn = document.querySelector(`.nav-btn[data-view="${viewId}"]`);
             if (activeBtn) activeBtn.classList.add('active');
             addLog(`Switching to sector: ${viewId.toUpperCase().replace('_', ' ')}`);
-            
+
             // Trigger data loads based on view
             if (viewId === 'forum') loadForum();
             if (viewId === 'wiki') loadWiki();
             if (viewId === 'trade') loadMarket();
             if (viewId === 'registry') loadRegistry();
-            if (viewId === 'messages') {
-                enterMessengerFullscreen();
-                loadChatRooms();
-            } else {
-                exitMessengerFullscreen();
-            }
+            if (viewId === 'messages') { loadChatRooms(); if (window.loadFolders) window.loadFolders(); }
             if (viewId === 'events') loadEvents();
             if (viewId === 'dashboard') loadDashboard();
         }
     }
-
-    // --- SKUFENGER FULLSCREEN MODE ---
-    function enterMessengerFullscreen() {
-        document.body.classList.add('skufenger-fullscreen');
-        const title = document.getElementById('skufenger-heading');
-        if (title) title.style.display = 'none';
-        document.title = 'SKUFenger';
-        window.location.hash = 'messenger';
-    }
-
-    function exitMessengerFullscreen() {
-        document.body.classList.remove('skufenger-fullscreen');
-        document.title = 'SKUFIA | Enterprise Command Center';
-    }
-
-    window.exitMessengerFullscreen = function() {
-        exitMessengerFullscreen();
-        switchView('home');
-        window.location.hash = '';
-    };
 
 
     // Chat logic extracted to chat_core.js
@@ -145,23 +113,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addLog('Initializing Skufia Enterprise OS...', 'info');
         await ensureKeys();
-        setTimeout(() => addLog('Loading Cyber-Industrial HUD...'), 500);
+
+setTimeout(() => addLog('Loading Cyber-Industrial HUD...'), 500);
         setTimeout(() => addLog('Connecting to Global Registry...'), 1000);
         setTimeout(() => addLog('Handshaking with Database Cluster...'), 1500);
         setTimeout(() => {
             addLog('System Online. Welcome, Operator.', 'success');
             // --- Initialization ---
-            const appParam = new URLSearchParams(window.location.search).get('app');
-            const isStandalone = appParam === 'skufenger' || appParam === 'messenger';
-            const isHashMessenger = window.location.hash === '#messenger';
-            if (isStandalone || isHashMessenger) {
-                switchView('messages');
-            } else {
+            if (new URLSearchParams(window.location.search).get('app') !== 'skufenger') {
                 switchView('home');
+            } else {
+                switchView('messages');
             }
             loadDashboard();
             connectWebSocket(); // Establish real-time link
-            
+
             // Phase 5: PWA Service Worker Registration
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.register('chat-sw.js').then(reg => {
@@ -238,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTHENTICATION LISTENERS ---
     const authOverlay = document.getElementById('auth-overlay');
-    
+
     document.getElementById('toggle-to-register').addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('login-form').style.display = 'none';
@@ -256,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = e.target.querySelector('button');
-        btn.textContent = 'ОЖИДАНИЕ...';
+        if (btn) btn.textContent = 'ОЖИДАНИЕ...';
         try {
             const res = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
@@ -271,6 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             localStorage.setItem('skuf_token', data.access_token);
             state.user.token = data.access_token;
+            state.user.password = document.getElementById('login-password').value; // Temporary store for E2EE key sync
             authOverlay.style.display = 'none';
             addLog('Аутентификация успешна', 'system');
             
@@ -279,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             document.getElementById('login-error').textContent = err.message;
         } finally {
-            btn.textContent = 'ВОЙТИ В СЕТЬ';
+            if (btn) btn.textContent = 'ВОЙТИ В СЕТЬ';
         }
     });
 
@@ -301,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.detail || 'Registration failed');
-            
+
             document.getElementById('register-form').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
             document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
@@ -336,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
         openSettingsBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             settingsModal.style.display = 'flex';
-            
+
             // Fetch profile data
             try {
                 const profile = await apiRequest('/me');
@@ -350,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const handleInput = document.getElementById('settings-handle');
+const handleInput = document.getElementById('settings-handle');
     if (handleInput) {
         handleInput.addEventListener('blur', async (e) => {
             let newVal = e.target.value.trim();
@@ -389,10 +356,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     const props = ['name', 'tel'];
                     const opts = { multiple: true };
                     const contacts = await navigator.contacts.select(props, opts);
-                    
+
                     if (contacts && contacts.length > 0) {
                         const payload = contacts.map(c => ({ name: c.name[0], phone: c.tel ? c.tel[0] : '' }));
-                        const resp = await fetch(`${API_BASE_URL}/api/contacts/sync`, {
+                        const resp = await fetch(`${API_BASE_URL}/contacts/sync`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.user.token}` },
                             body: JSON.stringify({ contacts: payload })
@@ -407,7 +374,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     addLog('Contact Picker API не поддерживается на вашем устройстве. Backend Sync Mode активирован.', 'info');
                     // Fallback to manual sync trigger on backend
-                    const resp = await fetch(`${API_BASE_URL}/api/contacts/sync`, {
+                    const resp = await fetch(`${API_BASE_URL}/contacts/sync`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.user.token}` },
                         body: JSON.stringify({ contacts: [] })
@@ -423,8 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     // --- STANDALONE MODE FOR SKUFENGER ---
-    const stParam = new URLSearchParams(window.location.search).get('app');
-    if (stParam === 'skufenger' || stParam === 'messenger') {
+    if (new URLSearchParams(window.location.search).get('app') === 'skufenger') {
         const sidePanel = document.querySelector('.side-panel');
         const header = document.querySelector('.system-header');
         const footer = document.querySelector('.system-footer');
@@ -434,8 +400,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.getElementById('skufenger-heading');
         const viewMessages = document.getElementById('view-messages');
         const chatLayout = viewMessages ? viewMessages.querySelector('.chat-layout') : null;
-        
-        if (sidePanel) sidePanel.style.display = 'none';
+
+if (sidePanel) sidePanel.style.display = 'none';
         if (header) header.style.display = 'none';
         if (footer) footer.style.display = 'none';
         if (title) title.style.display = 'none';
@@ -460,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const authTitle = document.getElementById('auth-title');
         const loginBtn = document.querySelector('#login-form button[type="submit"]');
         const regBtn = document.querySelector('#register-form button[type="submit"]');
-        
+
         if (authTitle) authTitle.textContent = 'ВХОД В SKUFENGER';
         if (loginBtn) loginBtn.textContent = 'ВОЙТИ В МЕССЕНДЖЕР';
         if (regBtn) regBtn.textContent = 'СОЗДАТЬ АККАУНТ';
@@ -477,14 +443,18 @@ document.addEventListener('DOMContentLoaded', () => {
     window.loadWiki = loadWiki;
     window.loadMarket = loadMarket;
     window.loadRegistry = loadRegistry;
-    
+    window.loadChatRooms = loadChatRooms;
+    window.loadFolders = loadFolders;
+    window.renderChatRooms = renderChatRooms;
     window.loadTopicPosts = loadTopicPosts;
     window.likePost = likePost;
     window.likeWiki = likeWiki;
     window.switchView = switchView;
-    // Removed undefined exports
+    window.selectChatRoom = selectChatRoom;
+    // [FIX-06] Alias: selectChatRoom renders new #chat-input with inline onclick="window.sendChatMessage()"
+    window.sendChatMessage = sendChatMsg;
     window.openSkufenger = function() {
-        switchView('messages');
+        window.open(window.location.pathname + '?app=skufenger', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
     };
 
     // --- CONTACT SEARCH FILTER ---
@@ -492,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatLayout = document.querySelector('.chat-layout');
         if (chatLayout) chatLayout.classList.remove('chat-open');
     };
-    
+
     const contactSearchInput = document.getElementById('contact-search');
     if (contactSearchInput) {
         contactSearchInput.addEventListener('input', function() {
@@ -531,7 +501,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
-        const dd = document.getElementById('chat-options-dropdown');
+
+const dd = document.getElementById('chat-options-dropdown');
         const wrapper = e.target.closest('.chat-options-wrapper');
         if (dd && !wrapper) {
             dd.style.display = 'none';
@@ -613,7 +584,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const badge = document.getElementById('chat-encryption-status');
                 const isE2EE = badge && badge.textContent.includes('E2EE');
                 alert(isE2EE
-                    ? '🔒 Этот чат защищён сквозным шифрованием (E2EE).\nКлючи сессии генерируются локально и не передаются на сервер.'
+
+? '🔒 Этот чат защищён сквозным шифрованием (E2EE).\nКлючи сессии генерируются локально и не передаются на сервер.'
                     : '⚠️ Шифрование не активно.\nВыберите приватный чат для активации E2EE.');
                 break;
             }
@@ -661,7 +633,7 @@ window.previewAvatar = async function(input) {
     try {
         const formData = new FormData();
         formData.append('file', file);
-        const resp = await fetch(`${API_BASE_URL}/api/me/avatar/upload`, {
+        const resp = await fetch(`${API_BASE_URL}/me/avatar/upload`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${state.user.token}` },
             body: formData
@@ -692,12 +664,12 @@ window.previewAvatar = async function(input) {
 window.openAddMemberModal = async function() {
     const roomId = state.chat.activeRoomId;
     if (!roomId) return;
-    
+
     document.getElementById('add-member-modal').style.display = 'flex';
     document.getElementById('add-member-search').value = '';
     const listContainer = document.getElementById('add-member-list');
     listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>';
-    
+
     try {
         const contacts = await apiRequest('/contacts');
         state.contacts = contacts || [];
@@ -712,23 +684,24 @@ window.filterAddMemberContacts = function() {
     const query = document.getElementById('add-member-search').value.toLowerCase();
     const listContainer = document.getElementById('add-member-list');
     listContainer.innerHTML = '';
-    
+
     const filtered = state.contacts.filter(c => 
         c.username.toLowerCase().includes(query) || 
         (c.display_name && c.display_name.toLowerCase().includes(query))
     );
-    
+
     if (filtered.length === 0) {
         listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Ничего не найдено</div>';
         return;
     }
-    
+
     filtered.forEach(contact => {
         const div = document.createElement('div');
-        div.className = 'sidebar-item';
+
+div.className = 'sidebar-item';
         div.style.marginBottom = '5px';
         const initial = (contact.display_name || contact.username).charAt(0).toUpperCase();
-        
+
         div.innerHTML = `
             <div class="sidebar-item-avatar">${contact.avatar_url ? `<img src="${API_BASE_URL}${contact.avatar_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : initial}</div>
             <div class="sidebar-item-info">
@@ -744,15 +717,15 @@ window.filterAddMemberContacts = function() {
 window.submitAddMembers = async function() {
     const roomId = state.chat.activeRoomId;
     if (!roomId) return;
-    
+
     const checkboxes = document.querySelectorAll('.add-member-checkbox:checked');
     const userIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-    
+
     if (userIds.length === 0) {
         addLog('Выберите хотя бы один контакт', 'error');
         return;
     }
-    
+
     try {
         for (let uid of userIds) {
             await apiRequest(`/chat/rooms/${roomId}/members`, 'POST', { user_id: uid });
@@ -828,8 +801,9 @@ if (mobileToggle && sidePanel) {
     // Create backdrop for mobile sidebar
     const backdrop = document.createElement('div');
     backdrop.id = 'mobile-backdrop';
-    backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:998; opacity:0; transition:opacity 0.3s ease;';
-    
+
+backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:998; opacity:0; transition:opacity 0.3s ease;';
+
     // Append to app-container to share stacking context with side-panel 
     const container = document.querySelector('.app-container') || document.body;
     container.appendChild(backdrop);
@@ -929,7 +903,8 @@ if (mobileToggle && sidePanel) {
             const targetBtn = document.querySelector(`.nav-btn[data-view="${s.view}"]`);
             if (targetBtn) targetBtn.classList.add('active');
         }
-        // If view === 'home' or no view: the app stays open (we have replaceState for home)
+
+// If view === 'home' or no view: the app stays open (we have replaceState for home)
     });
 
     // Intercept nav button clicks to push state
@@ -939,4 +914,5 @@ if (mobileToggle && sidePanel) {
             history.pushState({ skufia: true, view: viewId, chat: false }, '', `#${viewId}`);
         });
     });
-})();
+})();
+

@@ -52,6 +52,7 @@ def run_migrations():
 
             # users
             add_column("users", "public_key", "TEXT")
+            add_column("users", "encrypted_private_key", "TEXT")
             add_column("users", "handle", "VARCHAR")
             add_column("users", "is_superadmin", "BOOLEAN", default="0" if DATABASE_URL.startswith("sqlite") else "FALSE")
             add_column("users", "recovery_email", "VARCHAR")
