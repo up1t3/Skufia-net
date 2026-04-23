@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v37'; // Premium Fullscreen Glassmorphism UI
+const CACHE_NAME = 'skufia-chat-v38'; // Premium Fullscreen Glassmorphism UI
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

@@ -87,6 +87,16 @@ window.initChatCore = function() {
             } else if (data.type === 'delete_message') {
                 const el = document.getElementById(`msg-${data.message_id}`);
                 if (el) el.remove();
+            } else if (data.type === 'read_ack') {
+                const el = document.getElementById(`msg-${data.message_id}`);
+                if (el) {
+                    const timeSpan = el.querySelector('.msg-time');
+                    if (timeSpan) {
+                        const existingSvg = timeSpan.querySelector('svg');
+                        if (existingSvg) existingSvg.remove();
+                        timeSpan.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--accent-cyan); filter: drop-shadow(0px 0px 2px rgba(0,255,255,0.5)); margin-left:3px; vertical-align: middle;"><path d="M7 11.5L10 14.5L17 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M11 11.5L14 14.5L21 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>');
+                    }
+                }
             } else if (data.type === 'typing_status') {
                 if (state.chat.currentRoomId === data.room_id && data.sender_id !== state.user.id) {
                     const typingEl = document.getElementById('typing-indicator');
@@ -271,7 +281,7 @@ window.initChatCore = function() {
         state.chat.receiverId = receiverId;
 
         const chatHistoryEl = document.getElementById('chat-history');
-        const header = document.querySelector('.chat-header');
+        const header = document.getElementById('chat-header');
 
         if (header) {
             const headerAvatar = document.getElementById('header-avatar');
