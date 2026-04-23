@@ -2,14 +2,21 @@
   "name": "SKUFenger",
   "short_name": "SKUFenger",
   "description": "Secure Real-Time Enterprise Messenger",
-  "start_url": "./index.html?app=messenger",
+  "start_url": "messenger.html",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui", "browser"],
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
   "orientation": "portrait",
   "background_color": "#111820",
   "theme_color": "#00f2ff",
-  "categories": ["communication", "productivity"],
+  "categories": [
+    "communication",
+    "productivity"
+  ],
   "icons": [
     {
       "src": "./favicon.png",

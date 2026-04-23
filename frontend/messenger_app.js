@@ -112,6 +112,19 @@ document.addEventListener('DOMContentLoaded', () => {
         new EmojiPickerEngine();
 
         addLog('Initializing Skufia Enterprise OS...', 'info');
+
+        // Load user profile FIRST so state.user.id is available for ensureKeys cloud sync
+        try {
+            const me = await apiRequest('/me');
+            if (me) {
+                state.user.id = me.id;
+                state.user.username = me.username;
+                state.user.display_name = me.display_name || me.username;
+            }
+        } catch (e) {
+            console.warn('Profile pre-load failed:', e);
+        }
+
         try {
             await window.ensureKeys();
         } catch (e) {
@@ -123,12 +136,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addLog('System Online. Welcome, Operator.', 'success');
         
         // --- Initialization ---
-        if (new URLSearchParams(window.location.search).get('app') !== 'skufenger') {
-            switchView('home');
-        } else {
-            switchView('messages');
-        }
-        loadDashboard();
+        switchView('messages');
+        if (typeof loadDashboard === 'function') loadDashboard();
         connectWebSocket(); // Establish real-time link
 
         // Phase 5: PWA Service Worker Registration
@@ -400,7 +409,27 @@ const handleInput = document.getElementById('settings-handle');
             }
         });
     }
+    // --- ALWAYS SKUFENGER MODE ---
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const viewMessages = document.getElementById('view-messages');
+    if (viewMessages) viewMessages.classList.add('active');
 
+    // --- SKUFENGER AUTH BRANDING ---
+    const authTitle = document.getElementById('auth-title');
+    const loginBtn = document.querySelector('#login-form button[type="submit"]');
+    const regBtn = document.querySelector('#register-form button[type="submit"]');
+
+    if (authTitle) authTitle.textContent = 'ВХОД В SKUFENGER';
+    if (loginBtn) loginBtn.textContent = 'ВОЙТИ В МЕССЕНДЖЕР';
+    if (regBtn) regBtn.textContent = 'СОЗДАТЬ АККАУНТ';
+
+    // Force the chat view right away
+    if (typeof window.switchView === 'function') {
+        window.switchView('messages');
+    }
+
+    // Set document title
+    document.title = 'SKUFenger';
 
     // --- GLOBAL EXPOSURE ---
     window.loadForum = loadForum;

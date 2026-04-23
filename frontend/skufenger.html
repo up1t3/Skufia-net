@@ -47,13 +47,13 @@
         <h2>SKUFenger Messenger</h2>
         <p style="color: #8a94a2;">Добавьте эту страницу на домашний экран (Share -> Add to Home Screen), чтобы установить мессенджер как отдельное приложение.</p>
         <br>
-        <a href="index.html?app=messenger" class="cyber-btn">ОТКРЫТЬ В БРАУЗЕРЕ</a>
+        <a href="messenger.html" class="cyber-btn">ОТКРЫТЬ В БРАУЗЕРЕ</a>
     </div>
     <script>
         // Check if running in standalone mode (already installed PWA)
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
         if (isStandalone) {
-            window.location.replace("index.html?app=messenger");
+            window.location.replace("messenger.html");
         }
     </script>
 </body>

@@ -41,7 +41,7 @@ window.initChatCore = function() {
                 if (msg.iv && msg.iv.length > 0) {
                     if (state.chat.sessionKeys[msg.room_id]) {
                         try {
-                            msg.content = await CryptoManager.decryptMessage(
+                            msg.content = await window.CryptoManager.decryptMessage(
                                 state.chat.sessionKeys[msg.room_id],
                                 msg.content,
                                 msg.iv
@@ -74,7 +74,7 @@ window.initChatCore = function() {
                     if (txtEl) {
                         let decryptedContent = data.content;
                         if (data.iv && state.chat.sessionKeys[data.room_id]) {
-                            try { decryptedContent = await CryptoManager.decryptMessage(state.chat.sessionKeys[data.room_id], data.content, data.iv); } 
+                            try { decryptedContent = await window.CryptoManager.decryptMessage(state.chat.sessionKeys[data.room_id], data.content, data.iv); } 
                             catch(e) {}
                         }
                         txtEl.innerText = decryptedContent; 
@@ -389,7 +389,7 @@ window.initChatCore = function() {
                     if (m.iv && m.iv.length > 0) {
                         if (state.chat.sessionKeys[roomId]) {
                             try {
-                                m.text = await CryptoManager.decryptMessage(
+                                m.text = await window.CryptoManager.decryptMessage(
                                     state.chat.sessionKeys[roomId],
                                     m.text,
                                     m.iv
@@ -550,9 +550,14 @@ window.initChatCore = function() {
     async function sendChatMsg() {
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
         if (!input || !input.value.trim() || !state.chat.currentRoomId) return;
+
+        // Prevent double sending
+        if (input.disabled) return;
+        input.disabled = true;
+        const originalPlaceholder = input.placeholder;
+        input.placeholder = 'Отправка...';
         
         let content = input.value.trim();
-        localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
 
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
@@ -564,34 +569,31 @@ window.initChatCore = function() {
             reply_to_id: state.chat.replyToId
         };
 
-        // --- E2EE: ENCRYPTION ---
-        let isEncrypted = false;
-        if (state.chat.currentRoomType === 'private' && typeof getOrEstablishSessionKey === 'function') {
-            const sessionKey = await getOrEstablishSessionKey(roomId, receiverId);
-            if (sessionKey) {
-                try {
-                    const encrypted = await CryptoManager.encryptMessage(sessionKey, content);
+        try {
+            // --- E2EE: ENCRYPTION ---
+            let isEncrypted = false;
+            if (state.chat.currentRoomType === 'private' && typeof getOrEstablishSessionKey === 'function') {
+                const sessionKey = await getOrEstablishSessionKey(roomId, receiverId);
+                if (sessionKey) {
+                    const encrypted = await window.CryptoManager.encryptMessage(sessionKey, content);
                     payload.content = encrypted.content;
                     payload.encryption_iv = encrypted.iv;
                     isEncrypted = true;
-                } catch (e) {
-                    console.error('Failed to encrypt message:', e);
-                    addLog('⚠️ Ошибка шифрования, сообщение не отправлено', 'error');
-                    return; // Prevent fallback to plaintext if encryption fails!
                 }
             }
-        }
 
-        // Clear input IMMEDIATELY to prevent double-sends
-        const savedContent = content;
-        const savedFile = state.pendingFile ? { ...state.pendingFile } : null;
-        const savedReplyId = state.chat.replyToId;
-        input.value = '';
-        // @ts-ignore
-        if (window.cancelReply) window.cancelReply();
-        clearChatFile();
+            // At this point encryption succeeded or we fell back intentionally.
+            // Clear input AFTER successful encryption, BEFORE network
+            const savedContent = content;
+            const savedFile = state.pendingFile ? { ...state.pendingFile } : null;
+            const savedReplyId = state.chat.replyToId;
+            
+            input.value = '';
+            localStorage.removeItem(`skuf_draft_${roomId}`);
+            // @ts-ignore
+            if (window.cancelReply) window.cancelReply();
+            clearChatFile();
 
-        try {
             let response;
             if (state.chat.editingId) {
                 response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
@@ -603,8 +605,8 @@ window.initChatCore = function() {
             if (!state.chat.editingId) {
                 const optimisticMsg = {
                     id: response?.id || Date.now(),
-                    sender: state.user.username || state.user.display_name || '\u042f',
-                    sender_id: state.user.id,
+                    sender: state.user?.username || state.user?.display_name || '\u042f',
+                    sender_id: state.user?.id,
                     text: savedContent,
                     content: savedContent,
                     iv: isEncrypted ? payload.encryption_iv : null,
@@ -618,11 +620,18 @@ window.initChatCore = function() {
                 renderChatMessage(optimisticMsg);
             }
             state.chat.editingId = null;
+            const editBanner = document.getElementById('edit-banner');
+            if (editBanner) editBanner.style.display = 'none';
             playSound('click');
         } catch (e) {
+            console.error('sendChatMsg error:', e);
+            addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
             // Restore input on failure so user can retry
-            input.value = savedContent;
-            addLog('\u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438: ' + (e.message || e), 'error');
+            input.value = content;
+        } finally {
+            input.disabled = false;
+            input.placeholder = originalPlaceholder;
+            input.focus();
         }
     }
 
