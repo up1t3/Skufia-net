@@ -188,89 +188,42 @@
 
     // --- MODULE: WIKI ---
     async function loadWiki() {
-        const container = document.querySelector('.wiki-content');
-        if (!container) return;
+        const sidebarList = document.getElementById('wiki-sidebar-list');
+        const contentContainer = document.getElementById('wiki-article-view');
+        if (!sidebarList || !contentContainer) return;
+
         try {
             const articles = await apiRequest('/wiki');
-            container.innerHTML = '';
+            sidebarList.innerHTML = '';
             if (articles.length === 0) {
-                container.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: Поиск данных не дал результатов.</div>';
+                sidebarList.innerHTML = '<div class="system-msg" style="padding: 10px;">LIBRARY_EMPTY</div>';
                 return;
             }
-            container.style.display = 'flex';
-            container.style.flexDirection = 'column';
-            container.style.gap = '15px';
             
             articles.forEach(art => {
-                const div = document.createElement('div');
-                div.className = 'wiki-card glass-panel';
-                div.style.padding = '20px';
-                div.style.borderRadius = '12px';
-                div.style.borderLeft = '4px solid #f0b429';
-                div.style.display = 'flex';
-                div.style.flexDirection = 'column';
-                div.style.gap = '10px';
-                div.style.transition = 'transform 0.2s, box-shadow 0.2s';
-                
-                div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 5px 15px rgba(240, 180, 41, 0.15)'; };
-                div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
-
-                const headerRow = document.createElement('div');
-                headerRow.style.display = 'flex';
-                headerRow.style.justifyContent = 'space-between';
-                headerRow.style.alignItems = 'flex-start';
-
-                const h3 = document.createElement('h3');
-                h3.textContent = art.title;
-                h3.style.margin = '0';
-                h3.style.color = 'var(--text-main)';
-                h3.style.fontSize = '1.2em';
-
-                const metaDiv = document.createElement('div');
-                metaDiv.style.display = 'flex';
-                metaDiv.style.alignItems = 'center';
-                metaDiv.style.gap = '8px';
-
-                const likesSpan = document.createElement('span');
-                likesSpan.id = `wiki-likes-${art.id}`;
-                likesSpan.style.color = 'var(--accent-green)';
-                likesSpan.style.fontWeight = 'bold';
-                likesSpan.textContent = art.likes || 0;
-
-                const likeBtn = document.createElement('button');
-                likeBtn.className = 'cyber-btn-small';
-                likeBtn.innerHTML = '👍 +1';
-                likeBtn.onclick = (e) => { e.stopPropagation(); likeWiki(art.id); };
-
-                metaDiv.appendChild(likesSpan);
-                metaDiv.appendChild(likeBtn);
-
-                headerRow.appendChild(h3);
-                headerRow.appendChild(metaDiv);
-
-                const p = document.createElement('p');
-                p.className = 'wiki-excerpt';
-                p.style.margin = '0';
-                p.style.color = 'var(--text-dim)';
-                p.style.lineHeight = '1.5';
-                p.textContent = art.content ? art.content.substring(0, 150) + '...' : 'Контент засекречен';
-
-                const openBtn = document.createElement('button');
-                openBtn.className = 'cyber-btn-small';
-                openBtn.style.alignSelf = 'flex-start';
-                openBtn.style.marginTop = '5px';
-                openBtn.style.border = '1px solid #f0b429';
-                openBtn.style.color = '#f0b429';
-                openBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: middle; margin-right: 5px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>ЧИТАТЬ ДОКУМЕНТ';
-                openBtn.onclick = () => loadWikiArticle(art.id);
-
-                div.appendChild(headerRow);
-                div.appendChild(p);
-                div.appendChild(openBtn);
-                container.appendChild(div);
+                const navItem = document.createElement('div');
+                navItem.className = 'wiki-nav-item';
+                navItem.dataset.id = art.id;
+                navItem.textContent = art.title;
+                navItem.onclick = () => {
+                    document.querySelectorAll('.wiki-nav-item').forEach(el => el.classList.remove('active'));
+                    navItem.classList.add('active');
+                    loadWikiArticle(art.id);
+                };
+                sidebarList.appendChild(navItem);
             });
+
+            // Auto-load first article
+            if (articles.length > 0) {
+                const firstItem = sidebarList.querySelector('.wiki-nav-item');
+                if (firstItem) {
+                    firstItem.classList.add('active');
+                    loadWikiArticle(articles[0].id);
+                }
+            }
+
         } catch (e) {
-            container.innerHTML = '<div class="system-msg">ERROR: Wiki access failed.</div>';
+            sidebarList.innerHTML = '<div class="system-msg" style="padding: 10px;">ERROR: Wiki access failed.</div>';
         }
     }
 
@@ -596,37 +549,37 @@
     }
 
     window.loadWikiArticle = async function(artId) {
+        const container = document.getElementById('wiki-article-view');
+        if (!container) return;
+
+        container.innerHTML = '<div class="system-msg" style="animation: pulse 1.5s infinite;">Дешифровка документа...</div>';
         try {
             const art = await apiRequest(`/wiki/${artId}`);
-            let modal = document.getElementById('wiki-modal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'wiki-modal';
-                modal.className = 'modal-overlay';
-                modal.style.zIndex = '9999';
-                modal.innerHTML = `
-                    <div class="modal-content glass-panel" style="max-width: 800px; width: 90%; background: var(--bg-panel); border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
-                        <div class="modal-header" style="border-bottom: 1px solid var(--border-metal); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                            <h2 id="wiki-modal-title" style="margin: 0; color: var(--accent-cyan); font-family: 'Orbitron', sans-serif;">TITLE</h2>
-                            <button class="icon-btn" onclick="document.getElementById('wiki-modal').style.display='none'" style="color: var(--text-dim);">✕</button>
-                        </div>
-                        <div id="wiki-modal-body" class="premium-scroll" style="max-height: 65vh; overflow-y: auto; text-align: left; padding-right: 15px; font-size: 1.05em; line-height: 1.7; white-space: pre-wrap; color: var(--text-main);">
-                            CONTENT
-                        </div>
-                        <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
-                            <button class="cyber-btn" onclick="document.getElementById('wiki-modal').style.display='none'">ЗАКРЫТЬ БАЗУ</button>
-                        </div>
+            container.innerHTML = `
+                <h1 class="wiki-title">📜 ${art.title}</h1>
+                <div class="wiki-meta">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>Одобрено:</span>
+                        <span id="wiki-likes-${art.id}" style="color: var(--accent-green); font-weight: bold;">${art.likes || 0}</span>
                     </div>
-                `;
-                document.body.appendChild(modal);
-                
-                // Add fade-in animation
-                modal.style.animation = 'fadeIn 0.3s ease';
-            }
-            document.getElementById('wiki-modal-title').textContent = "📜 " + art.title.toUpperCase();
-            document.getElementById('wiki-modal-body').textContent = art.content;
-            modal.style.display = 'flex';
-        } catch (e) { addLog('Article data corrupted', 'error'); }
+                    <button class="cyber-btn-small" onclick="likeWiki(${art.id})">👍 Одобрить</button>
+                </div>
+                <div class="wiki-body">${art.content}</div>
+            `;
+
+            // Highlight active in sidebar just in case it was opened directly
+            document.querySelectorAll('.wiki-nav-item').forEach(el => {
+                if (el.dataset.id == artId) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+
+        } catch (e) {
+            container.innerHTML = '<div class="system-msg">ERROR: Article data corrupted or classified.</div>';
+            addLog('Article data corrupted', 'error');
+        }
     }
     
     // @ts-ignore
