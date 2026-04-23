@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         addLog('Initializing Skufia Enterprise OS...', 'info');
         try {
-            await ensureKeys();
+            await window.ensureKeys();
         } catch (e) {
             console.error('E2EE key init failed (non-fatal):', e);
             addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');

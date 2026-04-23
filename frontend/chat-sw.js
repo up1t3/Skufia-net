@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v44'; // Fix black screen: ensureKeys guard + openSkufenger removal
+const CACHE_NAME = 'skufia-chat-v45'; // Fix ensureKeys scope: window.ensureKeys()
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
