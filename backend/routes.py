@@ -62,6 +62,7 @@ class MessageCreate(BaseModel):
     room_id: Optional[int] = None
     content: str
     encryption_iv: Optional[str] = "" # Default to empty string for E2EE
+    key_version: Optional[int] = None
     file_url: Optional[str] = None
     reply_to_id: Optional[int] = None
 
@@ -392,6 +393,8 @@ class RoomKeyBundleSchema(BaseModel):
 class RoomKeyBundleSingle(BaseModel):
     wrapped_key: str
 
+from sqlalchemy import func
+
 @router.post('/chat/rooms/{room_id}/key')
 def store_room_keys(
     room_id: int,
@@ -412,23 +415,18 @@ def store_room_keys(
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this room")
 
+    current_max_version = db.query(func.max(RoomKeyBundle.key_version)).filter(RoomKeyBundle.room_id == room_id).scalar()
+    next_version = (current_max_version or 0) + 1
+
     for uid_str, wrapped_key in payload.keys.items():
         try:
             uid = int(uid_str)
         except ValueError:
             continue
-        # Upsert: update if exists, insert if not
-        existing = db.query(RoomKeyBundle).filter(
-            RoomKeyBundle.room_id == room_id,
-            RoomKeyBundle.user_id == uid
-        ).first()
-        if existing:
-            existing.wrapped_key = wrapped_key
-        else:
-            db.add(RoomKeyBundle(room_id=room_id, user_id=uid, wrapped_key=wrapped_key))
+        db.add(RoomKeyBundle(room_id=room_id, user_id=uid, wrapped_key=wrapped_key, key_version=next_version))
 
     db.commit()
-    return {"status": "Keys stored", "count": len(payload.keys)}
+    return {"status": "Keys stored", "count": len(payload.keys), "key_version": next_version}
 
 @router.get('/chat/rooms/{room_id}/key')
 def get_room_key(
@@ -451,11 +449,32 @@ def get_room_key(
     bundle = db.query(RoomKeyBundle).filter(
         RoomKeyBundle.room_id == room_id,
         RoomKeyBundle.user_id == current_user.id
-    ).first()
+    ).order_by(RoomKeyBundle.key_version.desc()).first()
+
     if not bundle:
         raise HTTPException(status_code=404, detail="No key bundle found for this room")
 
-    return {"wrapped_key": bundle.wrapped_key}
+    return {"wrapped_key": bundle.wrapped_key, "key_version": bundle.key_version}
+
+@router.get('/chat/rooms/{room_id}/key/history')
+def get_room_key_history(
+    room_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    membership = db.query(ChatRoomMember).filter(
+        ChatRoomMember.room_id == room_id,
+        ChatRoomMember.user_id == current_user.id
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+
+    bundles = db.query(RoomKeyBundle).filter(
+        RoomKeyBundle.room_id == room_id,
+        RoomKeyBundle.user_id == current_user.id
+    ).order_by(RoomKeyBundle.key_version.desc()).all()
+
+    return {"keys": [{"key_version": b.key_version, "wrapped_key": b.wrapped_key} for b in bundles]}
 
 # --- SECURE CHANNEL (Private Messaging) ---
 
@@ -1367,6 +1386,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         room_id=room_id, 
         content=msg.content,
         encryption_iv=msg.encryption_iv,
+        key_version=msg.key_version if msg.key_version is not None else 1,
         file_url=msg.file_url,
         reply_to_id=msg.reply_to_id
     )
@@ -1382,6 +1402,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "sender_id": current_user.id,
         "content": msg.content,
         "iv": msg.encryption_iv,
+        "key_version": db_msg.key_version,
         "file_url": msg.file_url,
         "reply_to_id": msg.reply_to_id,
         "is_edited": False,

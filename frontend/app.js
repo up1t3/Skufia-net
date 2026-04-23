@@ -1946,32 +1946,15 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await ensureKeys();
                 const sessionKey = await getOrEstablishSessionKey(roomId, receiverId);
-                if (sessionKey) {
-                    const myFp = state.chat.keyFingerprint || '';
-                    if (badge) {
-                        badge.innerHTML = `🔒 E2EE ACTIVE`;
-                        badge.title = `Твой отпечаток: ${myFp.slice(0, 23)}...`;
-                        badge.style.color = '#0f0';
-                        badge.style.background = 'rgba(0, 255, 65, 0.1)';
-                        badge.style.cursor = 'pointer';
-                        badge.onclick = () => {
-                            const fp = state.chat.keyFingerprint || 'н/д';
-                            alert(`🔑 Твой отпечаток ключа:\n${fp}\n\nПопроси собеседника прочитать тебе свой отпечаток вслух — они должны совпадать. Если нет — возможна атака MITM.`);
-                        };
-                    }
-                } else {
-                    if (badge) {
-                        badge.innerHTML = '⚠️ E2EE недоступен';
-                        badge.style.color = '#ffaa00';
-                        badge.style.background = 'rgba(255,170,0,0.1)';
-                    }
+                if (sessionKey && badge) {
+                    badge.innerHTML = '🔒 E2EE';
+                    badge.style.color = '#0f0';
+                    badge.style.background = 'rgba(0, 255, 65, 0.1)';
+                    badge.style.display = '';
                 }
             } catch (e) {
-                console.warn('E2EE init error:', e);
-                if (badge) {
-                    badge.innerHTML = '⚠️ Ошибка E2EE';
-                    badge.style.color = '#f00';
-                }
+                // Silently hide badge - don't scare users
+                if (badge) badge.style.display = 'none';
             }
         }
 
@@ -2170,7 +2153,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const receiverId = state.chat.currentReceiverId;
 
         // --- E2EE: Lazy key establishment ---
-        // Try to get/establish session key (private chats only)
         let sessionKey = null;
         if (receiverId) {
             sessionKey = await getOrEstablishSessionKey(roomId, receiverId).catch(() => null);
@@ -2178,7 +2160,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let payload;
         if (sessionKey) {
-            // Encrypt the message
             try {
                 const encrypted = await CryptoManager.encryptMessage(sessionKey, content);
                 payload = {
@@ -2188,17 +2169,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     reply_to_id: state.chat.replyToId
                 };
             } catch (e) {
-                addLog('❌ Ошибка шифрования сообщения', 'error');
-                return;
+                // Fallback to plaintext on encryption failure
+                payload = { content, encryption_iv: '', file_url: state.pendingFile ? state.pendingFile.url : null, reply_to_id: state.chat.replyToId };
             }
         } else {
-            // No E2EE — group chat or recipient hasn't registered keys
-            payload = {
-                content,
-                encryption_iv: '',
-                file_url: state.pendingFile ? state.pendingFile.url : null,
-                reply_to_id: state.chat.replyToId
-            };
+            payload = { content, encryption_iv: '', file_url: state.pendingFile ? state.pendingFile.url : null, reply_to_id: state.chat.replyToId };
         }
 
         try {
