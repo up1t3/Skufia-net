@@ -39,20 +39,20 @@ window.initChatCore = function() {
                 
                 // --- E2EE DECRYPTION (graceful) ---
                 if (msg.iv && msg.iv.length > 0) {
-                    if (state.chat.sessionKeys[msg.room_id]) {
-                        try {
-                            msg.content = await window.CryptoManager.decryptMessage(
-                                state.chat.sessionKeys[msg.room_id],
-                                msg.content,
-                                msg.iv
-                            );
-                            msg.is_secure = true;
-                        } catch (e) {
-                            // Key mismatch — show as encrypted, don't crash
-                            msg.content = '🔒 Зашифрованное сообщение';
+                    let decrypted = false;
+                    const keys = state.chat.sessionKeys[msg.room_id];
+                    if (keys) {
+                        const keysArr = Array.isArray(keys) ? keys : [keys];
+                        for (let i = keysArr.length - 1; i >= 0; i--) {
+                            try {
+                                msg.content = await window.CryptoManager.decryptMessage(keysArr[i], msg.content, msg.iv);
+                                msg.is_secure = true;
+                                decrypted = true;
+                                break;
+                            } catch (e) {}
                         }
-                    } else {
-                        // No session key at all — show as encrypted
+                    }
+                    if (!decrypted) {
                         msg.content = '🔒 Зашифрованное сообщение';
                     }
                 }
@@ -74,8 +74,13 @@ window.initChatCore = function() {
                     if (txtEl) {
                         let decryptedContent = data.content;
                         if (data.iv && state.chat.sessionKeys[data.room_id]) {
-                            try { decryptedContent = await window.CryptoManager.decryptMessage(state.chat.sessionKeys[data.room_id], data.content, data.iv); } 
-                            catch(e) {}
+                            const keysArr = Array.isArray(state.chat.sessionKeys[data.room_id]) ? state.chat.sessionKeys[data.room_id] : [state.chat.sessionKeys[data.room_id]];
+                            for (let i = keysArr.length - 1; i >= 0; i--) {
+                                try {
+                                    decryptedContent = await window.CryptoManager.decryptMessage(keysArr[i], data.content, data.iv);
+                                    break;
+                                } catch(e) {}
+                            }
                         }
                         txtEl.innerText = decryptedContent; 
                     }
@@ -111,6 +116,10 @@ window.initChatCore = function() {
                 }
             } else if (data.type === 'status_update') {
                 loadChatRooms();
+            } else if (data.type === 'room_key_rotated') {
+                if (window.refreshSessionKey) {
+                    window.refreshSessionKey(data.room_id);
+                }
             }
         };
 
@@ -387,19 +396,20 @@ window.initChatCore = function() {
                 for (const m of messages) {
                     // Try decrypting history if we have the key
                     if (m.iv && m.iv.length > 0) {
-                        if (state.chat.sessionKeys[roomId]) {
-                            try {
-                                m.text = await window.CryptoManager.decryptMessage(
-                                    state.chat.sessionKeys[roomId],
-                                    m.text,
-                                    m.iv
-                                );
-                                m.is_secure = true;
-                            } catch(e) {
-                                m.text = '🔒 Зашифрованное сообщение';
+                        let decrypted = false;
+                        const keys = state.chat.sessionKeys[roomId];
+                        if (keys) {
+                            const keysArr = Array.isArray(keys) ? keys : [keys];
+                            for (let i = keysArr.length - 1; i >= 0; i--) {
+                                try {
+                                    m.text = await window.CryptoManager.decryptMessage(keysArr[i], m.text, m.iv);
+                                    m.is_secure = true;
+                                    decrypted = true;
+                                    break;
+                                } catch(e) {}
                             }
-                        } else {
-                            // No key — show friendly placeholder
+                        }
+                        if (!decrypted) {
                             m.text = '🔒 Зашифрованное сообщение';
                         }
                     }

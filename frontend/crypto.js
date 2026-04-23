@@ -438,23 +438,58 @@
         addLog('✅ Личность создана и сохранена в облаке', 'success');
     }
 
-    async function getOrEstablishSessionKey(roomId, receiverId) {
-        if (state.chat.sessionKeys[roomId]) return state.chat.sessionKeys[roomId];
+    async function getAllSessionKeys(roomId) {
+        if (state.chat.sessionKeys[roomId] && Array.isArray(state.chat.sessionKeys[roomId])) {
+            return state.chat.sessionKeys[roomId];
+        }
         try {
-            const cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
+            let cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
             if (cached) {
+                if (!Array.isArray(cached)) {
+                    cached = [cached];
+                    await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, cached).catch(()=>{});
+                }
                 state.chat.sessionKeys[roomId] = cached;
                 return cached;
             }
         } catch(e) {
             console.warn('IDB session read error:', e);
         }
+        return [];
+    }
+    window.getAllSessionKeys = getAllSessionKeys;
+
+    window.refreshSessionKey = async function(roomId) {
+        try {
+            await ensureKeys();
+            const keyBundle = await apiRequest(`/chat/rooms/${roomId}/key`);
+            if (keyBundle && keyBundle.wrapped_key) {
+                const sessionKey = await CryptoManager.unwrapKey(
+                    state.chat.keys.privateKey,
+                    keyBundle.wrapped_key
+                );
+                let keys = await getAllSessionKeys(roomId);
+                keys.push(sessionKey);
+                state.chat.sessionKeys[roomId] = keys;
+                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, keys).catch(() => {});
+                console.log(`Session key rotated and saved for room ${roomId}`);
+                return sessionKey;
+            }
+        } catch(e) {
+            console.error('refreshSessionKey failed:', e);
+        }
+        return null;
+    };
+
+    async function getOrEstablishSessionKey(roomId, receiverId) {
+        let keys = await getAllSessionKeys(roomId);
+        if (keys.length > 0) return keys[keys.length - 1];
 
         try {
             await ensureKeys();
             if (!state.chat.keys.privateKey) return null;
         } catch (e) {
-            console.error('ensureKeys failed in getOrEstablishSessionKey:', e);
+            console.error('ensureKeys failed:', e);
             return null;
         }
 
@@ -465,8 +500,8 @@
                     state.chat.keys.privateKey,
                     keyBundle.wrapped_key
                 );
-                state.chat.sessionKeys[roomId] = sessionKey;
-                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
+                state.chat.sessionKeys[roomId] = [sessionKey];
+                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, [sessionKey]).catch(() => {});
                 return sessionKey;
             }
         } catch (e) {
@@ -480,7 +515,7 @@
 
         try {
             const sessionKey = await CryptoManager.generateSessionKey();
-            state.chat.sessionKeys[roomId] = sessionKey;
+            state.chat.sessionKeys[roomId] = [sessionKey];
 
             const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
             const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
@@ -493,7 +528,6 @@
 
             let myUserId = state.user?.id;
             if (!myUserId) {
-                console.warn('state.user.id is undefined during key generation, fetching /me...');
                 const me = await apiRequest('/me');
                 myUserId = me.id;
                 if (!myUserId) throw new Error("Could not determine user ID");
@@ -506,11 +540,10 @@
             
             await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
 
-            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
+            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, [sessionKey]).catch(() => {});
             return sessionKey;
         } catch (e) {
             console.error('Failed to establish new session key:', e);
-            // Re-throw so caller knows encryption setup failed and doesn't send in plaintext by accident if it shouldn't
             throw e;
         }
     }

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File as FastAPIFile, Header
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File as FastAPIFile, Header, BackgroundTasks
 import uuid
 import os
 import secrets
@@ -27,6 +27,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 
+from ws_manager import manager
 router = APIRouter()
 
 def get_display_name(user: User):
@@ -200,6 +201,7 @@ class RoomKeyBundleSingle(BaseModel):
 def store_room_keys(
     room_id: int,
     payload: RoomKeyBundleSchema,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -232,6 +234,16 @@ def store_room_keys(
             db.add(RoomKeyBundle(room_id=room_id, user_id=uid, wrapped_key=wrapped_key))
 
     db.commit()
+    
+    # Broadcast room key rotation to all members
+    members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
+    user_ids = [m.user_id for m in members]
+    background_tasks.add_task(
+        manager.broadcast_msg,
+        {"type": "room_key_rotated", "room_id": room_id},
+        user_ids
+    )
+
     return {"status": "Keys stored", "count": len(payload.keys)}
 
 @router.get('/chat/rooms/{room_id}/key')

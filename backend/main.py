@@ -120,7 +120,7 @@ os.makedirs("uploads", exist_ok=True)
 os.makedirs(os.path.join("uploads", "voice"), exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-broadcast = Broadcast(os.environ.get("REDIS_URL", "redis://localhost:6379"))
+from ws_manager import broadcast, manager
 
 # --- CORS Configuration ---
 setup_metrics(app)
@@ -156,46 +156,7 @@ app.include_router(market_router, prefix="/api", tags=["market"])
 app.include_router(events_router, prefix="/api", tags=["events"])
 
 # --- WebSocket Manager ---
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: Dict[int, WebSocket] = {}
-
-    async def connect(self, user_id: int, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections[user_id] = websocket
-        ACTIVE_WEBSOCKETS.inc()
-        # Update online status
-        db = SessionLocal()
-        profile = db.query(Profile).filter(Profile.user_id == user_id).first()
-        if profile:
-            profile.is_online = True
-            db.commit()
-        db.close()
-
-    async def disconnect(self, user_id: int):
-        if user_id in self.active_connections:
-            del self.active_connections[user_id]
-            ACTIVE_WEBSOCKETS.dec()
-        # Update offline status
-        db = SessionLocal()
-        profile = db.query(Profile).filter(Profile.user_id == user_id).first()
-        if profile:
-            profile.is_online = False
-            db.commit()
-        db.close()
-
-    async def send_personal_message(self, message: dict, user_id: int):
-        await broadcast.publish(channel=f"channel:{user_id}", message=json.dumps(message))
-
-    async def broadcast(self, message: dict, user_ids: List[int] = None):
-        msg_str = json.dumps(message)
-        if user_ids:
-            for uid in user_ids:
-                await broadcast.publish(channel=f"channel:{uid}", message=msg_str)
-        else:
-            await broadcast.publish(channel="channel:global", message=msg_str)
-
-manager = ConnectionManager()
+# Manager imported from ws_manager.py
 
 @app.websocket("/ws/chat/{token}")
 async def websocket_endpoint(websocket: WebSocket, token: str):
@@ -269,7 +230,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 "room_id": room_id,
                                 "is_typing": data.get('status', True)
                             }
-                            await manager.broadcast(relay_msg, user_ids=uids)
+                            await manager.broadcast_msg(relay_msg, user_ids=uids)
                     elif msg_type == 'read_ack':
                         message_id = data.get('message_id')
                         room_id = data.get('room_id')
