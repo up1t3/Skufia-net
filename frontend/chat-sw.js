@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v43'; // Premium Fullscreen Glassmorphism UI
+const CACHE_NAME = 'skufia-chat-v44'; // Fix black screen: ensureKeys guard + openSkufenger removal
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
