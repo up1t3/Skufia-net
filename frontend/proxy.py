@@ -11,13 +11,13 @@ BACKEND_PORT = 8007
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        if self.path.startswith("/api"):
+        if self.path.startswith("/api/"):
             self.proxy_request("GET")
         else:
             super().do_GET()
 
     def do_POST(self):
-        if self.path.startswith("/api"):
+        if self.path.startswith("/api/"):
             self.proxy_request("POST")
         else:
             self.send_error(404)

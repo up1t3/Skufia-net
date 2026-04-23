@@ -1,9 +1,14 @@
-const CACHE_NAME = 'skufia-chat-v26'; // Bumped: chat fixes 2026-04-21
+const CACHE_NAME = 'skufia-chat-v35'; // Premium Fullscreen Glassmorphism UI
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
     '/style.css',
     '/app.js',
+    '/ui.js',
+    '/api.js',
+    '/crypto.js',
+    '/features.js',
+    '/chat_core.js',
     '/manifest.json'
 ];
 

@@ -30,6 +30,8 @@ from datetime import datetime, timedelta
 router = APIRouter()
 
 def get_display_name(user: User):
+    if not user:
+        return "Unknown Skuf"
     profile = user.profile[0] if isinstance(user.profile, list) and user.profile else (user.profile if not isinstance(user.profile, list) else None)
     return profile.nickname if profile and getattr(profile, 'nickname', None) else user.username
 
@@ -133,212 +135,7 @@ def update_karma(db: Session, user_id: int, amount: int = 10):
     return profile
 
 
-# --- AUTH ROUTES (Existing) ---
-# Note: Assuming registration/login are handled here or in a separate auth file
-# For brevity, I'll focus on the new Enterprise endpoints
 
-# --- WIKI MODULE ---
-@router.get('/wiki', response_model=List[dict])
-def get_wiki(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    articles = db.query(WikiArticle).all()
-    articles_data = []
-    for a in articles:
-        likes_count = db.query(WikiLike).filter(WikiLike.article_id == a.id).count()
-        articles_data.append({
-            "id": a.id, 
-            "title": a.title, 
-            "content": a.content or "",
-            "author": a.author_id, 
-            "likes": likes_count,
-            "is_verified": a.is_verified
-        })
-    return articles_data
-
-@router.get('/wiki/{article_id}', response_model=dict)
-def get_wiki_detail(article_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Fetches full article data from the Cyber-Industrial archives."""
-    article = db.query(WikiArticle).filter(WikiArticle.id == article_id).first()
-    if not article:
-        raise HTTPException(status_code=404, detail="Article lost in the digital void")
-    likes_count = db.query(WikiLike).filter(WikiLike.article_id == article.id).count()
-    return {
-        "id": article.id, 
-        "title": article.title, 
-        "content": article.content,
-        "author": article.author_id, 
-        "likes": likes_count,
-        "is_verified": article.is_verified
-    }
-
-@router.post('/wiki/{article_id}/like')
-def like_wiki(article_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    """Pins a seal of approval (LIKE) on a wiki article"""
-    existing_like = db.query(WikiLike).filter(WikiLike.article_id == article_id, WikiLike.user_id == current_user.id).first()
-    if existing_like:
-        db.delete(existing_like)
-        db.commit()
-        return {"status": "unliked"}
-    
-    db.add(WikiLike(article_id=article_id, user_id=current_user.id))
-    db.commit()
-    return {"status": "liked"}
-
-@router.post('/wiki')
-def create_article(article: WikiCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    db_article = WikiArticle(**article.model_dump(), author_id=current_user.id)
-    db.add(db_article)
-    update_karma(db, current_user.id, amount=20) # Wiki articles give more karma
-    return {"status": "Article archived in the Great Library"}
-
-# --- FORUM MODULE ---
-@router.get('/topics', response_model=List[dict])
-def list_topics(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Lists all active transmissions (topics) in the forum"""
-    topics = db.query(Topic).order_by(Topic.created_at.desc()).all()
-    return [{"id": t.id, "title": t.title, "author": get_display_name(t.author), "created_at": t.created_at} for t in topics]
-
-@router.post('/topics')
-def create_topic(topic: TopicCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    """Initializes a new forum thread"""
-    db_topic = Topic(title=topic.title, category_id=topic.category_id, author_id=current_user.id)
-    db.add(db_topic)
-    db.commit()
-    db.refresh(db_topic)
-    update_karma(db, current_user.id, amount=10)
-    return {"id": db_topic.id, "status": "Carrier signal established. Topic live."}
-
-@router.get('/topics/{topic_id}/posts')
-def get_posts(topic_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Retrieves all posts for a forum topic with like counts"""
-    posts = db.query(Post).filter(Post.topic_id == topic_id).all()
-    posts_data = []
-    for p in posts:
-        likes_count = db.query(PostLike).filter(PostLike.post_id == p.id).count()
-        posts_data.append({
-            "id": p.id,
-            "content": p.content,
-            "author": get_display_name(p.author),
-            "created_at": p.created_at,
-            "likes": likes_count
-        })
-    return posts_data
-
-@router.post('/topics/{topic_id}/reply')
-def reply_topic(topic_id: int, post: PostCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    """Appends a new transmission to an existing topic"""
-    db_post = Post(topic_id=topic_id, author_id=current_user.id, content=post.content)
-    db.add(db_post)
-    db.commit()
-    update_karma(db, current_user.id, amount=5)
-    return {"status": "Message transmitted to topic thread"}
-
-@router.post('/posts/{post_id}/like')
-def like_post(post_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    """Pins a seal of approval (LIKE) on a forum post"""
-    existing_like = db.query(PostLike).filter(PostLike.post_id == post_id, PostLike.user_id == current_user.id).first()
-    if existing_like:
-        db.delete(existing_like)
-        db.commit()
-        return {"status": "unliked"}
-    
-    db.add(PostLike(post_id=post_id, user_id=current_user.id))
-    db.commit()
-    return {"status": "liked"}
-
-# --- REGISTRY MODULE ---
-@router.get('/registry')
-def get_registry(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profiles = db.query(Profile).all()
-    return [{"id": p.user_id, "username": p.user.username, "display_name": get_display_name(p.user), "rank": p.rank, "karma": p.karma, "avatar_url": p.avatar_url} for p in profiles]
-
-
-@router.get('/profile')
-def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    return {
-        "user_id": current_user.id,
-        "username": current_user.username,
-        "nickname": profile.nickname,
-        "email": current_user.email,
-        "rank": profile.rank,
-        "karma": profile.karma,
-        "bio": profile.bio,
-        "avatar_url": profile.avatar_url,
-        "is_online": profile.is_online
-    }
-
-@router.get('/me')
-def get_my_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    return {
-        "id": current_user.id,
-        "username": current_user.username,
-        "handle": current_user.handle if current_user.handle else "",
-        "is_superadmin": current_user.is_superadmin,
-        "nickname": profile.nickname if profile else "",
-        "display_name": profile.nickname if (profile and profile.nickname) else current_user.username,
-        "email": current_user.email,
-        "rank": profile.rank if profile else "Новичок",
-        "karma": profile.karma if profile else 0,
-        "bio": profile.bio if profile else "",
-        "avatar_url": profile.avatar_url if profile else ""
-    }
-
-@router.post('/me/update')
-def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    # 1. Update User table (Username/Callsign)
-    user_db = db.query(User).filter(User.id == current_user.id).first()
-    if data.username and data.username != user_db.username:
-        # Check if username exists
-        existing = db.query(User).filter(User.username == data.username).first()
-        if existing:
-            raise HTTPException(status_code=400, detail="Callsign already taken by another operative")
-        user_db.username = data.username
-
-    if data.handle is not None:
-        user_db.handle = data.handle
-
-    # 2. Update Profile table
-    profile = db.query(Profile).filter(Profile.user_id == user_db.id).first()
-    if not profile:
-        profile = Profile(user_id=user_db.id)
-        db.add(profile)
-    
-    if data.nickname is not None: profile.nickname = data.nickname
-    if data.bio is not None: profile.bio = data.bio
-    if data.avatar_url is not None: profile.avatar_url = data.avatar_url
-    
-    db.commit()
-    return {
-        "id": user_db.id,
-        "username": user_db.username,
-        "handle": user_db.handle if user_db.handle else "",
-        "is_superadmin": user_db.is_superadmin,
-        "nickname": profile.nickname,
-        "display_name": profile.nickname if profile.nickname else user_db.username,
-        "email": user_db.email,
-        "rank": profile.rank,
-        "karma": profile.karma,
-        "bio": profile.bio,
-        "avatar_url": profile.avatar_url
-    }
-
-class AvatarUpdate(BaseModel):
-    avatar_url: str
-
-@router.post('/me/avatar')
-def update_avatar(data: AvatarUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if profile and data.avatar_url:
-        profile.avatar_url = data.avatar_url
-        
-    db.commit()
-    return {"status": "Avatar updated successfully"}
-
-# [FIX-07] Removed duplicate /me/key route (kept the full implementation below at line 347)
 
 # --- CHAT MODULE ---
 # --- TELEGRAM INTEGRATION ---
@@ -429,28 +226,6 @@ def store_room_keys(
 
     db.commit()
     return {"status": "Keys stored", "count": len(payload.keys)}
-
-@router.post('/chat/rooms/{room_id}/key/reset')
-def reset_room_keys(
-    room_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Deletes all RoomKeyBundle records for the given room_id.
-    Requires authentication and that the user is a member of the room.
-    """
-    membership = db.query(ChatRoomMember).filter(
-        ChatRoomMember.room_id == room_id,
-        ChatRoomMember.user_id == current_user.id
-    ).first()
-    if not membership:
-        raise HTTPException(status_code=403, detail="Not a member of this room")
-
-    db.query(RoomKeyBundle).filter(RoomKeyBundle.room_id == room_id).delete()
-    db.commit()
-
-    return {"status": "Keys reset", "room_id": room_id}
 
 @router.get('/chat/rooms/{room_id}/key')
 def get_room_key(
@@ -1212,7 +987,7 @@ def get_room_history(
                 "is_edited": m.is_edited,
                 "is_read": m.is_read,
                 "reactions": m.reactions or {},
-                "timestamp": m.created_at.strftime('%H:%M') if m.created_at else '00:00'
+                "timestamp": m.created_at.isoformat() + "Z" if m.created_at else ''
             } for m in messages
         ],
         "has_more": has_more,
@@ -1407,7 +1182,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "file_url": msg.file_url,
         "reply_to_id": msg.reply_to_id,
         "is_edited": False,
-        "timestamp": datetime.utcnow().strftime('%H:%M'),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
         "room_id": room_id
     }
     
@@ -1447,13 +1222,13 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
             "file_url": None,
             "reply_to_id": db_msg.id,
             "is_edited": False,
-            "timestamp": datetime.utcnow().strftime('%H:%M'),
+            "timestamp": datetime.utcnow().isoformat() + "Z",
             "room_id": room_id
         }
         if room_id:
             await manager.broadcast(bot_payload, user_ids=uids)
     
-    return {"status": "Message transmitted and broadcasted"}
+    return {"status": "Message transmitted and broadcasted", "id": db_msg.id}
 
 @router.put('/chat/messages/{message_id}')
 async def edit_message(message_id: int, req: dict, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
@@ -1538,237 +1313,6 @@ def get_room_members(room_id: int, current_user: User = Depends(get_current_user
         "members": [{"user_id": u.id, "display_name": get_display_name(u), "role": m.role} for m, u in members_db]
     }
 
-# --- GLOBAL NOTIFICATIONS MODULE ---
-
-
-@router.get('/notifications')
-def get_notifications(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    notifs = db.query(GlobalNotification).filter(GlobalNotification.is_active == True).order_by(GlobalNotification.created_at.desc()).limit(50).all()
-    return [{
-        "id": n.id,
-        "message": n.message,
-        "level": n.level,
-        "created_at": n.created_at.isoformat() if n.created_at else None,
-        "is_active": n.is_active
-    } for n in notifs]
-
-@router.get('/notifications/all', response_model=List[dict])
-def get_global_notifications(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Retrieves all active system-wide alerts"""
-    notifs = db.query(GlobalNotification).filter(GlobalNotification.is_active == True).all()
-    return [{"id": n.id, "message": n.message, "level": n.level, "created_at": n.created_at} for n in notifs]
-
-@router.post('/notifications/broadcast')
-def broadcast_notification(notif: NotificationCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    """Broadcasts a system-wide alert to all operators (Admin only logic implied)"""
-    if not current_user.profile or current_user.profile.rank != 'admin':
-        raise HTTPException(status_code=403, detail="Not authorized")
-    db_notif = GlobalNotification(**notif.model_dump())
-    db.add(db_notif)
-    db.commit()
-    return {"status": "Global alert broadcasted across the network"}
-
-# --- MARKET MODULE ---
-class MarketCreate(BaseModel):
-    title: str
-    price: float
-    description: str = ""
-    category: str = "Разное"
-    location: str = "Вся сеть"
-
-class MarketUpdate(BaseModel):
-    title: str | None = None
-    price: float | None = None
-    description: str | None = None
-    category: str | None = None
-    location: str | None = None
-
-@router.get('/market')
-def get_market_listings(
-    category: str = None, 
-    location: str = None, 
-    q: str = None, 
-    min_price: float = None,
-    max_price: float = None,
-    sort: str = "newest",
-    page: int = 1, 
-    per_page: int = 20, 
-    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    
-    query = db.query(MarketListing).filter(MarketListing.is_active == True)
-    if category and category != "Все":
-        query = query.filter(MarketListing.category == category)
-    if location and location != "Везде":
-        query = query.filter(MarketListing.location == location)
-    if q:
-        search_pattern = f"%{q}%"
-        query = query.filter((MarketListing.title.ilike(search_pattern)) | (MarketListing.description.ilike(search_pattern)))
-    if min_price is not None:
-        query = query.filter(MarketListing.price >= min_price)
-    if max_price is not None:
-        query = query.filter(MarketListing.price <= max_price)
-        
-    if sort == "price_asc":
-        query = query.order_by(MarketListing.price.asc())
-    elif sort == "price_desc":
-        query = query.order_by(MarketListing.price.desc())
-    else:
-        query = query.order_by(MarketListing.created_at.desc())
-        
-    total = query.count()
-    pages = (total + per_page - 1) // per_page if total > 0 else 1
-    listings = query.offset((page - 1) * per_page).limit(per_page).all()
-
-    return {
-        "total": total,
-        "page": page,
-        "pages": pages,
-        "items": [{
-            "id": m.id,
-            "title": m.title,
-            "price": float(m.price),
-            "description": m.description,
-            "category": m.category,
-            "location": m.location,
-            "seller": get_display_name(m.seller),
-            "seller_id": m.seller_id,
-            "status": m.status,
-            "views_count": m.views_count,
-            "created_at": m.created_at.isoformat() if m.created_at else None
-        } for m in listings]
-    }
-
-@router.post('/market')
-def create_market_listing(market: MarketCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    db_market = MarketListing(
-        title=market.title,
-        price=market.price,
-        description=market.description,
-        category=market.category,
-        location=market.location,
-        seller_id=current_user.id
-    )
-    db.add(db_market)
-    update_karma(db, current_user.id, amount=5)
-    db.commit()
-    db.refresh(db_market)
-    return {"id": db_market.id, "status": "Listing active"}
-
-@router.get('/market/{item_id}')
-def get_market_listing(item_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    item = db.query(MarketListing).filter(MarketListing.id == item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Lot not found")
-    item.views_count += 1
-    db.commit()
-    images = [img.image_url for img in item.images]
-    return {
-        "id": item.id,
-        "title": item.title,
-        "price": float(item.price),
-        "description": item.description,
-        "category": item.category,
-        "location": item.location,
-        "seller": get_display_name(item.seller),
-        "seller_id": item.seller_id,
-        "status": item.status,
-        "views_count": item.views_count,
-        "created_at": item.created_at.isoformat() if item.created_at else None,
-        "images": images
-    }
-
-@router.put('/market/{item_id}')
-def update_market_listing(item_id: int, update: MarketUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    item = db.query(MarketListing).filter(MarketListing.id == item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Lot not found")
-    if item.seller_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to update this lot")
-    
-    if update.title is not None:
-        item.title = update.title
-    if update.price is not None:
-        item.price = update.price
-    if update.description is not None:
-        item.description = update.description
-    if update.category is not None:
-        item.category = update.category
-    if update.location is not None:
-        item.location = update.location
-    db.commit()
-    return {"status": "success"}
-
-class MarketStatusUpdate(BaseModel):
-    status: str
-
-@router.patch('/market/{item_id}/status')
-def update_market_status(item_id: int, update: MarketStatusUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    item = db.query(MarketListing).filter(MarketListing.id == item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Lot not found")
-    if item.seller_id != current_user.id and (not current_user.profile or current_user.profile.rank != "admin"):
-        raise HTTPException(status_code=403, detail="Not authorized to update this lot")
-
-    item.status = update.status
-    if update.status == "sold":
-        item.is_active = False
-    db.commit()
-    return {"status": "success"}
-
-@router.delete('/market/{item_id}')
-def delete_market_listing(item_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    item = db.query(MarketListing).filter(MarketListing.id == item_id).first()
-    if not item:
-        raise HTTPException(status_code=404, detail="Lot not found")
-    if item.seller_id != current_user.id and (not current_user.profile or current_user.profile.rank != "admin"):
-        raise HTTPException(status_code=403, detail="Not authorized to delete this lot")
-    
-    db.delete(item)
-    db.commit()
-    return {"status": "success"}
-
-@router.get('/market/recommended')
-def get_recommended_listings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Заглушка рекомендательной системы (Пока возвращает 3 самых новых)
-    # В будущем здесь будет FTS5 или векторный поиск
-    listings = db.query(MarketListing).filter(MarketListing.is_active == True).order_by(MarketListing.created_at.desc()).limit(3).all()
-    return [{
-        "id": m.id, 
-        "title": m.title, 
-        "price": m.price, 
-        "description": m.description, 
-        "category": m.category,
-        "location": m.location,
-        "seller": get_display_name(m.seller),
-        "seller_id": m.seller_id
-    } for m in listings]
-
-# --- EVENTS MODULE ---
-class EventCreate(BaseModel):
-    title: str
-    event_date: datetime
-    location: str
-    description: str = ""
-
-@router.get('/events', response_model=List[dict])
-def get_events(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    events = db.query(Event).order_by(Event.event_date.asc()).all()
-    return [{"id": e.id, "title": e.title, "date": e.event_date.isoformat(), "location": e.location, "description": e.description} for e in events]
-
-@router.post('/events')
-def create_event(event: EventCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
-    db_event = Event(
-        title=event.title,
-        event_date=event.event_date,
-        location=event.location,
-        description=event.description,
-        organizer_id=current_user.id
-    )
-    db.add(db_event)
-    update_karma(db, current_user.id, amount=10)
-    db.commit()
-    db.refresh(db_event)
-    return {"id": db_event.id, "status": "Event broadcasted"}
 
 # --- PRIVATE CHAT MODULE ---
 class PrivateChatCreate(BaseModel):
@@ -2064,4 +1608,5 @@ def use_invite(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Код недействителен")
     invite["uses_left"] -= 1
     return {"status": "used"}
+
 

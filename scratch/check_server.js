@@ -1,45 +1,20 @@
-#!/usr/bin/env node
-'use strict';
 require('dotenv').config();
-const { Client } = require('ssh2');
-
-const SERVER = {
-  host: process.env.SERVER_IP || '147.45.245.133',
-  port: 22,
-  username: process.env.SERVER_USER || 'root',
-  password: process.env.SERVER_PASSWORD,
-};
-
-function runSSH(conn, cmd) {
-  return new Promise((resolve, reject) => {
+const {Client} = require('ssh2');
+const conn = new Client();
+conn.on('ready', () => {
+    const cmd = [
+        'echo "=== chat_core.js check ==="',
+        'docker exec skufia-web grep "ЗАШИФРОВАНО" /usr/share/nginx/html/chat_core.js | head -5',
+        'echo "---"',
+        'docker exec skufia-web grep "Зашифрованное сообщение" /usr/share/nginx/html/chat_core.js | head -5',
+        'echo "=== SW version ==="',
+        'docker exec skufia-web head -1 /usr/share/nginx/html/chat-sw.js',
+    ].join('; ');
     conn.exec(cmd, (err, stream) => {
-      if (err) return reject(err);
-      let out = '';
-      stream
-        .on('close', () => resolve(out))
-        .on('data', (d) => { out += d; })
-        .stderr.on('data', (d) => { out += d; });
+        let out = '';
+        stream.on('data', d => out += d);
+        stream.stderr.on('data', d => out += d);
+        stream.on('close', () => { console.log(out); conn.end(); });
     });
-  });
-}
-
-async function main() {
-  const conn = new Client();
-  await new Promise((resolve, reject) => {
-    conn.on('ready', resolve).on('error', reject).connect(SERVER);
-  });
-  console.log('=== Connected ===\n');
-
-  console.log('--- Docker Containers ---');
-  console.log(await runSSH(conn, 'docker ps -a'));
-
-  console.log('\n--- Backend Logs (last 50) ---');
-  console.log(await runSSH(conn, 'docker logs --tail 50 skufia-api 2>&1'));
-
-  console.log('\n--- Disk Space ---');
-  console.log(await runSSH(conn, 'df -h /'));
-
-  conn.end();
-}
-
-main().catch(e => { console.error('Error:', e.message); process.exit(1); });
+});
+conn.connect({ host: process.env.SERVER_IP, port: 22, username: 'root', password: process.env.SERVER_PASSWORD });

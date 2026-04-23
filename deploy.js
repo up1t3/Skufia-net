@@ -137,7 +137,8 @@ function runTests() {
 // ─── 3. Сборка Docker-образов ───────────────────────────────────
 function buildImages() {
   step('Сборка Docker-образов (локально)');
-  run('docker compose build backend frontend');
+  run('docker build -t skufia-backend ./backend');
+  run('docker build -t skufia-frontend ./frontend');
   success('Образы собраны');
 }
 
@@ -177,13 +178,17 @@ async function deployToServer() {
     // Авторизация в GHCR прямо на сервере
     `echo ${CONFIG.ghcr.token} | docker login ghcr.io -u ${CONFIG.ghcr.user} --password-stdin`,
     // Переходим в папку проекта
+    `mkdir -p ${deployDir}/frontend`,
     `cd ${deployDir}`,
+    // Записываем обновленные файлы на сервер (с локальной копии)
+    `echo "${require('fs').readFileSync('docker-compose.production.yml').toString('base64')}" | base64 -d > docker-compose.production.yml`,
+    `echo "${require('fs').readFileSync('frontend/upstream.conf').toString('base64')}" | base64 -d > frontend/upstream.conf`,
     // Скачиваем свежие образы
     `docker compose -f ${composeFile} pull`,
     // Перезапускаем сервисы с нулевым даунтаймом
-    `docker compose -f ${composeFile} up -d`,
+    `docker compose -f ${composeFile} up -d --remove-orphans`,
     // Применяем миграции БД (создаём новые таблицы если их нет)
-    `docker exec skufia-api python -c "from database import init_db; init_db(); print('DB migration applied')"`,
+    `docker exec skufia-api-green python -c "from database import init_db; init_db(); print('DB migration applied')"`,
     // Убираем старые образы
     `docker image prune -f`,
   ]);

@@ -4,7 +4,13 @@ import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base, SessionLocal, Profile, DATABASE_URL
-from routes import router as main_router
+from routers.wiki import router as wiki_router
+from routers.forum import router as forum_router
+from routers.registry import router as registry_router
+from routers.chat import router as chat_router
+from routers.notifications import router as notifications_router
+from routers.market import router as market_router
+from routers.events import router as events_router
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, List
 import json
@@ -139,8 +145,14 @@ app.add_middleware(
 # Mount Auth router
 app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
 
-# Mount Main router (contains forum, registry, chat logic)
-app.include_router(main_router, prefix="/api", tags=["main"])
+# Mount Modular routers
+app.include_router(wiki_router, prefix="/api", tags=["wiki"])
+app.include_router(forum_router, prefix="/api", tags=["forum"])
+app.include_router(registry_router, prefix="/api", tags=["registry"])
+app.include_router(chat_router, prefix="/api", tags=["chat"])
+app.include_router(notifications_router, prefix="/api", tags=["notifications"])
+app.include_router(market_router, prefix="/api", tags=["market"])
+app.include_router(events_router, prefix="/api", tags=["events"])
 
 # --- WebSocket Manager ---
 class ConnectionManager:

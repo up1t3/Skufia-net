@@ -1,96 +1,105 @@
 :root {
-    /* Default variables - Retro */
+    /* Default variables - Cyber Glassmorphism */
     --bg-dark: #0a0e14;
-    --bg-panel: #111820;
-    --bg-accent: #1c232d;
+    --bg-panel: color-mix(in srgb, #111820 60%, transparent);
+    --bg-accent: color-mix(in srgb, #1c232d 70%, transparent);
+    --bg-message-other: color-mix(in srgb, #222b36 70%, transparent);
     --accent-cyan: #00f2ff;
     --accent-amber: #ffb800;
+    --accent-gradient: linear-gradient(135deg, #00f2ff, #7000ff);
     --text-main: #e0e6ed;
     --text-dim: #8a94a2;
-    --border-metal: #3a4450;
-    --glow: 0 0 10px rgba(0, 242, 255, 0.5);
-    --panel-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8);
+    --border-metal: color-mix(in srgb, #00f2ff 15%, transparent);
+    --glow: 0 0 15px rgba(0, 242, 255, 0.4);
+    --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --font-main: 'JetBrains Mono', 'Courier New', monospace;
     --crt-display: block;
-    --backdrop-blur: none;
-    --chat-bubble-radius: 2px;
-    /* Dynamic viewport height — updated by JS visualViewport listener.
-       Falls back to 100dvh which already excludes retractable browser UI. */
+    --backdrop-blur: blur(12px) saturate(150%);
+    --chat-bubble-radius: 16px;
+    /* Dynamic viewport height */
     --app-height: 100dvh;
     --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 [data-theme="telegram"] {
     --bg-dark: #0f172a; 
-    --bg-panel: #1e293b; 
-    --bg-accent: #334155; 
+    --bg-panel: color-mix(in srgb, #1e293b 70%, transparent); 
+    --bg-accent: color-mix(in srgb, #334155 80%, transparent); 
+    --bg-message-other: color-mix(in srgb, #334155 70%, transparent);
     --accent-cyan: #3b82f6; 
     --accent-amber: #f59e0b;
+    --accent-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
     --text-main: #f8fafc;
     --text-dim: #94a3b8;
-    --border-metal: #334155;
+    --border-metal: color-mix(in srgb, #3b82f6 20%, transparent);
     --glow: none;
-    --panel-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
     --transition: all 0.2s ease-in-out;
     --font-main: 'Inter', sans-serif;
     --crt-display: none;
-    --backdrop-blur: none;
-    --chat-bubble-radius: 12px;
+    --backdrop-blur: blur(16px) saturate(180%);
+    --chat-bubble-radius: 18px;
 }
 
 [data-theme="neon"] {
     --bg-dark: #09090b;
-    --bg-panel: rgba(24, 24, 27, 0.65);
-    --bg-accent: rgba(39, 39, 42, 0.8);
+    --bg-panel: color-mix(in srgb, #18181b 50%, transparent);
+    --bg-accent: color-mix(in srgb, #27272a 60%, transparent);
+    --bg-message-other: color-mix(in srgb, #27272a 70%, transparent);
     --accent-cyan: #22d3ee; 
     --accent-amber: #d946ef; 
+    --accent-gradient: linear-gradient(135deg, #22d3ee, #d946ef);
     --text-main: #fafafa;
     --text-dim: #a1a1aa;
-    --border-metal: rgba(255, 255, 255, 0.1);
-    --glow: 0 0 15px rgba(217, 70, 239, 0.4);
-    --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    --border-metal: color-mix(in srgb, #22d3ee 20%, transparent);
+    --glow: 0 0 20px rgba(217, 70, 239, 0.4);
+    --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     --font-main: 'Inter', sans-serif;
     --crt-display: none;
-    --backdrop-blur: blur(12px) saturate(180%);
-    --chat-bubble-radius: 16px;
+    --backdrop-blur: blur(20px) saturate(200%);
+    --chat-bubble-radius: 18px;
 }
 
 [data-theme="light-ios"] {
     --bg-dark: #F2F2F7;
-    --bg-panel: #FFFFFF;
-    --bg-accent: rgba(255, 255, 255, 0.75);
+    --bg-panel: color-mix(in srgb, #FFFFFF 70%, transparent);
+    --bg-accent: color-mix(in srgb, #FFFFFF 85%, transparent);
+    --bg-message-other: color-mix(in srgb, #E5E5EA 90%, transparent);
     --accent-cyan: #007AFF; 
     --accent-amber: #FF3B30; 
+    --accent-gradient: linear-gradient(135deg, #007AFF, #5856D6);
     --text-main: #000000;
     --text-dim: #8E8E93;
-    --border-metal: rgba(60, 60, 67, 0.36);
+    --border-metal: color-mix(in srgb, #3c3c43 15%, transparent);
     --glow: none;
-    --panel-shadow: 0 4px 12px rgba(0,0,0, 0.08);
+    --panel-shadow: 0 8px 32px 0 rgba(0,0,0, 0.08);
     --transition: all 0.2s ease-in-out;
     --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     --crt-display: none;
-    --backdrop-blur: blur(20px) saturate(180%);
+    --backdrop-blur: blur(25px) saturate(180%);
     --chat-bubble-radius: 18px;
 }
 
 [data-theme="gold"] {
     --bg-dark: #121008;
-    --bg-panel: rgba(30, 25, 10, 0.85);
-    --bg-accent: rgba(212, 175, 55, 0.15);
+    --bg-panel: color-mix(in srgb, #1e190a 70%, transparent);
+    --bg-accent: color-mix(in srgb, #d4af37 15%, transparent);
+    --bg-message-other: color-mix(in srgb, #332d16 70%, transparent);
     --accent-cyan: #FFD700; 
     --accent-amber: #FF8C00; 
+    --accent-gradient: linear-gradient(135deg, #FFD700, #FF8C00);
     --text-main: #FFF8DC;
     --text-dim: #D4AF37;
-    --border-metal: rgba(212, 175, 55, 0.4);
-    --glow: 0 0 10px rgba(255, 215, 0, 0.6);
-    --panel-shadow: 0 4px 15px rgba(255, 215, 0, 0.15);
+    --border-metal: color-mix(in srgb, #d4af37 30%, transparent);
+    --glow: 0 0 15px rgba(255, 215, 0, 0.6);
+    --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
     --transition: all 0.3s ease;
     --font-main: 'Share Tech Mono', monospace;
     --crt-display: block;
-    --backdrop-blur: blur(12px) saturate(150%);
-    --chat-bubble-radius: 4px;
+    --backdrop-blur: blur(14px) saturate(160%);
+    --chat-bubble-radius: 16px;
 }
 
 * {
@@ -167,6 +176,8 @@ header {
     backdrop-filter: var(--backdrop-blur);
     -webkit-backdrop-filter: var(--backdrop-blur);
     position: relative;
+    border-radius: 16px;
+    margin-bottom: 20px;
 }
 
 .logo {
@@ -335,24 +346,30 @@ nav {
     width: 300px;
     flex-shrink: 0;
     background: var(--bg-panel);
-    border: 2px solid var(--border-metal);
+    border: 1px solid var(--border-metal);
     display: flex;
     flex-direction: column;
     padding: 20px;
     gap: 20px;
     box-shadow: var(--panel-shadow);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border-radius: 16px;
 }
 
 .viewport {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: rgba(10, 14, 20, 0.8);
-    border: 2px solid var(--border-metal);
+    background: color-mix(in srgb, var(--bg-dark) 40%, transparent);
+    border: 1px solid var(--border-metal);
     padding: 30px;
     overflow-y: auto;
     position: relative;
     box-shadow: var(--panel-shadow);
+    backdrop-filter: var(--backdrop-blur);
+    -webkit-backdrop-filter: var(--backdrop-blur);
+    border-radius: 16px;
     min-height: 0; /* Important for preventing flex children from stretching */
 }
 
@@ -725,21 +742,25 @@ input {
 
 .message {
     max-width: 80%;
-    padding: 10px 15px;
-    border-left: 3px solid var(--accent-cyan);
-    background: rgba(255, 255, 255, 0.03);
-    font-size: 13px;
+    padding: 12px 16px;
+    border-radius: var(--chat-bubble-radius);
+    border-bottom-left-radius: 4px;
+    background: var(--bg-message-other);
+    font-size: 14px;
     line-height: 1.5;
     position: relative;
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 .message.sent {
     align-self: flex-end;
-    border-left: none;
-    border-right: 3px solid var(--accent-amber);
-    background: rgba(255, 184, 0, 0.05);
-    text-align: right;
+    border-bottom-left-radius: var(--chat-bubble-radius);
+    border-bottom-right-radius: 4px;
+    background: var(--accent-gradient);
+    color: #fff;
 }
 
 .message .msg-meta {
@@ -774,23 +795,54 @@ input {
 
 #msg-input {
     flex: 1;
-    background: #05080a;
+    background: var(--bg-panel);
     border: 1px solid var(--border-metal);
-    color: var(--accent-cyan);
-    padding: 12px;
-    font-family: 'JetBrains Mono', monospace;
+    border-radius: 20px;
+    color: var(--text-main);
+    padding: 12px 16px;
+    font-family: var(--font-main);
+    font-size: 14px;
     outline: none;
     transition: var(--transition);
 }
 
 #msg-input:focus {
     border-color: var(--accent-cyan);
-    box-shadow: var(--panel-shadow);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-cyan) 30%, transparent);
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Skeleton Loaders --- */
+.chat-placeholder {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    height: 100%;
+}
+
+.skeleton-msg {
+    max-width: 60%;
+    height: 40px;
+    border-radius: var(--chat-bubble-radius);
+    background: linear-gradient(90deg, var(--bg-accent) 25%, color-mix(in srgb, var(--bg-accent) 80%, #fff) 50%, var(--bg-accent) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite linear;
+}
+
+.skeleton-msg.sent {
+    align-self: flex-end;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 20%, transparent) 25%, color-mix(in srgb, var(--accent-cyan) 40%, transparent) 50%, color-mix(in srgb, var(--accent-cyan) 20%, transparent) 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 /* Contact List Items */
@@ -1384,11 +1436,10 @@ body.super-user .nav-btn.active {
 .chat-capsule {
     display: flex;
     align-items: center;
-    flex-wrap: nowrap;
     background: var(--bg-panel);
     border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    padding: 6px 12px;
+    border-radius: 28px;
+    padding: 8px 12px;
     width: 100%;
     gap: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
@@ -1411,7 +1462,7 @@ body.super-user .nav-btn.active {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    padding: 6px;
+    padding: 8px;
     border-radius: 50%;
     transition: var(--transition);
 }
@@ -1427,8 +1478,8 @@ body.super-user .nav-btn.active {
     border: none;
     color: var(--text-main);
     font-family: var(--font-main);
-    font-size: 14px;
-    padding: 8px 4px;
+    font-size: 16px;
+    padding: 12px 8px;
     margin: 0;
     box-sizing: border-box;
     outline: none;
@@ -1452,8 +1503,8 @@ body.super-user .nav-btn.active {
     background: var(--accent-cyan);
     color: var(--bg-dark); /* Contrast */
     border: none;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -2395,5 +2446,335 @@ body.super-user .nav-btn.active {
     
     .ent-card p {
         font-size: 12px;
+    }
+}
+
+/* ==========================================================
+   SKUFENGER FULLSCREEN MODE — Premium Messenger UI
+   When body has .skufenger-fullscreen, the messenger takes
+   100% of the viewport, hiding the Skufia portal chrome.
+   ========================================================== */
+
+/* --- Phase 1: Hide portal chrome --- */
+body.skufenger-fullscreen .system-header,
+body.skufenger-fullscreen .system-footer,
+body.skufenger-fullscreen .side-panel,
+body.skufenger-fullscreen .crt-overlay,
+body.skufenger-fullscreen .scanline {
+    display: none !important;
+}
+
+/* Kill CRT scan-line effect on body */
+body.skufenger-fullscreen {
+    background-image: none !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body.skufenger-fullscreen::after {
+    display: none !important;
+}
+
+/* --- Phase 2: Full-viewport layout --- */
+body.skufenger-fullscreen .app-container {
+    padding: 0;
+    margin: 0;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.skufenger-fullscreen .main-interface {
+    flex: 1;
+    height: 100%;
+    gap: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+body.skufenger-fullscreen .viewport {
+    flex: 1;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: none;
+    background: var(--bg-dark);
+    margin: 0;
+    box-shadow: none;
+}
+
+body.skufenger-fullscreen #view-messages {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+body.skufenger-fullscreen #view-messages .view-title {
+    display: none;
+}
+
+body.skufenger-fullscreen .chat-layout {
+    display: flex;
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+    background: var(--bg-dark);
+}
+
+/* --- Phase 3: Premium sidebar --- */
+body.skufenger-fullscreen .chat-sidebar {
+    width: 360px;
+    background: linear-gradient(180deg, 
+        color-mix(in srgb, var(--bg-panel) 90%, transparent) 0%, 
+        var(--bg-dark) 100%);
+    border-right: 1px solid color-mix(in srgb, var(--border-metal) 50%, transparent);
+}
+
+body.skufenger-fullscreen .sidebar-header {
+    height: 60px;
+    padding: 0 16px;
+    background: color-mix(in srgb, var(--bg-dark) 80%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid color-mix(in srgb, var(--border-metal) 40%, transparent);
+}
+
+body.skufenger-fullscreen .sidebar-title {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    letter-spacing: 0;
+}
+
+/* --- Back button (portal return) --- */
+.messenger-back-btn {
+    display: none; /* Hidden by default */
+    background: none;
+    border: none;
+    color: var(--accent-cyan);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-right: 4px;
+}
+
+.messenger-back-btn:hover {
+    background: color-mix(in srgb, var(--accent-cyan) 15%, transparent);
+    transform: scale(1.1);
+}
+
+body.skufenger-fullscreen .messenger-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Phase 4: Premium chat area --- */
+body.skufenger-fullscreen .chat-main {
+    background: var(--bg-dark);
+}
+
+body.skufenger-fullscreen .chat-info {
+    height: 60px;
+    background: color-mix(in srgb, var(--bg-dark) 80%, transparent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid color-mix(in srgb, var(--border-metal) 40%, transparent);
+    padding: 0 20px;
+}
+
+body.skufenger-fullscreen .chat-messages {
+    background-image: none;
+    padding: 20px;
+    gap: 4px;
+}
+
+/* Premium message bubbles */
+body.skufenger-fullscreen .msg {
+    font-family: 'Inter', sans-serif;
+    transition: opacity 0.2s ease;
+}
+
+body.skufenger-fullscreen .msg.sent .msg-bubble {
+    background: var(--accent-gradient);
+    color: #fff;
+    border-radius: 18px 18px 4px 18px;
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--accent-cyan) 20%, transparent);
+    border: none;
+}
+
+body.skufenger-fullscreen .msg.received .msg-bubble {
+    background: color-mix(in srgb, var(--bg-message-other) 90%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 18px 18px 18px 4px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Phase 5: Premium input bar --- */
+body.skufenger-fullscreen .premium-input-wrapper {
+    padding: 12px 16px;
+    padding-bottom: calc(12px + var(--safe-bottom, 0px));
+    background: color-mix(in srgb, var(--bg-dark) 90%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid color-mix(in srgb, var(--border-metal) 30%, transparent);
+}
+
+body.skufenger-fullscreen .chat-capsule {
+    background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
+    border: 1px solid color-mix(in srgb, var(--border-metal) 40%, transparent);
+    border-radius: 24px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.2s ease;
+}
+
+body.skufenger-fullscreen .chat-capsule:focus-within {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-cyan) 15%, transparent);
+}
+
+body.skufenger-fullscreen .send-circle-btn {
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-cyan) 30%, transparent);
+}
+
+body.skufenger-fullscreen .send-circle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--accent-cyan) 40%, transparent);
+}
+
+/* --- Phase 6: Chat room list premium items --- */
+body.skufenger-fullscreen .room-item {
+    border-radius: 12px;
+    margin: 2px 8px;
+    padding: 10px 12px;
+    transition: all 0.15s ease;
+}
+
+body.skufenger-fullscreen .room-item:hover {
+    background: color-mix(in srgb, var(--accent-cyan) 8%, transparent);
+}
+
+body.skufenger-fullscreen .room-item.active {
+    background: color-mix(in srgb, var(--accent-cyan) 12%, transparent);
+    border-left: 3px solid var(--accent-cyan);
+}
+
+body.skufenger-fullscreen .room-avatar {
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* --- Phase 7: Chat folders tabs premium --- */
+body.skufenger-fullscreen .chat-folders-tabs {
+    background: transparent;
+    border-bottom: 1px solid color-mix(in srgb, var(--border-metal) 30%, transparent);
+    padding: 8px 12px;
+    gap: 6px;
+}
+
+body.skufenger-fullscreen .folder-tab {
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    border-radius: 16px;
+    padding: 5px 14px;
+    transition: all 0.2s ease;
+}
+
+body.skufenger-fullscreen .folder-tab.active {
+    background: var(--accent-gradient);
+    color: #fff;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-cyan) 25%, transparent);
+}
+
+/* --- Phase 8: Online status indicator --- */
+body.skufenger-fullscreen .status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+body.skufenger-fullscreen .status-dot.online {
+    background: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+    animation: statusPulse 2s infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+    50% { box-shadow: 0 0 12px rgba(34, 197, 94, 0.9); }
+}
+
+/* --- Phase 9: Typography override --- */
+body.skufenger-fullscreen,
+body.skufenger-fullscreen input,
+body.skufenger-fullscreen button,
+body.skufenger-fullscreen textarea {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body.skufenger-fullscreen .msg-time {
+    font-size: 11px;
+    opacity: 0.6;
+    font-weight: 400;
+}
+
+/* --- Phase 10: Smooth entry animation --- */
+body.skufenger-fullscreen .chat-layout {
+    animation: messengerFadeIn 0.3s ease-out;
+}
+
+@keyframes messengerFadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* --- Mobile responsiveness for fullscreen --- */
+@media (max-width: 768px) {
+    body.skufenger-fullscreen .chat-sidebar {
+        width: 100%;
+        position: absolute;
+        top: 0; left: 0; bottom: 0;
+        z-index: 20;
+        transition: transform 0.3s ease;
+    }
+
+    body.skufenger-fullscreen .chat-layout.chat-open .chat-sidebar {
+        transform: translateX(-100%);
+    }
+
+    body.skufenger-fullscreen .chat-layout.chat-open .chat-main {
+        display: flex;
+    }
+
+    body.skufenger-fullscreen .mobile-back-btn {
+        display: flex;
     }
 }

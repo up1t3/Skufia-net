@@ -40,11 +40,27 @@ services:
       - "3478:3478/tcp"
     command: turnserver --use-auth-secret --static-auth-secret=${TURN_SECRET:-skufia_secret} --realm=${TURN_REALM:-skuf-net.ru}
 
-  backend:
+  backend-blue:
     image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest
-    container_name: skufia-api
+    container_name: skufia-api-blue
     ports:
       - "8007:8007"
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - skufia_uploads:/app/uploads
+      - skufia_db:/app/data
+    restart: always
+
+  backend-green:
+    image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest
+    container_name: skufia-api-green
+    ports:
+      - "8008:8007"
     environment:
       - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-skufia}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -63,9 +79,11 @@ services:
       - "80:80"
       - "443:443"
     depends_on:
-      - backend
+      - backend-blue
+      - backend-green
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
+      - ./frontend/upstream.conf:/etc/nginx/upstream.conf:ro
     restart: always
 
 volumes:

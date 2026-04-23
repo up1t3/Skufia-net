@@ -22,9 +22,10 @@ def client():
 @pytest.fixture(scope="module")
 def setup_db():
     db = SessionLocal()
-    # Clean previous test user if any
-    db.query(Profile).filter(Profile.user.has(username="test_user")).delete(synchronize_session=False)
-    db.query(User).filter(User.username == "test_user").delete()
+    # Clean previous test users if any
+    test_usernames = ["test_user", "new_guy", "new_guy_3", "second_user3", "second_user4", "ghost_user"]
+    db.query(Profile).filter(Profile.user.has(User.username.in_(test_usernames))).delete(synchronize_session=False)
+    db.query(User).filter(User.username.in_(test_usernames)).delete(synchronize_session=False)
     db.commit()
     
     # Create test user
@@ -142,6 +143,7 @@ def test_register_flow(client):
         "email": "new@guy.net",
         "password": "secret_password", "accepted_pd": True
     })
+    print(response.json())
     assert response.status_code == 201
     
     # Register existing username
