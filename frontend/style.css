@@ -574,15 +574,56 @@ nav {
     line-height: 1.6;
 }
 
-.wiki-item {
-    border-bottom: 1px solid var(--border-metal);
-    padding: 15px 0;
+.wiki-article-view {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
 }
 
-.wiki-excerpt {
-    font-size: 12px;
+.wiki-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2em;
+    color: var(--accent-cyan);
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-metal);
+    padding-bottom: 10px;
+}
+
+.wiki-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
     color: var(--text-dim);
-    margin-top: 5px;
+}
+
+.wiki-body {
+    line-height: 1.7;
+    font-size: 1.05em;
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    white-space: pre-wrap;
+}
+
+.wiki-nav-item {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-metal);
+    transition: all 0.2s ease;
+}
+
+.wiki-nav-item:hover {
+    background: var(--bg-accent);
+    color: var(--accent-cyan);
+}
+
+.wiki-nav-item.active {
+    background: var(--bg-accent);
+    border-left: 3px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    font-weight: bold;
 }
 
 /* AUTH FORMS */
