@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SKUFIA | Enterprise Command Center</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=38">
-    <link rel="stylesheet" href="style-modal.css?v=38">
+    <link rel="stylesheet" href="style.css?v=39">
+    <link rel="stylesheet" href="style-modal.css?v=39">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -148,6 +148,13 @@
                     <button id="sync-contacts-btn" class="cyber-btn" style="width: 100%; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px;">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
                         Синхронизация контактов
+                    </button>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                    <button onclick="window.location.href='skufenger.html'" class="cyber-btn" style="width: 100%; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(0, 242, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Установить приложение (PWA)
                     </button>
                 </div>
 
@@ -671,6 +678,9 @@
                                     </button>
                                     <span class="sidebar-title" style="display: flex; align-items: center; gap: 8px;">SKUFenger <span id="global-status-indicator" class="status-dot online" style="position: static; margin-top: 2px;"></span></span>
                                     <div class="sidebar-actions" style="display: flex; gap: 4px;">
+                                        <button class="icon-btn" id="install-pwa-btn" title="Установить приложение" style="display: none;">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                        </button>
                                         <button class="icon-btn" id="sidebar-search-toggle-btn" title="Поиск" onclick="toggleSidebarSearch(true)">
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                         </button>
@@ -802,11 +812,11 @@
     <script defer src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script defer src="db.js?v=36"></script>
     <script defer src="rtcManager.js?v=36"></script>
-    <script defer src="ui.js?v=38"></script>
+    <script defer src="ui.js?v=39"></script>
     <script defer src="api.js?v=36"></script>
     <script defer src="crypto.js?v=36"></script>
-    <script defer src="features.js?v=38"></script>
-    <script defer src="chat_core.js?v=38"></script>
-    <script defer src="app.js?v=38"></script>
+    <script defer src="features.js?v=39"></script>
+    <script defer src="chat_core.js?v=39"></script>
+    <script defer src="app.js?v=39"></script>
 </body>
 </html>
