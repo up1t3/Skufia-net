@@ -53,7 +53,7 @@ def setup_db():
 def auth_headers(client, setup_db):
     response = client.post("/api/auth/login", json={
         "username": "test_user",
-        "password": "password123"
+        "password": "password123", "accepted_pd": True
     })
     assert response.status_code == 200
     token = response.json()["access_token"]
@@ -140,7 +140,7 @@ def test_register_flow(client):
     response = client.post("/api/auth/register", json={
         "username": "new_guy",
         "email": "new@guy.net",
-        "password": "secret_password"
+        "password": "secret_password", "accepted_pd": True
     })
     assert response.status_code == 201
     
@@ -148,7 +148,7 @@ def test_register_flow(client):
     response = client.post("/api/auth/register", json={
         "username": "new_guy",
         "email": "new2@guy.net",
-        "password": "secret_password"
+        "password": "secret_password", "accepted_pd": True
     })
     assert response.status_code == 400
     
@@ -156,7 +156,7 @@ def test_register_flow(client):
     response = client.post("/api/auth/register", json={
         "username": "new_guy_3",
         "email": "new@guy.net",
-        "password": "secret_password"
+        "password": "secret_password", "accepted_pd": True
     })
     assert response.status_code == 400
 
@@ -257,11 +257,11 @@ def test_market_unauth_delete(client, auth_headers):
     client.post("/api/auth/register", json={
         "username": "second_user3",
         "email": "second3@skufia.net",
-        "password": "password123"
+        "password": "password123", "accepted_pd": True
     })
     r2 = client.post("/api/auth/login", json={
         "username": "second_user3",
-        "password": "password123"
+        "password": "password123", "accepted_pd": True
     })
     second_user_auth3 = {"Authorization": f"Bearer {r2.json()['access_token']}"}
 
@@ -312,11 +312,11 @@ def test_topic_patch_unauth(client, auth_headers):
     client.post("/api/auth/register", json={
         "username": "second_user4",
         "email": "second4@skufia.net",
-        "password": "password123"
+        "password": "password123", "accepted_pd": True
     })
     r2 = client.post("/api/auth/login", json={
         "username": "second_user4",
-        "password": "password123"
+        "password": "password123", "accepted_pd": True
     })
     second_user_auth4 = {"Authorization": f"Bearer {r2.json()['access_token']}"}
 

@@ -278,6 +278,7 @@ class RoomKeyBundle(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     # The AES session key, wrapped (encrypted) with the user's RSA public key
     wrapped_key = Column(Text, nullable=False)
+    key_version = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
