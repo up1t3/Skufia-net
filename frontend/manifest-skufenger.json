@@ -2,7 +2,7 @@
   "name": "SKUFenger",
   "short_name": "SKUFenger",
   "description": "Secure Real-Time Enterprise Messenger",
-  "start_url": "./skufenger.html",
+  "start_url": "./index.html?app=messenger",
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
