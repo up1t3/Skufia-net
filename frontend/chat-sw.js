@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v45'; // Fix ensureKeys scope: window.ensureKeys()
+const CACHE_NAME = 'skufia-chat-v46'; // Fix crypto.js IIFE wrapper
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
