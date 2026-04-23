@@ -120,14 +120,14 @@ def seed_serious_nostalgia():
 
     # 5. Market Listings
     market_items = [
-        {"title": "Видеокарта 3dfx Voodoo 2 12MB", "desc": "Легенда в рабочем состоянии. В комплекте кабель VGA-passthrough. Для ценителей Glide.", "price": "5000", "cat": "Hardware"},
-        {"title": "Стопка журналов 'Страна Игр' (1998-2001)", "desc": "Почти все номера с постерами. Состояние удовлетворительное. Запах истории бесплатно.", "price": "2000", "cat": "Collectibles"},
-        {"title": "Диалап-модем US Robotics Courier", "desc": "Лучшее, что могло случиться с вашей телефонной линией. Держит коннект даже на 'гнилой' меди.", "price": "1500", "cat": "Hardware"},
+        {"title": "Видеокарта 3dfx Voodoo 2 12MB", "desc": "Легенда в рабочем состоянии. В комплекте кабель VGA-passthrough. Для ценителей Glide.", "price": 5000.0, "price_type": "fixed", "cat": "Hardware"},
+        {"title": "Стопка журналов 'Страна Игр' (1998-2001)", "desc": "Почти все номера с постерами. Состояние удовлетворительное. Запах истории бесплатно.", "price": 2000.0, "price_type": "fixed", "cat": "Collectibles"},
+        {"title": "Диалап-модем US Robotics Courier", "desc": "Лучшее, что могло случиться с вашей телефонной линией. Держит коннект даже на 'гнилой' меди.", "price": 1500.0, "price_type": "fixed", "cat": "Hardware"},
     ]
     
     for m in market_items:
         u = random.choice(active_users)
-        db.add(MarketListing(title=m['title'], description=f"[{m['cat']}] {m['desc']}", price=m['price'], seller_id=u.id))
+        db.add(MarketListing(title=m['title'], description=f"[{m['cat']}] {m['desc']}", price=m['price'], price_type=m['price_type'], seller_id=u.id))
         db.commit()
 
     print("Skufia now breathes the 90s atmosphere!")

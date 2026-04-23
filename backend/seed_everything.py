@@ -158,13 +158,13 @@ def seed_data():
 
     # 6. Seed Market Listings
     market_items = [
-        {"title": "Монитор Sony Trinitron", "desc": "В отличном состоянии, легкий засвет по углам.", "price": 2000.0, "seller": "CRT_Guru"},
-        {"title": "Механическая клавиатура IBM Model M", "desc": "Звучит как пулемет. Состояние: музейное.", "price": 5000.0, "seller": "Old_School_Coder"},
+        {"title": "Монитор Sony Trinitron", "desc": "В отличном состоянии, легкий засвет по углам.", "price": 2000.0, "price_type": "exchange", "seller": "CRT_Guru"},
+        {"title": "Механическая клавиатура IBM Model M", "desc": "Звучит как пулемет. Состояние: музейное.", "price": 5000.0, "price_type": "fixed", "seller": "Old_School_Coder"},
     ]
     for item in market_items:
         user = db.query(User).filter(User.username == item['seller']).first()
         if user and not db.query(MarketListing).filter(MarketListing.title == item['title']).first():
-            db.add(MarketListing(title=item['title'], description=item['desc'], price=item['price'], seller_id=user.id))
+            db.add(MarketListing(title=item['title'], description=item['desc'], price=item['price'], price_type=item['price_type'], seller_id=user.id))
 
     # 7. Seed Chat Rooms
     chat_rooms = [
