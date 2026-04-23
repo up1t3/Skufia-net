@@ -217,6 +217,7 @@ class Message(Base):
     content = Column(Text, nullable=False) # Encrypted content blob for E2EE
     file_url = Column(String, nullable=True) # Attached file URL
     encryption_iv = Column(String, nullable=True) # Initialization Vector for AES
+    key_version = Column(Integer, default=1, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
     
@@ -276,6 +277,7 @@ class RoomKeyBundle(Base):
     id = Column(Integer, primary_key=True, index=True)
     room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    key_version = Column(Integer, default=1, nullable=False)
     # The AES session key, wrapped (encrypted) with the user's RSA public key
     wrapped_key = Column(Text, nullable=False)
     key_version = Column(Integer, default=1, nullable=False)
@@ -283,7 +285,7 @@ class RoomKeyBundle(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint('room_id', 'user_id', name='uix_room_user_key'),
+        UniqueConstraint('room_id', 'user_id', 'key_version', name='uix_room_user_key'),
     )
 
 def init_db():
