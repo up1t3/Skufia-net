@@ -112,7 +112,12 @@ document.addEventListener('DOMContentLoaded', () => {
         new EmojiPickerEngine();
 
         addLog('Initializing Skufia Enterprise OS...', 'info');
-        await ensureKeys();
+        try {
+            await ensureKeys();
+        } catch (e) {
+            console.error('E2EE key init failed (non-fatal):', e);
+            addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
+        }
 
 setTimeout(() => addLog('Loading Cyber-Industrial HUD...'), 500);
         setTimeout(() => addLog('Connecting to Global Registry...'), 1000);
