@@ -140,6 +140,15 @@ setTimeout(() => addLog('Loading Cyber-Industrial HUD...'), 500);
                 }).catch(err => {
                     console.error('SW registration failed:', err);
                 });
+
+                // Auto-reload when a new SW activates with a fresh cache
+                // This prevents the PWA from running stale broken JS after an update
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'SW_UPDATED') {
+                        console.log('[PWA] New SW activated (' + event.data.version + '), reloading...');
+                        window.location.reload();
+                    }
+                });
             }
         }, 2000);
     }

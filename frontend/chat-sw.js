@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v46'; // Fix crypto.js IIFE wrapper
+const CACHE_NAME = 'skufia-chat-v47'; // Add SW_UPDATED auto-reload for PWA
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -38,6 +38,11 @@ self.addEventListener('activate', (event) => {
             );
         }).then(() => {
             return self.clients.claim();
+        }).then(() => {
+            // Notify all open PWA windows to reload so they pick up fresh assets
+            return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+                clientList.forEach(client => client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME }));
+            });
         })
     );
 });
@@ -85,21 +90,8 @@ self.addEventListener('fetch', (event) => {
     }
 });
 
-self.addEventListener('activate', (event) => {
-    event.waitUntil(clients.claim());
-    const cacheAllowlist = [CACHE_NAME];
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheAllowlist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-});
+// Second activate handler — deduplicated into the one above (no-op keep for safety)
+// self.addEventListener('activate', ...) → merged above
 // --- Push Notification Listeners ---
 
 self.addEventListener('push', function(event) {
