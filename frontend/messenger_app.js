@@ -1,4 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Viewport Height Fix for Mobile ---
+    function setAppHeight() {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    }
+    
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setAppHeight);
+        window.visualViewport.addEventListener('scroll', setAppHeight);
+    }
+    window.addEventListener('resize', setAppHeight);
+    setAppHeight(); // Initial call
+
     // Initialize Theme
     const savedTheme = localStorage.getItem('skufia_theme') || 'telegram';
     if (typeof window.changeTheme === 'function') {
@@ -95,11 +108,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SYSTEM BOOT & ALERTS ---
     async function bootSystem() {
+        console.log('--- SYSTEM BOOT START ---');
         if (!state.user.token) {
+            console.log('No token found, showing auth overlay');
             const authOverlay = document.getElementById('auth-overlay');
             if (authOverlay) authOverlay.style.display = 'flex';
             return;
         } else {
+            console.log('Token detected, proceeding with boot');
             const authOverlay = document.getElementById('auth-overlay');
             if (authOverlay) authOverlay.style.display = 'none';
         }
@@ -107,9 +123,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.addLog) window.addLog('Инициализация Skufia Enterprise OS...', 'info');
 
         // Load user profile
+        console.log('Fetching user profile...');
         try {
             const me = await apiRequest('/me');
             if (me) {
+                console.log('User profile loaded:', me.username);
                 state.user.id = me.id;
                 state.user.username = me.username;
                 state.user.display_name = me.display_name || me.username;
@@ -124,6 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('Profile pre-load failed:', e);
         }
 
+        console.log('Initializing E2EE keys...');
         try {
             if (window.ensureKeys) await window.ensureKeys();
         } catch (e) {
@@ -135,16 +154,25 @@ document.addEventListener('DOMContentLoaded', () => {
             window.addLog('System Online. Welcome, Operator.', 'success');
         }
         
+        console.log('Switching to messages view');
         switchView('messages');
-        if (typeof loadDashboard === 'function') loadDashboard();
+        if (typeof loadDashboard === 'function') {
+            console.log('Loading dashboard data');
+            loadDashboard();
+        }
+        
+        console.log('Connecting WebSocket...');
         if (window.connectWebSocket) window.connectWebSocket(); 
 
         // PWA Service Worker
         if ('serviceWorker' in navigator) {
+            console.log('Registering Service Worker...');
             navigator.serviceWorker.register('chat-sw.js').then(reg => {
+                console.log('SW registered successfully');
                 reg.update();
             }).catch(err => console.error('SW registration failed:', err));
         }
+        console.log('--- SYSTEM BOOT COMPLETE ---');
     }
 
     async function syncGlobalAlerts() {

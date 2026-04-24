@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1777024777428'; // Add SW_UPDATED auto-reload for PWA
+const CACHE_NAME = 'skufia-chat-v1777029509749'; // Add SW_UPDATED auto-reload for PWA
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -56,6 +56,9 @@ self.addEventListener('fetch', (event) => {
 
     // Skip WebSockets or API calls entirely (Fixes Unexpected token < in JSON)
     if (event.request.url.includes('/ws/') || event.request.url.includes('/api/')) return;
+    
+    // Only intercept http/https schemes (Fixes chrome-extension error)
+    if (!event.request.url.startsWith('http')) return;
 
     // Determine if it's an HTML request
     const isHtml = event.request.headers.get('accept').includes('text/html');
@@ -66,7 +69,11 @@ self.addEventListener('fetch', (event) => {
             fetch(event.request).then((networkResponse) => {
                 if (networkResponse && networkResponse.status === 200) {
                     const responseClone = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+                    caches.open(CACHE_NAME).then((cache) => {
+                if (event.request.url.startsWith('http')) {
+                    cache.put(event.request, responseClone);
+                }
+            });
                 }
                 return networkResponse;
             }).catch(() => {
@@ -80,7 +87,9 @@ self.addEventListener('fetch', (event) => {
                 return cache.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
                     const fetchedResponse = fetch(event.request).then((networkResponse) => {
                         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-                            cache.put(event.request, networkResponse.clone());
+                            if (event.request.url.startsWith('http')) {
+                                cache.put(event.request, networkResponse.clone());
+                            }
                         }
                         return networkResponse;
                     }).catch(() => {
