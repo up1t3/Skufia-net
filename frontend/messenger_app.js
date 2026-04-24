@@ -137,18 +137,35 @@ document.addEventListener('DOMContentLoaded', () => {
             state.user.username = me.username;
             state.user.profile = me;
             
-            const headerAvatar = document.getElementById('header-avatar');
-            if (headerAvatar && me.avatar_url) {
-                const baseUrl = window.BASE_URL || '';
-                const aUrl = me.avatar_url.startsWith('http') ? me.avatar_url : `${baseUrl}${me.avatar_url}`;
-                if (typeof applyAvatarDisplay === 'function') {
-                    applyAvatarDisplay(headerAvatar, aUrl);
+            // Re-hydrate my avatars across the app
+            const baseUrl = window.BASE_URL || '';
+            let aUrl = null;
+            if (me.avatar_url) {
+                aUrl = me.avatar_url.startsWith('http') || me.avatar_url.startsWith('SPRITE:') ? me.avatar_url : `${baseUrl}${me.avatar_url}`;
+                // Cache bust
+                if (!aUrl.startsWith('SPRITE:')) aUrl += `?v=${Date.now()}`;
+            }
+
+            const dashAvatar = document.getElementById('dash-avatar');
+            if (dashAvatar) {
+                if (aUrl) {
+                    if (typeof applyAvatarDisplay === 'function') applyAvatarDisplay(dashAvatar, aUrl);
+                    dashAvatar.textContent = '';
                 } else {
-                    headerAvatar.innerHTML = `<img src="${aUrl}?v=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                    dashAvatar.textContent = me.username ? me.username.charAt(0).toUpperCase() : '?';
+                    dashAvatar.style.backgroundImage = 'none';
                 }
             }
 
-            // We will remove the overlay after subsystems load to prevent flash of empty app
+            const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
+            if (sidebarAvatar) {
+                if (aUrl && typeof applyAvatarDisplay === 'function') applyAvatarDisplay(sidebarAvatar, aUrl);
+            }
+
+            const settingsPreview = document.getElementById('settings-avatar-preview');
+            if (settingsPreview && aUrl) {
+                if (typeof applyAvatarDisplay === 'function') applyAvatarDisplay(settingsPreview, aUrl);
+            }            // We will remove the overlay after subsystems load to prevent flash of empty app
             // if (authOverlay) authOverlay.style.display = 'none';
 
             console.log('BOOT: Loading subsystems...');
@@ -443,18 +460,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('btn-save-profile');
         if (!input || !btn) return;
 
-        let newVal = input.value.trim();
-        if (newVal && !newVal.startsWith('@')) {
-            newVal = '@' + newVal;
-            input.value = newVal;
+        let rawVal = input.value.trim();
+        // Remove @ if user typed it, since we have a visual @ prefix in UI
+        if (rawVal.startsWith('@')) {
+            rawVal = rawVal.substring(1);
+            input.value = rawVal;
         }
+        
+        const sendVal = rawVal ? '@' + rawVal : '';
 
         const originalHTML = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> СОХРАНЕНИЕ...';
         btn.disabled = true;
 
         try {
-            await apiRequest('/me/update', 'POST', { handle: newVal });
+            await apiRequest('/me/update', 'POST', { handle: sendVal });
             if (typeof addLog === 'function') addLog('Профиль успешно сохранен', 'success');
             if (typeof showToast === 'function') showToast('✅ Настройки сохранены!');
             

@@ -2887,3 +2887,99 @@ body.skufenger-fullscreen .mobile-back-btn {
     margin-right: 4px;
     flex-shrink: 0;
 }
+
+/* --- GALLERY & LIGHTBOX --- */
+.msg-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 4px;
+    margin-top: 6px;
+    max-width: 280px;
+}
+.msg-gallery-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--border-metal);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.msg-gallery-img:hover {
+    border-color: var(--accent-cyan);
+    box-shadow: var(--glow);
+}
+
+/* Lightbox container */
+.lightbox-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.lightbox-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+.lightbox-content {
+    max-width: 90vw;
+    max-height: 90vh;
+    object-fit: contain;
+    transform-origin: center center;
+    transition: transform 0.1s ease-out;
+}
+.lightbox-close {
+    position: absolute;
+    top: 20px; right: 20px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid var(--border-metal);
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    font-size: 24px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10000;
+}
+
+/* --- MEDIA RECORDING --- */
+.waveform-container {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-surface-light);
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--border-metal);
+    flex: 1;
+}
+.recording-indicator {
+    width: 10px; height: 10px;
+    background-color: #ff3b30;
+    border-radius: 50%;
+    animation: pulse-record 1.5s infinite;
+}
+@keyframes pulse-record {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+}
+#recording-timer {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 36px;
+}
+#waveform-canvas {
+    flex: 1;
+    max-width: 150px;
+}
+.stop-btn { color: #ff3b30; }
+.cancel-btn { color: var(--text-secondary); }
+.mic-btn.recording svg { stroke: #ff3b30; }

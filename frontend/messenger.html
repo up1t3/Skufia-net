@@ -390,8 +390,8 @@
                                         <button class="icon-btn" id="sidebar-search-toggle-btn" title="Поиск" onclick="toggleSidebarSearch(true)">
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                         </button>
-                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8 1 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'" style="padding: 0; overflow: hidden; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: var(--surface-light); border: 1px solid var(--border-metal); margin-left: 4px;">
+                                            <div id="dash-avatar" style="width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: var(--text-bright);">?</div>
                                         </button>
                                     </div>
                                 </div>
@@ -475,7 +475,7 @@
                             
                             <!-- Chat Input Wrapper -->
                             <div class="chat-input-row premium-input-wrapper">
-                                <input type="file" id="chat-file-input" style="display:none;" accept="*/*">
+                                <input type="file" id="chat-file-input" style="display:none;" accept="*/*" multiple>
                                 <div class="chat-capsule">
                                     <button id="chat-attach-btn" class="capsule-btn attach-btn" title="Вложение" onclick="document.getElementById('chat-file-input').click()">
                                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
@@ -515,6 +515,8 @@
     <script defer src="api.js?v=50"></script>
     <script defer src="crypto.js?v=50"></script>
     <script defer src="features.js?v=50"></script>
+    <script defer src="lightbox.js?v=1"></script>
+    <script defer src="media_capture.js?v=1"></script>
     <script defer src="chat_core.js?v=50"></script>
     <script defer src="messenger_app.js?v=50"></script>
 

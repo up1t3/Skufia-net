@@ -91,23 +91,38 @@ window.initChatCore = function() {
             } else if (data.type === 'edit_message') {
                 const el = document.getElementById(`msg-${data.message_id}`);
                 if (el) {
-                    const txtEl = el.querySelector('.msg-text');
-                    if (txtEl) {
-                        let decryptedContent = data.content;
-                        if (data.iv && state.chat.sessionKeys[data.room_id]) {
-                            const keysArr = Array.isArray(state.chat.sessionKeys[data.room_id]) ? state.chat.sessionKeys[data.room_id] : [state.chat.sessionKeys[data.room_id]];
-                            for (let i = keysArr.length - 1; i >= 0; i--) {
-                                try {
-                                    decryptedContent = await window.CryptoManager.decryptMessage(keysArr[i], data.content, data.iv);
-                                    break;
-                                } catch(e) {}
-                            }
+                    let decryptedContent = data.content;
+                    if (data.iv && state.chat.sessionKeys[data.room_id]) {
+                        const keysArr = Array.isArray(state.chat.sessionKeys[data.room_id]) ? state.chat.sessionKeys[data.room_id] : [state.chat.sessionKeys[data.room_id]];
+                        for (let i = keysArr.length - 1; i >= 0; i--) {
+                            try {
+                                decryptedContent = await window.CryptoManager.decryptMessage(keysArr[i], data.content, data.iv);
+                                break;
+                            } catch(e) {}
                         }
-                        txtEl.innerText = decryptedContent; 
                     }
-                    if (!el.querySelector('.is-edited')) {
-                        const mheader = el.querySelector('.msg-header');
-                        if (mheader) mheader.insertAdjacentHTML('beforeend', '<span class="is-edited">(изменено)</span>');
+                    
+                    let txtEl = el.querySelector('.msg-text');
+                    if (txtEl) {
+                        txtEl.textContent = decryptedContent;
+                    } else {
+                        txtEl = document.createElement('div');
+                        txtEl.className = 'msg-text';
+                        txtEl.textContent = decryptedContent;
+                        const footer = el.querySelector('.msg-footer');
+                        if (footer) {
+                            el.insertBefore(txtEl, footer);
+                        } else {
+                            el.appendChild(txtEl);
+                        }
+                    }
+                    
+                    const footerDiv = el.querySelector('.msg-footer');
+                    if (footerDiv && !footerDiv.querySelector('.is-edited')) {
+                        const editedSpan = document.createElement('span');
+                        editedSpan.className = 'is-edited';
+                        editedSpan.textContent = 'изм. ';
+                        footerDiv.insertBefore(editedSpan, footerDiv.firstChild);
                     }
                 }
             } else if (data.type === 'delete_message') {
@@ -538,12 +553,34 @@ window.initChatCore = function() {
         const fileUrl = msg.file_url || null;
         let fileHtml = '';
         if (fileUrl) {
-            const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
-            if (isImage) {
-                fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
-            } else {
-                const fname = fileUrl.split('/').pop() || 'file';
-                fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
+            let urls = [];
+            try {
+                urls = fileUrl.startsWith('[') ? JSON.parse(fileUrl) : [fileUrl];
+            } catch (e) {
+                urls = [fileUrl];
+            }
+            
+            if (urls.length > 1) {
+                fileHtml = '<div class="msg-gallery">';
+                urls.forEach(url => {
+                    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
+                    if (isImage) {
+                        fileHtml += `<a href="${BASE_URL}${url}" target="_blank" onclick="window.openLightbox(event, '${BASE_URL}${url}')"><img class="msg-gallery-img" src="${BASE_URL}${url}" alt="attachment"></a>`;
+                    } else {
+                        const fname = url.split('/').pop() || 'file';
+                        fileHtml += `<a class="msg-file-attachment" href="${BASE_URL}${url}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
+                    }
+                });
+                fileHtml += '</div>';
+            } else if (urls.length === 1) {
+                const url = urls[0];
+                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
+                if (isImage) {
+                    fileHtml = `<a href="${BASE_URL}${url}" target="_blank" onclick="window.openLightbox(event, '${BASE_URL}${url}')"><img class="msg-file-img-preview" src="${BASE_URL}${url}" alt="attachment"></a>`;
+                } else {
+                    const fname = url.split('/').pop() || 'file';
+                    fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${url}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
+                }
             }
         }
 
@@ -775,10 +812,21 @@ window.initChatCore = function() {
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
 
+        let fileUrlPayload = null;
+        if (state.pendingFiles && state.pendingFiles.length > 0) {
+            if (state.pendingFiles.length === 1) {
+                fileUrlPayload = state.pendingFiles[0].url;
+            } else {
+                fileUrlPayload = JSON.stringify(state.pendingFiles.map(f => f.url));
+            }
+        } else if (state.pendingFile) { // Fallback for old code
+            fileUrlPayload = state.pendingFile.url;
+        }
+
         let payload = {
             content,
             encryption_iv: '',
-            file_url: state.pendingFile ? state.pendingFile.url : null,
+            file_url: fileUrlPayload,
             reply_to_id: state.chat.replyToId
         };
 
@@ -800,25 +848,49 @@ window.initChatCore = function() {
             const savedContent = content;
             const savedFile = state.pendingFile ? { ...state.pendingFile } : null;
             const savedReplyId = state.chat.replyToId;
+            const savedEditingId = state.chat.editingId;
             
             input.value = '';
             localStorage.removeItem(`skuf_draft_${roomId}`);
             // @ts-ignore
-            if (window.cancelReply) window.cancelReply();
+            if (window.cancelReply) window.cancelReply(); // this clears editingId!
             clearChatFile();
 
             let response;
-            if (state.chat.editingId) {
-                response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
+            if (savedEditingId) {
+                response = await apiRequest(`/chat/messages/${savedEditingId}`, 'PUT', payload);
+                // Optimistic UI update for edit
+                const el = document.getElementById(`msg-${savedEditingId}`);
+                if (el) {
+                    let textDiv = el.querySelector('.msg-text');
+                    if (textDiv) {
+                        textDiv.textContent = savedContent;
+                    } else {
+                        textDiv = document.createElement('div');
+                        textDiv.className = 'msg-text';
+                        textDiv.textContent = savedContent;
+                        const footer = el.querySelector('.msg-footer');
+                        if (footer) {
+                            el.insertBefore(textDiv, footer);
+                        } else {
+                            el.appendChild(textDiv);
+                        }
+                    }
+                    
+                    const footerDiv = el.querySelector('.msg-footer');
+                    if (footerDiv && !footerDiv.querySelector('.is-edited')) {
+                        const editedSpan = document.createElement('span');
+                        editedSpan.className = 'is-edited';
+                        editedSpan.textContent = 'изм. ';
+                        footerDiv.insertBefore(editedSpan, footerDiv.firstChild);
+                    }
+                }
             } else {
                 response = await apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
-            }
-
-            // Optimistic render — show message immediately, don't wait for WS echo
-            if (!state.chat.editingId) {
+                // Optimistic render — show message immediately, don't wait for WS echo
                 const optimisticMsg = {
                     id: response?.id || Date.now(),
-                    sender: state.user?.username || state.user?.display_name || '\u042f',
+                    sender: state.user?.username || state.user?.display_name || 'Я',
                     sender_id: state.user?.id,
                     text: savedContent,
                     content: savedContent,
@@ -832,7 +904,6 @@ window.initChatCore = function() {
                 };
                 renderChatMessage(optimisticMsg);
             }
-            state.chat.editingId = null;
             const editBanner = document.getElementById('edit-banner');
             if (editBanner) editBanner.style.display = 'none';
             playSound('click');
@@ -850,19 +921,81 @@ window.initChatCore = function() {
 
 
     /** Upload a file to the server and store the URL in pendingFile */
-    async function uploadChatFile(/** @type {File} */ file) {
-        if (file.size > 5 * 1024 * 1024) {
-            addLog('Файл превышает лимит 5 МБ', 'error');
-            return;
-        }
+    async function compressImage(file) {
+        if (!file.type.startsWith('image/')) return file;
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const max_size = 1920; // max dimension
+                    
+                    if (width > height && width > max_size) {
+                        height *= max_size / width;
+                        width = max_size;
+                    } else if (height > max_size) {
+                        width *= max_size / height;
+                        height = max_size;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Compress as JPEG (0.8 quality)
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            // Use the compressed file only if it's actually smaller
+                            resolve(newFile.size < file.size ? newFile : file);
+                        } else {
+                            resolve(file);
+                        }
+                    }, 'image/jpeg', 0.8);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    /** Upload multiple files to the server and store the URLs in pendingFiles */
+    async function uploadChatFiles(/** @type {FileList | File[]} */ files) {
         const formData = new FormData();
-        formData.append('file', file);
+        let totalSize = 0;
+        let validFilesCount = 0;
+        
+        // Wait for all potential image compressions
+        for (let i = 0; i < files.length; i++) {
+            let file = files[i];
+            
+            if (file.type.startsWith('image/')) {
+                file = await compressImage(file);
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                addLog(`Файл ${file.name} превышает лимит 5 МБ`, 'error');
+                continue;
+            }
+            formData.append('files', file);
+            totalSize += file.size;
+            validFilesCount++;
+        }
+        if (validFilesCount === 0) return;
+
         try {
             const token = state.user.token;
             /** @type {Record<string, string>} */
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            const resp = await fetch(`${API_BASE_URL}/chat/upload`, {
+            const resp = await fetch(`${API_BASE_URL}/chat/upload_multiple`, {
                 method: 'POST',
                 headers,
                 body: formData
@@ -872,20 +1005,28 @@ window.initChatCore = function() {
                 throw new Error(err.detail || 'Upload failed');
             }
             const data = await resp.json();
-            state.pendingFile = { url: data.file_url, name: data.original_name || file.name };
+            
+            if (!state.pendingFiles) state.pendingFiles = [];
+            for (let i = 0; i < data.file_urls.length; i++) {
+                // We use Array.from if it's FileList just to be safe
+                const fileList = Array.from(files);
+                state.pendingFiles.push({ url: data.file_urls[i], name: fileList[i] ? fileList[i].name : `file_${i}` });
+            }
+            
             // Show preview strip
             const preview = document.getElementById('chat-file-preview');
             const nameEl = document.getElementById('chat-file-name');
             if (preview) preview.style.display = 'flex';
-            if (nameEl) nameEl.textContent = `📎 ${state.pendingFile.name} (${(file.size / 1024).toFixed(1)} KB)`;
-            addLog(`Файл '${file.name}' загружен`, 'success');
+            if (nameEl) nameEl.textContent = `📎 ${state.pendingFiles.length} файл(ов) (${(totalSize / 1024).toFixed(1)} KB)`;
+            addLog(`Загружено ${validFilesCount} файл(ов)`, 'success');
         } catch (e) {
-            addLog(`Ошибка загрузки файла: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
+            addLog(`Ошибка загрузки: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
         }
     }
 
     function clearChatFile() {
         state.pendingFile = null;
+        state.pendingFiles = [];
         const preview = document.getElementById('chat-file-preview');
         const fileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
         if (preview) preview.style.display = 'none';
@@ -1528,8 +1669,8 @@ window.initChatCore = function() {
     const chatFileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
     if (chatFileInput) {
         chatFileInput.addEventListener('change', () => {
-            if (chatFileInput.files && chatFileInput.files[0]) {
-                uploadChatFile(chatFileInput.files[0]);
+            if (chatFileInput.files && chatFileInput.files.length > 0) {
+                uploadChatFiles(chatFileInput.files);
             }
         });
     }

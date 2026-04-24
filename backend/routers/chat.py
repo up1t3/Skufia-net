@@ -1067,6 +1067,10 @@ def validate_magic_bytes(contents: bytes, expected_type: str = "all") -> bool:
             b'RIFF',             # WAV (first 4) then WAVE (8-11)
             b'fLaC',             # FLAC
         ],
+        "video": [
+            b'\x1a\x45\xdf\xa3', # WebM / MKV
+            b'ftyp',             # MP4 (usually offset by 4 bytes, handled in check_group)
+        ],
         "image": [
             b'\xff\xd8\xff',     # JPEG
             b'\x89PNG\r\n\x1a\n',# PNG
@@ -1085,6 +1089,10 @@ def validate_magic_bytes(contents: bytes, expected_type: str = "all") -> bool:
         
     def check_group(group_key: str):
         for sig in signatures[group_key]:
+            if sig == b'ftyp':
+                if contents[4:8] == b'ftyp':
+                    return True
+                continue
             if contents.startswith(sig):
                 if sig == b'RIFF':
                     # Special check for WEBP vs WAV
@@ -1098,11 +1106,13 @@ def validate_magic_bytes(contents: bytes, expected_type: str = "all") -> bool:
 
     if expected_type == "audio":
         return check_group("audio")
+    elif expected_type == "video":
+        return check_group("video")
     elif expected_type == "image":
         return check_group("image")
     else:
         # Check if it fits ANY known safe binary type OR looks like plain text
-        if check_group("image") or check_group("audio") or check_group("document"):
+        if check_group("image") or check_group("audio") or check_group("video") or check_group("document"):
             return True
         # ASCII / UTF-8 fallback check (for .txt, .csv, etc)
         try:
@@ -1167,6 +1177,41 @@ async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: Us
         f.write(contents)
     
     return {"file_url": f"/api/uploads/{unique_name}", "original_name": safe_filename, "size": len(contents)}
+
+@router.post('/chat/upload_multiple')
+async def upload_multiple_chat_files(files: List[UploadFile] = FastAPIFile(...), current_user: User = Depends(get_current_user), idem_key: str = Depends(validate_idempotency)):
+    """Upload multiple file attachments for chat (max 5 MB per file)"""
+    urls = []
+    total_size = 0
+    os.makedirs('uploads', exist_ok=True)
+    
+    for file in files:
+        contents = await file.read()
+        if len(contents) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=413, detail=f"File {file.filename} exceeds 5 MB limit")
+        
+        # [SEC-102] Security Check: Magic Bytes Validation
+        if not validate_magic_bytes(contents, expected_type="all"):
+            raise HTTPException(status_code=415, detail=f"Spoofing detected in {file.filename}")
+            
+        safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))
+        ext = os.path.splitext(safe_filename)[1].lower() or '.bin'
+        
+        # Block dangerous extensions regardless of magic bytes
+        dangerous_exts = ['.exe', '.sh', '.bat', '.cmd', '.ps1', '.vbs', '.js', '.php', '.py', '.scr']
+        if ext in dangerous_exts:
+            raise HTTPException(status_code=403, detail=f"Dangerous extension detected in {file.filename}")
+
+        unique_name = f"{uuid.uuid4().hex}{ext}"
+        save_path = os.path.join('uploads', unique_name)
+        
+        with open(save_path, 'wb') as f:
+            f.write(contents)
+            
+        urls.append(f"/api/uploads/{unique_name}")
+        total_size += len(contents)
+        
+    return {"file_urls": urls, "total_size": total_size}
 
 @router.post('/chat/rooms/{room_id}/send')
 async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
