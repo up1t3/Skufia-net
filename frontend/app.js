@@ -942,7 +942,7 @@ backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; 
     });
 })();
 
-\n
+
 window.openSettingsModal = function() {
     const m = document.getElementById('settings-modal');
     if (m) m.style.display = 'flex';
