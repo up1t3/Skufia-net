@@ -700,8 +700,6 @@ window.initChatCore = function() {
             document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
             const menu = document.createElement('div');
             menu.className = 'msg-context-menu';
-            menu.style.left = `${e.pageX}px`;
-            menu.style.top = `${e.pageY}px`;
             
             // @ts-ignore
             let cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
@@ -724,6 +722,22 @@ window.initChatCore = function() {
                 menu.appendChild(deleteDiv);
             }
             document.body.appendChild(menu);
+            
+            // Adjust position to keep within viewport
+            const rect = menu.getBoundingClientRect();
+            let left = e.pageX;
+            let top = e.pageY;
+            
+            if (left + rect.width > window.innerWidth) {
+                left = window.innerWidth - rect.width - 10;
+            }
+            if (top + rect.height > window.innerHeight) {
+                top = window.innerHeight - rect.height - 10;
+            }
+            
+            menu.style.left = `${Math.max(10, left)}px`;
+            menu.style.top = `${Math.max(10, top)}px`;
+
             setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
         };
 
