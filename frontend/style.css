@@ -2097,6 +2097,37 @@ body.super-user .nav-btn.active {
     background: rgba(0, 0, 0, 0.4);
 }
 
+.msg-action-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    font-size: 14px;
+    transition: background 0.2s;
+    z-index: 10;
+}
+
+.msg-action-btn:hover {
+    background: var(--accent-cyan);
+    color: #000;
+}
+
+.msg-bubble {
+    position: relative;
+}
+
+.msg-bubble:hover .msg-action-btn {
+    display: flex;
+}
+
 .reply-preview-container {
     padding: 8px 15px;
     background: rgba(0, 0, 0, 0.5);

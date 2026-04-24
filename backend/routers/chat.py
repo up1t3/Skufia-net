@@ -297,6 +297,14 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
             sender_name = get_display_name(last_msg.sender) if last_msg.sender else 'unknown'
             last_msg_text = f"{sender_name}: {last_msg.content[:60]}" if last_msg.content else None
 
+        # Unread count
+        unread_count = db.query(Message).filter(
+            Message.room_id == room.id,
+            Message.sender_id != current_user.id,
+            Message.is_read == False,
+            Message.is_deleted_for_all == False
+        ).count()
+
         room_data = {
             "id": room.id, 
             "name": room.name, 
@@ -305,7 +313,8 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
             "avatar_url": None,
             "other_user_id": None,
             "last_message": last_msg_text,
-            "last_activity": last_activity
+            "last_activity": last_activity,
+            "unread_count": unread_count
         }
         
         if room.room_type == 'private':

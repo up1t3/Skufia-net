@@ -229,6 +229,32 @@ window.initChatCore = function() {
             // Show status dot only for private chats
             statusSpan.style.display = room.type === 'private' ? 'inline-block' : 'none';
 
+            // Unread badge
+            let unreadBadge = null;
+            if (room.unread_count && room.unread_count > 0) {
+                unreadBadge = document.createElement('div');
+                unreadBadge.className = 'unread-badge';
+                unreadBadge.textContent = room.unread_count > 99 ? '99+' : room.unread_count;
+                unreadBadge.style.cssText = `
+                    background: var(--accent-cyan);
+                    color: #000;
+                    border-radius: 10px;
+                    padding: 0 6px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    height: 20px;
+                    min-width: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: absolute;
+                    right: 15px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    box-shadow: 0 0 5px var(--accent-cyan);
+                `;
+            }
+
             // Delete/Leave button (visible on hover)
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'room-delete-btn';
@@ -269,6 +295,7 @@ window.initChatCore = function() {
             div.appendChild(avatarDiv);
             div.appendChild(infoDiv);
             div.appendChild(statusSpan);
+            if (unreadBadge) div.appendChild(unreadBadge);
             div.appendChild(deleteBtn);
             div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
             list.appendChild(div);
@@ -310,6 +337,12 @@ window.initChatCore = function() {
         state.chat.currentRoomId = roomId;
         state.chat.currentRoomType = type;
         state.chat.receiverId = receiverId;
+
+        // Reset local unread count and remove badge visually
+        const roomState = (state.chat.rooms || []).find(r => r.id === roomId);
+        if (roomState) roomState.unread_count = 0;
+        const activeRoomEl = document.querySelector(`.chat-room-item[data-room-id="${roomId}"] .unread-badge`);
+        if (activeRoomEl) activeRoomEl.remove();
 
         const chatHistoryEl = document.getElementById('chat-history');
         const header = document.getElementById('chat-header');
@@ -569,8 +602,42 @@ window.initChatCore = function() {
         if (msg.reply_to_id) {
             const replyEl = document.createElement('div');
             replyEl.className = 'reply-badge';
-            replyEl.textContent = 'Ответ на сообщение';
-            replyEl.onclick = () => document.getElementById(`msg-${msg.reply_to_id}`)?.scrollIntoView({behavior:'smooth'});
+            
+            // Try to find original message in DOM for context
+            const origMsgEl = document.getElementById(`msg-${msg.reply_to_id}`);
+            let quotedText = 'Перейти к сообщению...';
+            let quotedSender = '';
+            
+            if (origMsgEl) {
+                const textEl = origMsgEl.querySelector('.msg-text');
+                if (textEl) {
+                    quotedText = textEl.innerText.substring(0, 40);
+                    if (textEl.innerText.length > 40) quotedText += '...';
+                }
+                const senderEl = origMsgEl.querySelector('.msg-sender-name');
+                if (senderEl) {
+                    quotedSender = senderEl.innerText;
+                } else if (origMsgEl.classList.contains('msg-sent')) {
+                    quotedSender = state.user.username || 'Я';
+                }
+            }
+            
+            if (quotedSender) {
+                replyEl.innerHTML = `<div style="font-weight:bold; color:var(--accent-cyan); font-size:11px; margin-bottom:2px;">${quotedSender}</div><div>${quotedText}</div>`;
+            } else {
+                replyEl.innerHTML = `<div>${quotedText}</div>`;
+            }
+
+            replyEl.onclick = () => {
+                const target = document.getElementById(`msg-${msg.reply_to_id}`);
+                if (target) {
+                    target.scrollIntoView({behavior:'smooth', block: 'center'});
+                    target.style.transition = 'background 0.5s';
+                    const oldBg = target.style.background;
+                    target.style.background = 'rgba(0, 242, 255, 0.3)';
+                    setTimeout(() => target.style.background = oldBg, 1500);
+                }
+            };
             div.appendChild(replyEl);
         }
 
@@ -620,9 +687,16 @@ window.initChatCore = function() {
         footerDiv.appendChild(timeSpan);
         div.appendChild(footerDiv);
         
-        // Context menu
-        div.oncontextmenu = (e) => {
+        // Action Button for Discoverable Context Menu
+        const actionBtn = document.createElement('div');
+        actionBtn.className = 'msg-action-btn';
+        actionBtn.innerHTML = '&#8942;'; // vertical ellipsis
+        actionBtn.title = 'Меню сообщения';
+        div.appendChild(actionBtn);
+
+        const showContextMenu = (e) => {
             e.preventDefault();
+            e.stopPropagation();
             document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
             const menu = document.createElement('div');
             menu.className = 'msg-context-menu';
@@ -634,24 +708,38 @@ window.initChatCore = function() {
             menu.innerHTML = '';
             const replyDiv = document.createElement('div');
             replyDiv.textContent = 'Ответить';
-            replyDiv.onclick = () => setReply(msg.id, cleanText);
+            replyDiv.onclick = (ev) => { ev.stopPropagation(); setReply(msg.id, cleanText); menu.remove(); };
             menu.appendChild(replyDiv);
 
             if (isMe) {
                 const editDiv = document.createElement('div');
                 editDiv.textContent = 'Редактировать';
-                editDiv.onclick = () => setEdit(msg.id, cleanText);
+                editDiv.onclick = (ev) => { ev.stopPropagation(); setEdit(msg.id, cleanText); menu.remove(); };
                 menu.appendChild(editDiv);
 
                 const deleteDiv = document.createElement('div');
                 deleteDiv.className = 'delete-ctx';
                 deleteDiv.textContent = 'Удалить';
-                deleteDiv.onclick = () => deleteMessage(msg.id);
+                deleteDiv.onclick = (ev) => { ev.stopPropagation(); deleteMessage(msg.id); menu.remove(); };
                 menu.appendChild(deleteDiv);
             }
             document.body.appendChild(menu);
             setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
         };
+
+        // Context menu bindings
+        div.oncontextmenu = showContextMenu;
+        actionBtn.onclick = showContextMenu;
+        
+        // Touch support for long press
+        let touchTimer;
+        div.addEventListener('touchstart', (e) => {
+            touchTimer = setTimeout(() => {
+                showContextMenu(e.touches[0]);
+            }, 600); // 600ms long press
+        }, {passive: true});
+        div.addEventListener('touchend', () => clearTimeout(touchTimer));
+        div.addEventListener('touchmove', () => clearTimeout(touchTimer));
 
         row.appendChild(div);
         history.appendChild(row);
