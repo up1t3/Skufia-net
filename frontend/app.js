@@ -669,7 +669,8 @@ window.previewAvatar = async function(input) {
         const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
         if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
         const dashAvatar = document.getElementById('dash-avatar');
-        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);\n        addLog('Фотография загружена. Не забудьте сохранить настройки.', 'success');
+        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
+        addLog('Фотография загружена. Не забудьте сохранить настройки.', 'success');
 
         addLog('✅ Аватарка загружена и сохранена!', 'success');
     } catch (e) {
