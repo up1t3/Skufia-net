@@ -1,6 +1,6 @@
 window.isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-window.BASE_URL = window.isLocalDev ? 'http://localhost:8007' : '';
-window.API_BASE_URL = `${window.BASE_URL}/api`;
+window.BASE_URL = '';
+window.API_BASE_URL = `/api`;
 
 window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = null) {
     const headers = {};
@@ -25,8 +25,13 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
         if (res.status === 401) {
             localStorage.removeItem('skuf_token');
             if (window.state && window.state.user) window.state.user.token = null;
+            document.documentElement.classList.remove('is-logged-in'); // FIX: allow overlay to show
             const authOverlay = document.getElementById('auth-overlay');
-            if (authOverlay) authOverlay.style.display = 'flex';
+            if (authOverlay) {
+                authOverlay.style.display = 'flex';
+            } else {
+                window.location.reload();
+            }
             throw new Error('Unauthorized');
         }
         if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -999,6 +999,7 @@ def get_room_history(
                 "id": m.id,
                 "sender": get_display_name(m.sender), 
                 "sender_id": m.sender_id, 
+                "avatar_url": m.sender.profile.avatar_url if m.sender and m.sender.profile else None,
                 "text": m.content, 
                 "iv": m.encryption_iv,
                 "file_url": m.file_url,
@@ -1202,7 +1203,8 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "reply_to_id": msg.reply_to_id,
         "is_edited": False,
         "timestamp": datetime.utcnow().isoformat() + "Z",
-        "room_id": room_id
+        "room_id": room_id,
+        "avatar_url": current_user.profile.avatar_url if current_user.profile else None
     }
     
     if room_id:
@@ -1329,7 +1331,13 @@ def get_room_members(room_id: int, current_user: User = Depends(get_current_user
     return {
         "invite_code": room.invite_code,
         "my_role": me.role,
-        "members": [{"user_id": u.id, "display_name": get_display_name(u), "role": m.role} for m, u in members_db]
+        "members": [{
+            "user_id": u.id, 
+            "display_name": get_display_name(u), 
+            "username": get_display_name(u),
+            "role": m.role,
+            "avatar_url": u.profile.avatar_url if u.profile else None
+        } for m, u in members_db]
     }
 
 

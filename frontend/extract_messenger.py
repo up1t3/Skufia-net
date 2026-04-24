@@ -55,9 +55,8 @@ messenger_html = f'''<!DOCTYPE html>
 </body>
 </html>'''
 
-# Replace app.js with messenger_app.js
-messenger_html = messenger_html.replace('src="app.js?v=49"', 'src="messenger_app.js?v=49"')
-
+import re
+messenger_html = re.sub(r'src="app\.js(\?v=\d+)?"', r'src="messenger_app.js\1"', messenger_html)
 # Make sure #view-messages has class "view active"
 messenger_html = messenger_html.replace('<div class="view" id="view-messages">', '<div class="view active" id="view-messages">')
 

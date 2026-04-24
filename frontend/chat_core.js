@@ -401,7 +401,9 @@ window.initChatCore = function() {
         const chatLayout = document.querySelector('.chat-layout');
         if (chatLayout && !chatLayout.classList.contains('chat-open')) {
             chatLayout.classList.add('chat-open');
-            if (window.innerWidth <= 768) {
+            const isMobile = window.innerWidth <= 768;
+            const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
+            if (isMobile || isFullscreen) {
                 try {
                     history.pushState({ skufia: true, view: 'messages', chat: true }, "Chat", "");
                 } catch(e) {}
