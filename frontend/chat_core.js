@@ -1461,13 +1461,22 @@ window.initChatCore = function() {
         async start() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+                // FIX: iOS Safari doesn't support audio/webm — pick compatible mimeType
+                const mimeType = [
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                    'audio/mp4',
+                    'audio/ogg;codecs=opus',
+                    ''
+                ].find(t => t === '' || MediaRecorder.isTypeSupported(t));
+                this.mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
                 this.audioChunks = [];
                 this.mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) this.audioChunks.push(event.data);
                 };
                 this.mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
+                    const type = this.mediaRecorder.mimeType || 'audio/webm';
+                    const audioBlob = new Blob(this.audioChunks, { type });
                     this.audioChunks = [];
                     stream.getTracks().forEach(t => t.stop());
                     this.btn.style.color = '';

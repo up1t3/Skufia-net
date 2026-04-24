@@ -499,20 +499,24 @@ const handleInput = document.getElementById('settings-handle');
     // --- CALL GATEWAY (audio/video) ---
     window.skufengerCall = function(isVideo) {
         if (!state.chat.currentRoomId) {
-            addLog('Сначала выберите контакт для звонка', 'error');
+            if (typeof showToast === 'function') showToast('Сначала выберите контакт для звонка');
             return;
         }
-        const targetId = state.chat.currentReceiverId || state.chat.currentRoomId;
+        // FIX: was currentReceiverId (typo), correct field is receiverId
+        const targetId = state.chat.receiverId || state.chat.currentRoomId;
         if (!window.RTCManagerInstance) {
-            addLog('RTC модуль не инициализирован', 'error');
+            if (typeof showToast === 'function') showToast('⚠️ RTC модуль не инициализирован');
             return;
         }
-        addLog(`Инициация ${isVideo ? 'видео' : 'аудио'} звонка...`, 'info');
+        if (typeof showToast === 'function') showToast(`📞 Инициация ${isVideo ? 'видео' : 'аудио'} звонка...`);
         window.RTCManagerInstance.startCall(targetId, isVideo);
     };
 
     // --- CHAT OPTIONS DROPDOWN ---
-    window.toggleChatOptions = function() {
+    // FIX: accept event and call stopPropagation so the same click doesn't
+    // bubble up to document and immediately close the dropdown we just opened
+    window.toggleChatOptions = function(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
         const dd = document.getElementById('chat-options-dropdown');
         if (!dd) return;
         const isOpen = dd.style.display !== 'none';
@@ -521,13 +525,58 @@ const handleInput = document.getElementById('settings-handle');
 
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
-
-const dd = document.getElementById('chat-options-dropdown');
+        const dd = document.getElementById('chat-options-dropdown');
         const wrapper = e.target.closest('.chat-options-wrapper');
         if (dd && !wrapper) {
             dd.style.display = 'none';
         }
     });
+
+    // --- CONTACT PROFILE ---
+    window.openContactProfile = function() {
+        const roomId = state.chat.currentRoomId;
+        if (!roomId) return;
+        const room = (state.chat.rooms || []).find(r => r.id === roomId);
+        const name = document.getElementById('chat-header-title')?.textContent || 'Неизвестно';
+        const avatarEl = document.getElementById('header-avatar');
+        const avatarHtml = avatarEl ? avatarEl.innerHTML : '';
+
+        // Build/reuse modal
+        let modal = document.getElementById('contact-profile-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'contact-profile-modal';
+            modal.style.cssText = 'display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.7); align-items:flex-end; justify-content:center;';
+            modal.innerHTML = `
+                <div style="background:var(--bg-panel); width:100%; max-width:600px; border-radius:16px 16px 0 0; padding:24px; border:1px solid var(--border-metal);">
+                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+                        <div id="cp-avatar" style="width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-dark);display:flex;align-items:center;justify-content:center;"></div>
+                        <div>
+                            <div id="cp-name" style="font-size:1.1rem;font-weight:700;color:var(--text-main);"></div>
+                            <div id="cp-status" style="font-size:0.85rem;color:var(--text-dim);"></div>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:12px; margin-bottom:16px;">
+                        <button class="cyber-btn" style="flex:1;" onclick="window.skufengerCall(false); document.getElementById('contact-profile-modal').style.display='none';">📞 Позвонить</button>
+                        <button class="cyber-btn" style="flex:1;" onclick="window.skufengerCall(true); document.getElementById('contact-profile-modal').style.display='none';">🎥 Видео</button>
+                    </div>
+                    <button class="cyber-btn" style="width:100%;background:rgba(255,50,50,0.15);border-color:rgba(255,100,100,0.3);" onclick="document.getElementById('contact-profile-modal').style.display='none'">✕ Закрыть</button>
+                </div>`;
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) modal.style.display = 'none';
+            });
+            document.body.appendChild(modal);
+        }
+
+        // Populate
+        const cpAvatar = document.getElementById('cp-avatar');
+        const cpName = document.getElementById('cp-name');
+        const cpStatus = document.getElementById('cp-status');
+        if (cpAvatar) cpAvatar.innerHTML = avatarHtml;
+        if (cpName) cpName.textContent = name;
+        if (cpStatus) cpStatus.textContent = room ? (room.is_online ? '🟢 В сети' : '⚫ Не в сети') : '';
+        modal.style.display = 'flex';
+    };
 
     // --- CHAT OPTION ACTIONS ---
     window.chatOptionAction = function(action) {
