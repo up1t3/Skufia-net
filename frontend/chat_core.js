@@ -8,7 +8,7 @@ window.initChatCore = function() {
         }
     };
 
-    function connectWebSocket() {
+    window.connectWebSocket = function() {
         if (state.chat.socket) return;
         
         const token = state.user.token;

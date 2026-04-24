@@ -3,7 +3,11 @@ window.BASE_URL = window.isLocalDev ? 'http://localhost:8007' : '';
 window.API_BASE_URL = `${window.BASE_URL}/api`;
 
 window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = null) {
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {};
+    if (!(body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+    
     if (window.state && window.state.user && window.state.user.token) {
         headers['Authorization'] = `Bearer ${window.state.user.token}`;
     }
@@ -15,7 +19,7 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
         const res = await fetch(`${window.API_BASE_URL}${endpoint}`, {
             method,
             headers,
-            body: body ? JSON.stringify(body) : null,
+            body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
             cache: 'no-store'
         });
         if (res.status === 401) {

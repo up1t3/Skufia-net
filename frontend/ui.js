@@ -27,6 +27,18 @@ window.applyAvatarDisplay = function(element, url, index = null) {
 window.changeTheme = function(themeName) {
     document.body.setAttribute('data-theme', themeName);
     localStorage.setItem('skufia_theme', themeName);
+    const label = document.getElementById('current-theme-label');
+    if (label) {
+        const themeMap = {
+            'cyber': 'Cyber Dark',
+            'telegram': 'Telegram Dark',
+            'light-ios': 'Light OS',
+            'gold': 'Cyber Gold',
+            'matrix': 'Matrix Green',
+            'blood': 'Blood Red'
+        };
+        label.textContent = themeMap[themeName] || themeName;
+    }
 };
 
 window.setAndCloseTheme = function(themeName) {

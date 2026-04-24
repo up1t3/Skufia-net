@@ -63,7 +63,6 @@
                         <input type="password" id="reg-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
                         <button type="button" class="password-toggle" onclick="const input = document.getElementById('reg-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
                     </div>
-                </div>
                 <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
 
                 <!-- ФЗ-152: Personal Data Consent -->
@@ -87,84 +86,106 @@
     
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 16px;">
-            <div class="modal-header">
-                <h2>Настройки</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('settings-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        <div class="modal-content glass-panel" style="max-width: 420px; padding: 0; border-radius: 20px; overflow: hidden; border: 1px solid var(--border-metal); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <!-- Header -->
+            <div class="modal-header" style="display: flex; align-items: center; padding: 15px 20px; background: rgba(0,242,255,0.03); border-bottom: 1px solid var(--border-metal);">
+                <button class="back-btn-premium" onclick="window.closeSettingsModal()">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Назад
                 </button>
+                <h2 style="margin: 0; font-size: 17px; flex-grow: 1; text-align: center; font-weight: 700; letter-spacing: 0.5px; color: var(--text-main);">НАСТРОЙКИ</h2>
+                <div style="width: 75px;"></div> <!-- Balance for centering -->
             </div>
             
-            <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
+            <div class="settings-scroll-area premium-scroll" style="max-height: 80vh; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 20px;">
                 
-                <!-- Avatar Upload Section -->
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <div class="avatar-upload-container" style="position: relative; cursor: pointer; transition: transform 0.2s ease;" onclick="document.getElementById('settings-avatar-upload').click()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=Admin&background=1f2937&color=00f2ff" alt="Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-cyan); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                        <div class="avatar-overlay" style="position: absolute; bottom: 0; right: 0; background: var(--accent-cyan); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
-                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                <!-- Profile Section Group -->
+                <div style="display: flex; flex-direction: column; gap: 20px; background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                    <!-- Avatar Upload Section -->
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                        <div class="avatar-upload-container" style="position: relative; cursor: pointer; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);" onclick="document.getElementById('settings-avatar-upload').click()" onmouseover="this.style.transform='scale(1.08)'" onmouseout="this.style.transform='scale(1)'">
+                            <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=User&background=1f2937&color=00f2ff" alt="Avatar" style="width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0,242,255,0.2);">
+                            <div class="avatar-overlay" style="position: absolute; bottom: 2px; right: 2px; background: var(--accent-cyan); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.4); border: 2px solid var(--bg-surface);">
+                                <svg viewBox="0 0 24 24" width="16" height="16" stroke="#000" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                            </div>
+                        </div>
+                        <input type="file" id="settings-avatar-upload" accept="image/*" style="display: none;" onchange="window.previewAvatar(this)">
+                        <span style="font-size: 11px; color: var(--text-dim); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Изменить фото профиля</span>
+                    </div>
+
+                    <!-- Handle Input -->
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="settings-handle" style="font-size: 13px; margin-bottom: 8px; display: block; color: var(--text-dim); font-weight: 500;">Ваш уникальный никнейм</label>
+                        <div style="display: flex; gap: 0; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                            <span style="display: flex; align-items: center; justify-content: center; background: rgba(0,242,255,0.05); border: 1px solid var(--border-metal); border-right: none; border-radius: 10px 0 0 10px; padding: 0 15px; color: var(--accent-cyan); font-weight: bold; font-size: 16px;">@</span>
+                            <input type="text" id="settings-handle-input" class="cyber-input" style="width: 100%; border-radius: 0 10px 10px 0; padding: 12px 15px; font-size: 15px;" placeholder="username">
                         </div>
                     </div>
-                    <input type="file" id="settings-avatar-upload" accept="image/*" style="display: none;" onchange="window.previewAvatar(this)">
-                    <span style="font-size: 12px; color: var(--text-dim); font-weight: 500;">Установить фото профиля</span>
-                </div>
 
-                <!-- Formally had theme select here, moved to dedicated modal -->
-
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="settings-handle" style="font-size: 14px; margin-bottom: 5px; display: block; color: var(--text-dim);">Короткое имя (Handle)</label>
-                    <div style="display: flex; gap: 10px;">
-                        <span style="display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border-metal); border-radius: 8px; padding: 0 12px; color: var(--text-dim);">@</span>
-                        <input type="text" id="settings-handle" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="username">
-                    </div>
-                    <small style="color: var(--text-dim); font-size: 11px; margin-top: 4px; display: block;">По этой ссылке вас смогут найти другие.</small>
-                </div>
-
-                <!-- Toggles Section -->
-                <div style="background: var(--bg-accent); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border-metal);">
-                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                        <label style="margin: 0; font-size: 14px;">Звуковые уведомления</label>
-                        <input type="checkbox" id="settings-sound-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                        <label style="margin: 0; font-size: 14px;">Push-уведомления (PWA)</label>
-                        <input type="checkbox" id="settings-push-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                        <label style="margin: 0; font-size: 14px;">Отправка по Enter</label>
-                        <input type="checkbox" id="settings-enter-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                        <label style="margin: 0; font-size: 14px;">Автозагрузка медиа</label>
-                        <input type="checkbox" id="settings-media-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-                </div>
-
-
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <!-- Sync Contacts Hidden -->
-                </div>
-
-                
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <button onclick="window.location.href='skufenger.html'" class="cyber-btn" style="width: 100%; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(0, 242, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Установить приложение (PWA)
+                    <!-- SAVE SETTINGS — Prominent Primary Action -->
+                    <button id="btn-save-profile" onclick="window.saveProfileHandle()" class="cyber-btn primary-btn save-btn-premium" style="width: 100%;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        СОХРАНИТЬ ПРОФИЛЬ
                     </button>
                 </div>
-                <div style="margin-top: 15px; text-align: center; color: var(--text-dim); font-size: 11px; line-height: 1.4; opacity: 0.7;">
-                    © 2026 
-                    <span id="matrix-brand" class="scramble-text" data-text="Skufia-Net" style="color: var(--neon-cyan); font-weight: bold;">Skufia-Net</span>
-                    <span class="scramble-text" data-text=". All rights reserved.">. All rights reserved.</span>
-                    <a href="#" onclick="window.openCreatorPlaque(event)" style="color: var(--text-dim); text-decoration: underline;"><span class="scramble-text" data-text="By Vladimir Popov">By Vladimir Popov</span></a><br>
-                    <span class="scramble-text" data-text="Version 1.0.0 Enterprise | Created by Vladimir Popov">Version 1.0.0 Enterprise | Created by Vladimir Popov</span>
+
+                <!-- Appearance Section -->
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <h3 style="margin: 0; font-size: 13px; color: var(--accent-cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Интерфейс</h3>
+                    
+                    <button onclick="document.getElementById('theme-switcher-modal').style.display='flex'" class="cyber-btn" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-radius: 12px; font-size: 14px; background: var(--bg-accent); border: 1px solid var(--border-metal); color: var(--text-main); transition: all 0.2s;">
+                        <span style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="var(--accent-cyan)" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a10 10 0 0 1 0 20 5 5 0 0 1 0-10 5 5 0 0 0 0-10"></path></svg>
+                            </div>
+                            Цветовая схема
+                        </span>
+                        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-dim);">
+                            <span id="current-theme-label" style="font-size: 12px;">Cyber Dark</span>
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </div>
+                    </button>
+
+                    <button id="sync-contacts-btn" class="cyber-btn" style="width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-radius: 12px; font-size: 14px; background: var(--bg-accent); border: 1px solid var(--border-metal); color: var(--text-main); transition: all 0.2s;">
+                        <span style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(0,255,65,0.05); display: flex; align-items: center; justify-content: center;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" stroke="#00ff41" stroke-width="2" fill="none"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><polyline points="16 11 18 13 22 9"></polyline></svg>
+                            </div>
+                            Синхронизация контактов
+                        </span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
                 </div>
-            </div>
+
+                <!-- Preferences Section -->
+                <div style="background: rgba(0,0,0,0.2); border-radius: 16px; padding: 5px; border: 1px solid var(--border-metal);">
+                    <div style="padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <label style="margin: 0; font-size: 14px; color: var(--text-main);">Звуковые уведомления</label>
+                        <input type="checkbox" id="settings-sound-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
+                    <div style="padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <label style="margin: 0; font-size: 14px; color: var(--text-main);">Push-уведомления</label>
+                        <input type="checkbox" id="settings-push-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
+                    <div style="padding: 12px 15px; display: flex; align-items: center; justify-content: space-between;">
+                        <label style="margin: 0; font-size: 14px; color: var(--text-main);">Отправка по Enter</label>
+                        <input type="checkbox" id="settings-enter-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
+                    </div>
+                </div>
+
+                <!-- PWA Install & Footer -->
+                <div class="pwa-install-block" style="display: flex; flex-direction: column; gap: 20px;">
+                    <button onclick="window.location.href='skufenger.html'" class="cyber-btn" style="width: 100%; background: rgba(0,242,255,0.05); border: 1px dashed var(--accent-cyan); color: var(--accent-cyan); padding: 12px; border-radius: 12px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: all 0.2s;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        УСТАНОВИТЬ ПРИЛОЖЕНИЕ (PWA)
+                    </button>
+
+                    <div style="text-align: center; color: var(--text-dim); font-size: 11px; line-height: 1.6; opacity: 0.6; padding-bottom: 10px;">
+                        <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 4px; font-size: 12px;">SKUFIA-NET // ENTERPRISE</div>
+                        © 2026 Vladimir Popov. Все права защищены.<br>
+                        Безопасное соединение E2EE активно.
+                    </div>
+                </div>
             </div>
         </div>
     </div>

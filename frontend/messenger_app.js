@@ -1,10 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize Theme
     const savedTheme = localStorage.getItem('skufia_theme') || 'telegram';
-    changeTheme(savedTheme);
-    const themeSelector = document.getElementById('theme-selector');
-    if (themeSelector) {
-        themeSelector.value = savedTheme;
+    if (typeof window.changeTheme === 'function') {
+        window.changeTheme(savedTheme);
     }
 
     // --- State Management ---
@@ -13,13 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
         layout: 'grid',
         filters: { q: '', cat: 'Все', loc: 'Везде', sort: 'newest', min: null, max: null }
     };
-    window.updatePriceFilter = debounce(function(e, type) { 
+    window.updatePriceFilter = window.debounce ? window.debounce(function(e, type) { 
         window.marketState.filters[type] = e.target.value; 
         window.marketState.page = 1; 
-        loadMarket(); 
-    }, 500);
-    window.updateMarketSort = function(e) { window.marketState.filters.sort = e.target.value; window.marketState.page = 1; loadMarket(); };
-    window.setMarketLayout = function(layout) { window.marketState.layout = layout; loadMarket(); };
+        if (typeof loadMarket === 'function') loadMarket(); 
+    }, 500) : null;
+    
+    window.updateMarketSort = function(e) { window.marketState.filters.sort = e.target.value; window.marketState.page = 1; if (typeof loadMarket === 'function') loadMarket(); };
+    window.setMarketLayout = function(layout) { window.marketState.layout = layout; if (typeof loadMarket === 'function') loadMarket(); };
 
     const state = window.state = {
         currentView: 'home',
@@ -47,11 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         logs: [],
         audioEnabled: true,
-        /** @type {{ url: string, name: string } | null} */
         pendingFile: null
     };
 
     // Use relative port for WebSocket (proxied via Nginx)
+    const isLocalDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
     const host = isLocalDev ? 'localhost:8007' : window.location.host; 
     const WS_URL = protocol + host;
@@ -59,12 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const views = document.querySelectorAll('.view');
     const navBtns = document.querySelectorAll('.nav-btn');
-    const logContainer = document.getElementById('system-logs');
     const mobileMenuBtn = document.getElementById('mobile-menu-toggle');
     const sidePanel = document.querySelector('.side-panel');
-    if (mobileMenuBtn && sidePanel) {
-        // Redundant listeners removed. The actual logic is handled at the bottom of the file (lines 3018+)
-    }
 
     // --- Navigation Logic ---
     function switchView(viewId) {
@@ -77,127 +72,89 @@ document.addEventListener('DOMContentLoaded', () => {
             state.currentView = viewId;
             const activeBtn = document.querySelector(`.nav-btn[data-view="${viewId}"]`);
             if (activeBtn) activeBtn.classList.add('active');
-            addLog(`Switching to sector: ${viewId.toUpperCase().replace('_', ' ')}`);
+            if (window.addLog) window.addLog(`Переход в сектор: ${viewId.toUpperCase().replace('_', ' ')}`);
 
             // Trigger data loads based on view
-            if (viewId === 'forum') loadForum();
-            if (viewId === 'wiki') loadWiki();
-            if (viewId === 'trade') loadMarket();
-            if (viewId === 'registry') loadRegistry();
-            if (viewId === 'messages') { if (window.loadChatRooms) window.loadChatRooms(); if (window.loadFolders) window.loadFolders(); }
-            if (viewId === 'events') loadEvents();
-            if (viewId === 'dashboard') loadDashboard();
+            if (viewId === 'forum' && typeof loadForum === 'function') loadForum();
+            if (viewId === 'wiki' && typeof loadWiki === 'function') loadWiki();
+            if (viewId === 'trade' && typeof loadMarket === 'function') loadMarket();
+            if (viewId === 'registry' && typeof loadRegistry === 'function') loadRegistry();
+            if (viewId === 'messages') { 
+                if (window.loadChatRooms) window.loadChatRooms(); 
+                if (window.loadFolders) window.loadFolders(); 
+            }
+            if (viewId === 'dashboard' && typeof loadDashboard === 'function') loadDashboard();
         }
     }
 
-
-    // Chat logic extracted to chat_core.js
     window.WS_URL = WS_URL;
     window.switchView = switchView;
     if (window.initChatCore) {
         window.initChatCore();
     }
+
     // --- SYSTEM BOOT & ALERTS ---
     async function bootSystem() {
         if (!state.user.token) {
-            document.getElementById('auth-overlay').style.display = 'flex';
-            // Wait for user to log in
+            const authOverlay = document.getElementById('auth-overlay');
+            if (authOverlay) authOverlay.style.display = 'flex';
             return;
         } else {
-            document.getElementById('auth-overlay').style.display = 'none';
+            const authOverlay = document.getElementById('auth-overlay');
+            if (authOverlay) authOverlay.style.display = 'none';
         }
 
-        // Initialize Phase 2 Engines
-        new VoiceRecorderService();
-        new EmojiPickerEngine();
+        if (window.addLog) window.addLog('Инициализация Skufia Enterprise OS...', 'info');
 
-        addLog('Initializing Skufia Enterprise OS...', 'info');
-
-        // Load user profile FIRST so state.user.id is available for ensureKeys cloud sync
+        // Load user profile
         try {
             const me = await apiRequest('/me');
             if (me) {
                 state.user.id = me.id;
                 state.user.username = me.username;
                 state.user.display_name = me.display_name || me.username;
+                state.user.avatar = me.avatar_url;
+                
+                const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
+                if (sidebarAvatar && me.avatar_url) {
+                    if (window.applyAvatarDisplay) window.applyAvatarDisplay(sidebarAvatar, me.avatar_url);
+                }
             }
         } catch (e) {
             console.warn('Profile pre-load failed:', e);
         }
 
         try {
-            await window.ensureKeys();
+            if (window.ensureKeys) await window.ensureKeys();
         } catch (e) {
-            console.error('E2EE key init failed (non-fatal):', e);
-            addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
+            console.error('E2EE key init failed:', e);
         }
 
-        addLog('Loading Cyber-Industrial HUD...', 'system');
-        addLog('System Online. Welcome, Operator.', 'success');
+        if (window.addLog) {
+            window.addLog('Loading Cyber-Industrial HUD...', 'system');
+            window.addLog('System Online. Welcome, Operator.', 'success');
+        }
         
-        // --- Initialization ---
         switchView('messages');
         if (typeof loadDashboard === 'function') loadDashboard();
-        connectWebSocket(); // Establish real-time link
+        if (window.connectWebSocket) window.connectWebSocket(); 
 
-        // Phase 5: PWA Service Worker Registration
+        // PWA Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('chat-sw.js').then(reg => {
-                addLog('Service Worker Connected (PWA Active)', 'system');
-                
-                // Explicitly check for updates on load
                 reg.update();
-
-                // Check for updates when app comes back to foreground
-                document.addEventListener('visibilitychange', () => {
-                    if (document.visibilityState === 'visible') {
-                        reg.update();
-                    }
-                });
-            }).catch(err => {
-                console.error('SW registration failed:', err);
-            });
-
-            // Auto-reload when a new SW activates with a fresh cache
-            // This prevents the PWA from running stale broken JS after an update
-            navigator.serviceWorker.addEventListener('message', (event) => {
-                if (event.data && event.data.type === 'SW_UPDATED') {
-                    console.log('[PWA] New SW activated (' + event.data.version + '), reloading...');
-                    window.location.reload();
-                }
-            });
+            }).catch(err => console.error('SW registration failed:', err));
         }
     }
 
-    // Phase 5: Install Prompt Logic
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        const installBtn = document.getElementById('install-pwa-btn');
-        if (installBtn) {
-            installBtn.style.display = 'flex';
-            installBtn.addEventListener('click', async (clickEvent) => {
-                clickEvent.preventDefault();
-                installBtn.style.display = 'none';
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    addLog('PWA Installation Accepted', 'success');
-                }
-                deferredPrompt = null;
-            });
-        }
-    });
-
     async function syncGlobalAlerts() {
-        if (!state.user.token) return; // Prevent 401 polling
+        if (!state.user.token) return;
         const banner = document.getElementById('global-alert-banner');
         if (!banner) return;
         try {
             const data = await apiRequest('/notifications/all');
             if (data && data.length > 0) {
-                const alert = data[0]; // Show most recent
+                const alert = data[0];
                 banner.textContent = `⚠️ SYSTEM ALERT: ${alert.message}`;
                 banner.className = alert.level;
                 banner.classList.remove('hidden');
@@ -205,112 +162,49 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { banner.classList.add('hidden'); }
     }
 
-    // --- EASTER EGGS ---
-    let keyBuffer = '';
-    window.addEventListener('keydown', (e) => {
-        if (!e.key) return; // Prevent crash if key is undefined
-        keyBuffer += e.key.toLowerCase();
-        if (keyBuffer.length > 10) keyBuffer = keyBuffer.slice(-10);
-        if (keyBuffer.includes('skuf')) {
-            document.body.classList.add('super-user');
-            addLog('[SECRET] Super-User Mode Activated.', 'success');
-            playSound('alert');
-            keyBuffer = '';
-        }
-    });
+    // --- LISTENERS ---
+    const soundToggle = document.getElementById('settings-sound-toggle');
+    const pushToggle = document.getElementById('settings-push-toggle');
+    const enterToggle = document.getElementById('settings-enter-toggle');
+    const syncBtn = document.getElementById('sync-contacts-btn');
 
-    // --- INITIALIZATION ---
+    if (soundToggle) {
+        soundToggle.checked = localStorage.getItem('skufia_sound') !== 'false';
+        soundToggle.addEventListener('change', (e) => {
+            state.audioEnabled = e.target.checked;
+            localStorage.setItem('skufia_sound', e.target.checked);
+        });
+    }
+
+    if (enterToggle) {
+        enterToggle.checked = localStorage.getItem('skufia_enter_send') === 'true';
+        enterToggle.addEventListener('change', (e) => {
+            localStorage.setItem('skufia_enter_send', e.target.checked);
+        });
+    }
+
+    if (syncBtn) {
+        syncBtn.addEventListener('click', async () => {
+            if (window.showToast) window.showToast('⏳ Синхронизация...');
+            try {
+                if (window.loadChatRooms) await window.loadChatRooms();
+                if (window.showToast) window.showToast('✅ Контакты обновлены!');
+            } catch (e) {
+                if (window.showToast) window.showToast('❌ Ошибка синхронизации');
+            }
+        });
+    }
+
     if (mobileMenuBtn) {
-        mobileMenuBtn.addEventListener('click', () => { sidePanel.classList.toggle('open'); });
+        mobileMenuBtn.addEventListener('click', () => { if (sidePanel) sidePanel.classList.toggle('open'); });
     }
 
     navBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            playSound('click');
+            if (window.playSound) window.playSound('click');
             switchView(btn.getAttribute('data-view'));
-            if (window.innerWidth <= 768) sidePanel.classList.remove('open');
+            if (window.innerWidth <= 768 && sidePanel) sidePanel.classList.remove('open');
         });
-    });
-
-    // --- AUTHENTICATION LISTENERS ---
-    const authOverlay = document.getElementById('auth-overlay');
-
-    document.getElementById('toggle-to-register').addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('login-form').style.display = 'none';
-        document.getElementById('register-form').style.display = 'block';
-        document.getElementById('auth-title').textContent = 'РЕГИСТРАЦИЯ';
-    });
-
-    document.getElementById('toggle-to-login').addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('register-form').style.display = 'none';
-        document.getElementById('login-form').style.display = 'block';
-        document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
-    });
-
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button');
-        if (btn) btn.textContent = 'ОЖИДАНИЕ...';
-        try {
-            const res = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: document.getElementById('login-username').value,
-                    password: document.getElementById('login-password').value
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Login failed');
-            
-            localStorage.setItem('skuf_token', data.access_token);
-            state.user.token = data.access_token;
-            state.user.password = document.getElementById('login-password').value; // Temporary store for E2EE key sync
-            authOverlay.style.display = 'none';
-            addLog('Аутентификация успешна', 'system');
-            
-            // Re-bind auth logic on boot system
-            bootSystem();
-        } catch (err) {
-            document.getElementById('login-error').textContent = err.message;
-        } finally {
-            if (btn) btn.textContent = 'ВОЙТИ В СЕТЬ';
-        }
-    });
-
-    document.getElementById('register-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('reg-submit-btn') || e.target.querySelector('button[type="submit"]');
-        if (btn) btn.textContent = 'ОЖИДАНИЕ...';
-        try {
-            const pdConsent = document.getElementById('reg-pd-consent');
-            const res = await fetch(`${API_BASE_URL}/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username: document.getElementById('reg-username').value,
-                    email: document.getElementById('reg-email').value,
-                    password: document.getElementById('reg-password').value,
-                    accepted_pd: pdConsent ? pdConsent.checked : false  // [ФЗ-152]
-                })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Registration failed');
-
-            document.getElementById('register-form').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-            document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
-            document.getElementById('login-username').value = document.getElementById('reg-username').value;
-            document.getElementById('login-password').value = document.getElementById('reg-password').value;
-            document.getElementById('login-error').textContent = 'Регистрация успешна. Выполните вход.';
-            document.getElementById('login-error').style.color = '#00f2ff';
-        } catch (err) {
-            document.getElementById('reg-error').textContent = err.message;
-        } finally {
-            if (btn) btn.textContent = 'АКТИВИРОВАТЬ АККАУНТ';
-        }
     });
 
     const logoutBtn = document.getElementById('logout-btn');
@@ -322,714 +216,164 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    bootSystem();
-    syncGlobalAlerts();
-    setInterval(syncGlobalAlerts, 30000);
-
-    // --- PHASE 6 & 7: SETTINGS AND CONTACT SYNC UX ---
+    // --- SETTINGS & PROFILE ---
     const settingsModal = document.getElementById('settings-modal');
     const openSettingsBtn = document.getElementById('open-settings-btn');
+    
+    window.closeSettingsModal = () => {
+        if (settingsModal) settingsModal.style.display = 'none';
+    };
+
     if (openSettingsBtn && settingsModal) {
         openSettingsBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             settingsModal.style.display = 'flex';
-
-            // Fetch profile data
             try {
                 const profile = await apiRequest('/me');
-                if (profile && profile.handle) {
-                    const handleInput = document.getElementById('settings-handle');
-                    if (handleInput) handleInput.value = profile.handle.replace('@', '');
+                if (profile) {
+                    const handleInput = document.getElementById('settings-handle-input');
+                    if (handleInput) handleInput.value = (profile.handle || '').replace('@', '');
+                    
+                    const avatarPreview = document.getElementById('settings-avatar-preview');
+                    if (avatarPreview && profile.avatar_url) {
+                        const baseUrl = window.BASE_URL || '';
+                        avatarPreview.src = profile.avatar_url.startsWith('http') ? profile.avatar_url : `${baseUrl}${profile.avatar_url}`;
+                    }
                 }
-            } catch (err) {
-                console.error('Failed to load profile details', err);
-            }
-        });
-    }
-
-const handleInput = document.getElementById('settings-handle');
-    if (handleInput) {
-        handleInput.addEventListener('blur', async (e) => {
-            let newVal = e.target.value.trim();
-            if (newVal && !newVal.startsWith('@')) {
-                newVal = '@' + newVal;
-            }
-            try {
-                await apiRequest('/me/update', 'POST', { handle: newVal });
-                addLog('Короткое имя обновлено', 'success');
-            } catch (err) {
-                addLog('Ошибка при сохранении имени', 'error');
-            }
+            } catch (err) { console.error('Settings load error:', err); }
         });
     }
 
     window.saveProfileHandle = async function() {
-        const input = document.getElementById('settings-handle');
-        if (!input) return;
-        
+        const input = document.getElementById('settings-handle-input');
+        const btn = document.getElementById('btn-save-profile');
+        if (!input || !btn) return;
+
         let newVal = input.value.trim();
         if (newVal && !newVal.startsWith('@')) {
             newVal = '@' + newVal;
             input.value = newVal;
         }
-        
-        const btn = document.getElementById('btn-save-profile');
-        if (btn) btn.innerHTML = 'СОХРАНЕНИЕ...';
-        
+
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = 'СОХРАНЕНИЕ...';
+        btn.disabled = true;
+
         try {
             await apiRequest('/me/update', 'POST', { handle: newVal });
-            addLog('Профиль успешно сохранен', 'success');
-            if (btn) {
-                btn.innerHTML = 'СОХРАНЕНО ✓';
-                btn.style.background = 'rgba(0, 255, 65, 0.2)';
-                btn.style.color = '#00ff41';
-                btn.style.borderColor = '#00ff41';
-                setTimeout(() => { 
-                    btn.innerHTML = 'СОХРАНИТЬ ПРОФИЛЬ'; 
-                    btn.style = 'width: 100%; border-radius: 8px; font-size: 13px; padding: 10px;';
-                }, 2000);
-            }
+            if (window.showToast) window.showToast('✅ Профиль сохранен!');
+            btn.innerHTML = '✓ ГОТОВО';
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }, 2000);
         } catch (err) {
-            addLog('Ошибка при сохранении', 'error');
-            if (btn) {
-                btn.innerHTML = 'ОШИБКА';
-                btn.style.background = 'rgba(255, 51, 51, 0.2)';
-                btn.style.color = '#ff3333';
-                btn.style.borderColor = '#ff3333';
-                setTimeout(() => { 
-                    btn.innerHTML = 'СОХРАНИТЬ ПРОФИЛЬ'; 
-                    btn.style = 'width: 100%; border-radius: 8px; font-size: 13px; padding: 10px;';
-                }, 2000);
-            }
+            if (window.showToast) window.showToast('❌ Ошибка сохранения');
+            btn.innerHTML = '✕ ОШИБКА';
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.disabled = false;
+            }, 2000);
         }
     };
 
-    const themeSelect = document.getElementById('settings-theme-select');
-    if (themeSelect) {
-        themeSelect.addEventListener('change', (e) => {
-            document.body.setAttribute('data-theme', e.target.value);
-            localStorage.setItem('skufia_theme', e.target.value);
-        });
-        // Restore theme on boot
-        const savedTheme = localStorage.getItem('skufia_theme');
-        if (savedTheme) {
-            document.body.setAttribute('data-theme', savedTheme);
-            themeSelect.value = savedTheme;
-        }
-    }
+    window.previewAvatar = async function(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('settings-avatar-preview');
+            if (preview) preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
 
-    const syncContactsBtn = document.getElementById('sync-contacts-btn');
-    if (syncContactsBtn) {
-        syncContactsBtn.addEventListener('click', async () => {
-            syncContactsBtn.textContent = 'ИДЕТ ПОИСК...';
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            if (window.showToast) window.showToast('⏳ Загрузка...');
+            const data = await apiRequest('/me/avatar/upload', 'POST', formData);
+            if (window.showToast) window.showToast('✅ Фото обновлено!');
+            
+            if (data.avatar_url) {
+                const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
+                if (sidebarAvatar && window.applyAvatarDisplay) window.applyAvatarDisplay(sidebarAvatar, data.avatar_url);
+            }
+        } catch (e) {
+            if (window.showToast) window.showToast('❌ Ошибка загрузки');
+        }
+    };
+
+    // --- AUTH FORMS ---
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            if (btn) btn.textContent = 'ВХОД...';
             try {
-                if ('contacts' in navigator && 'ContactsManager' in window) {
-                    const props = ['name', 'tel'];
-                    const opts = { multiple: true };
-                    const contacts = await navigator.contacts.select(props, opts);
-
-                    if (contacts && contacts.length > 0) {
-                        const payload = contacts.map(c => ({ name: c.name[0], phone: c.tel ? c.tel[0] : '' }));
-                        const resp = await fetch(`${API_BASE_URL}/contacts/sync`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.user.token}` },
-                            body: JSON.stringify({ contacts: payload })
-                        });
-                        if (resp.ok) {
-                            addLog(`Успешно подтянуто абонентов: ${contacts.length}`, 'success');
-                            if (window.loadChatRooms) window.loadChatRooms(); // refresh sidebar 
-                        } else throw new Error();
-                    } else {
-                        addLog('Контакты не выбраны', 'info');
-                    }
-                } else {
-                    addLog('Contact Picker API не поддерживается на вашем устройстве. Backend Sync Mode активирован.', 'info');
-                    // Fallback to manual sync trigger on backend
-                    const resp = await fetch(`${API_BASE_URL}/contacts/sync`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.user.token}` },
-                        body: JSON.stringify({ contacts: [] })
-                    });
-                    if (resp.ok) addLog('Backend Sync завершен', 'success');
-                }
-            } catch (err) {
-                addLog('Ошибка синхронизации контактов', 'error');
-            } finally {
-                syncContactsBtn.textContent = 'ПОДТЯНУТЬ КОНТАКТЫ';
-                settingsModal.style.display = 'none';
-            }
-        });
-    }
-    // --- ALWAYS SKUFENGER MODE ---
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    const viewMessages = document.getElementById('view-messages');
-    if (viewMessages) viewMessages.classList.add('active');
-
-    // --- SKUFENGER AUTH BRANDING ---
-    const authTitle = document.getElementById('auth-title');
-    const loginBtn = document.querySelector('#login-form button[type="submit"]');
-    const regBtn = document.querySelector('#register-form button[type="submit"]');
-
-    if (authTitle) authTitle.textContent = 'ВХОД В SKUFENGER';
-    if (loginBtn) loginBtn.textContent = 'ВОЙТИ В МЕССЕНДЖЕР';
-    if (regBtn) regBtn.textContent = 'СОЗДАТЬ АККАУНТ';
-
-    // Force the chat view right away
-    if (typeof window.switchView === 'function') {
-        window.switchView('messages');
-    }
-
-    // Set document title
-    document.title = 'SKUFenger';
-
-    // --- GLOBAL EXPOSURE ---
-    window.loadForum = loadForum;
-    window.loadWiki = loadWiki;
-    window.loadMarket = loadMarket;
-    window.loadRegistry = loadRegistry;
-    window.loadTopicPosts = loadTopicPosts;
-    window.likePost = likePost;
-    window.likeWiki = likeWiki;
-    window.switchView = switchView;
-    window.openSkufenger = function() {
-        window.open(window.location.pathname + '?app=skufenger', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
-    };
-
-    // --- CONTACT SEARCH FILTER ---
-    window.closeChatMobile = function(fromHistory = false) {
-        const chatLayout = document.querySelector('.chat-layout');
-        if (chatLayout && chatLayout.classList.contains('chat-open')) {
-            chatLayout.classList.remove('chat-open');
-            if (fromHistory !== true && window.innerWidth <= 768) {
-                try { history.back(); } catch(e) {}
-            }
-        }
-    };
-
-    // --- CONTACT PROFILE ---
-    window.openContactProfile = function() {
-        const modal = document.getElementById('contact-profile-modal');
-        if (!modal) return;
-        
-        const headerTitle = document.getElementById('chat-header-title');
-        const headerAvatar = document.getElementById('header-avatar');
-        const headerStatus = document.getElementById('chat-header-status');
-        
-        const name = headerTitle ? headerTitle.textContent : 'Неизвестно';
-        const cpAvatar = document.getElementById('cp-avatar');
-        const cpName = document.getElementById('cp-name');
-        const cpUsername = document.getElementById('cp-username');
-        const cpStatus = document.getElementById('cp-status');
-        const cpE2ee = document.getElementById('cp-e2ee');
-        
-        if (cpAvatar && headerAvatar) {
-            cpAvatar.innerHTML = headerAvatar.innerHTML;
-        }
-        if (cpName) cpName.textContent = name;
-        if (cpUsername) cpUsername.textContent = `@${name.toLowerCase().replace(/\s+/g, '_')}`;
-        
-        const isOnline = headerStatus && headerStatus.textContent === 'в сети';
-        if (cpStatus) {
-            cpStatus.innerHTML = isOnline 
-                ? '<span style="color:#0f6;">● В сети</span>'
-                : '<span style="color:var(--text-dim);">○ Не в сети</span>';
-        }
-        
-        if (cpE2ee && state.chat.keyFingerprint) {
-            cpE2ee.textContent = `🔐 E2EE Fingerprint: ${state.chat.keyFingerprint.substring(0, 16)}...`;
-        } else if (cpE2ee) {
-            cpE2ee.textContent = '⚠️ E2EE не установлено';
-        }
-        
-        modal.style.display = 'flex';
-    };
-
-    const contactSearchInput = document.getElementById('contact-search');
-    if (contactSearchInput) {
-        contactSearchInput.addEventListener('input', function() {
-            const query = this.value.toLowerCase().trim();
-            const items = document.querySelectorAll('#chat-rooms-list .sidebar-item');
-            items.forEach(item => {
-                const nameEl = item.querySelector('.sidebar-item-name');
-                const name = nameEl ? nameEl.textContent.toLowerCase() : '';
-                item.style.display = name.includes(query) ? '' : 'none';
-            });
-        });
-    }
-
-    // --- CALL GATEWAY (audio/video) ---
-    window.skufengerCall = function(isVideo) {
-        if (!state.chat.currentRoomId) {
-            addLog('Сначала выберите контакт для звонка', 'error');
-            return;
-        }
-        const callType = isVideo ? 'Видеозвонки' : 'Аудиозвонки';
-        showToast(`🚧 ${callType} — в разработке. Следите за обновлениями!`);
-        addLog(`${callType} пока недоступны (требуется TURN-сервер)`, 'warning');
-    };
-
-    // --- CHAT OPTIONS DROPDOWN ---
-    window.toggleChatOptions = function(e) {
-        if (e) e.stopPropagation();
-        const dd = document.getElementById('chat-options-dropdown');
-        if (!dd) return;
-        const isOpen = dd.style.display !== 'none';
-        dd.style.display = isOpen ? 'none' : 'block';
-    };
-
-    // Attach via addEventListener with stopPropagation (inline onclick doesn't pass event)
-    const optionsBtn = document.getElementById('btn-chat-options');
-    if (optionsBtn) {
-        optionsBtn.removeAttribute('onclick');
-        optionsBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            window.toggleChatOptions();
-        });
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        const dd = document.getElementById('chat-options-dropdown');
-        if (dd && dd.style.display !== 'none') {
-            dd.style.display = 'none';
-        }
-    });
-
-    // --- CHAT OPTION ACTIONS ---
-    window.chatOptionAction = function(action) {
-        const dd = document.getElementById('chat-options-dropdown');
-        if (dd) dd.style.display = 'none';
-
-        switch(action) {
-            case 'mute': {
-                const roomId = state.chat.currentRoomId;
-                if (!roomId) { addLog('Сначала выберите чат', 'error'); return; }
-                const mutedRooms = JSON.parse(localStorage.getItem('skuf_muted_rooms') || '[]');
-                const idx = mutedRooms.indexOf(roomId);
-                if (idx === -1) {
-                    mutedRooms.push(roomId);
-                    addLog('🔕 Уведомления чата отключены', 'info');
-                } else {
-                    mutedRooms.splice(idx, 1);
-                    addLog('🔔 Уведомления чата включены', 'info');
-                }
-                localStorage.setItem('skuf_muted_rooms', JSON.stringify(mutedRooms));
-                break;
-            }
-            case 'search': {
-                const chatHistory = document.getElementById('chat-history');
-                if (!chatHistory) return;
-                const term = prompt('Поиск по сообщениям:');
-                if (!term || !term.trim()) return;
-                const messages = chatHistory.querySelectorAll('.chat-msg');
-                let found = 0;
-                messages.forEach(msg => {
-                    const bodyEl = msg.querySelector('.msg-body');
-                    if (!bodyEl) return;
-                    const text = bodyEl.textContent || '';
-                    if (text.toLowerCase().includes(term.toLowerCase())) {
-                        msg.style.outline = '2px solid var(--accent-cyan)';
-                        msg.style.outlineOffset = '2px';
-                        if (!found) msg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        found++;
-                    } else {
-                        msg.style.outline = 'none';
-                    }
+                const res = await fetch(`${window.API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('login-username').value,
+                        password: document.getElementById('login-password').value
+                    })
                 });
-                addLog(`🔍 Найдено совпадений: ${found}`, found ? 'info' : 'error');
-                break;
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Login failed');
+                localStorage.setItem('skuf_token', data.access_token);
+                state.user.token = data.access_token;
+                location.reload();
+            } catch (err) {
+                const errEl = document.getElementById('login-error');
+                if (errEl) errEl.textContent = err.message;
+                if (btn) btn.textContent = 'ВОЙТИ';
             }
-            case 'wallpaper': {
-                const chatHistory = document.getElementById('chat-history');
-                if (!chatHistory) return;
-                const wallpapers = [
-                    'linear-gradient(135deg, rgba(10,14,20,0.95), rgba(20,30,50,0.95))',
-                    'linear-gradient(135deg, rgba(30,10,30,0.95), rgba(15,15,35,0.95))',
-                    'linear-gradient(135deg, rgba(10,25,20,0.95), rgba(15,20,35,0.95))',
-                    'linear-gradient(135deg, rgba(25,20,10,0.95), rgba(20,15,25,0.95))',
-                    'none'
-                ];
-                const current = localStorage.getItem('skuf_wallpaper_idx') || '0';
-                const next = (parseInt(current) + 1) % wallpapers.length;
-                chatHistory.style.background = wallpapers[next];
-                localStorage.setItem('skuf_wallpaper_idx', String(next));
-                addLog('🎨 Фон чата обновлён', 'info');
-                break;
-            }
-            case 'clear': {
-                if (!state.chat.currentRoomId) { addLog('Сначала выберите чат', 'error'); return; }
-                if (!confirm('Очистить историю сообщений? Это действие необратимо.')) return;
-                const chatHistory = document.getElementById('chat-history');
-                if (chatHistory) {
-                    chatHistory.innerHTML = '<div class="chat-placeholder">История очищена</div>';
+        });
+    }
+
+    const regForm = document.getElementById('register-form');
+    if (regForm) {
+        regForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            if (btn) btn.textContent = 'РЕГИСТРАЦИЯ...';
+            try {
+                const res = await fetch(`${window.API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('reg-username').value,
+                        email: document.getElementById('reg-email').value,
+                        password: document.getElementById('reg-password').value,
+                        accepted_pd: true
+                    })
+                });
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || 'Registration failed');
                 }
-                addLog('🗑️ История чата очищена', 'info');
-                break;
-            }
-            case 'encryption': {
-                const badge = document.getElementById('chat-encryption-status');
-                const isE2EE = badge && badge.textContent.includes('E2EE');
-                alert(isE2EE
-
-? '🔒 Этот чат защищён сквозным шифрованием (E2EE).\nКлючи сессии генерируются локально и не передаются на сервер.'
-                    : '⚠️ Шифрование не активно.\nВыберите приватный чат для активации E2EE.');
-                break;
-            }
-        }
-    };
-});
-
-// Telegram-like Sidebar Search Toggle
-function toggleSidebarSearch(show) {
-    const defaultHeader = document.getElementById("sidebar-default-header");
-    const searchHeader = document.getElementById("sidebar-active-search");
-    const searchInput = document.getElementById("contact-search");
-
-    if (show) {
-        defaultHeader.style.display = "none";
-        searchHeader.style.display = "flex";
-        if (searchInput) {
-            searchInput.focus();
-        }
-    } else {
-        defaultHeader.style.display = "flex";
-        searchHeader.style.display = "none";
-        if (searchInput) {
-            searchInput.value = "";
-            searchInput.dispatchEvent(new Event("input"));
-        }
-    }
-}
-
-
-// Settings Avatar Preview + Upload
-window.previewAvatar = async function(input) {
-    if (!input.files || !input.files[0]) return;
-    const file = input.files[0];
-
-    // Immediate local preview
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const preview = document.getElementById('settings-avatar-preview');
-        if (preview) preview.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-
-    // Upload to server
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const resp = await fetch(`${API_BASE_URL}/me/avatar/upload`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${state.user.token}` },
-            body: formData
-        });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            throw new Error(err.detail || 'Upload failed');
-        }
-        const data = await resp.json();
-        const avatarUrl = data.avatar_url;
-
-        // Update sidebar and dashboard avatars
-        const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
-        if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
-        const dashAvatar = document.getElementById('dash-avatar');
-        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
-        addLog('Фотография загружена. Не забудьте сохранить настройки.', 'success');
-
-        addLog('✅ Аватарка загружена и сохранена!', 'success');
-    } catch (e) {
-        console.error('Avatar upload error:', e);
-        addLog(`❌ Ошибка загрузки аватарки: ${e.message}`, 'error');
-    }
-};
-
-
-
-// --- MODULE: CHANNEL/GROUP MEMBER MANAGEMENT ---
-window.openAddMemberModal = async function() {
-    const roomId = state.chat.activeRoomId;
-    if (!roomId) return;
-
-    document.getElementById('add-member-modal').style.display = 'flex';
-    document.getElementById('add-member-search').value = '';
-    const listContainer = document.getElementById('add-member-list');
-    listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>';
-
-    try {
-        const contacts = await apiRequest('/contacts');
-        state.contacts = contacts || [];
-        window.filterAddMemberContacts();
-    } catch(e) {
-        console.error('Error fetching contacts for add member:', e);
-        listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:#ff3333;">Ошибка загрузки</div>';
-    }
-};
-
-window.filterAddMemberContacts = function() {
-    const query = document.getElementById('add-member-search').value.toLowerCase();
-    const listContainer = document.getElementById('add-member-list');
-    listContainer.innerHTML = '';
-
-    const filtered = state.contacts.filter(c => 
-        c.username.toLowerCase().includes(query) || 
-        (c.display_name && c.display_name.toLowerCase().includes(query))
-    );
-
-    if (filtered.length === 0) {
-        listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Ничего не найдено</div>';
-        return;
-    }
-
-    filtered.forEach(contact => {
-        const div = document.createElement('div');
-
-div.className = 'sidebar-item';
-        div.style.marginBottom = '5px';
-        const initial = (contact.display_name || contact.username).charAt(0).toUpperCase();
-
-        div.innerHTML = `
-            <div class="sidebar-item-avatar">${contact.avatar_url ? `<img src="${API_BASE_URL}${contact.avatar_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : initial}</div>
-            <div class="sidebar-item-info">
-                <div class="sidebar-item-name">${contact.display_name || contact.username}</div>
-                <div class="sidebar-item-last-msg">@${contact.username}</div>
-            </div>
-            <input type="checkbox" class="add-member-checkbox" value="${contact.id}" style="width: 20px; height: 20px; cursor: pointer;">
-        `;
-        listContainer.appendChild(div);
-    });
-};
-
-window.submitAddMembers = async function() {
-    const roomId = state.chat.activeRoomId;
-    if (!roomId) return;
-
-    const checkboxes = document.querySelectorAll('.add-member-checkbox:checked');
-    const userIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-    if (userIds.length === 0) {
-        addLog('Выберите хотя бы один контакт', 'error');
-        return;
-    }
-
-    try {
-        for (let uid of userIds) {
-            await apiRequest(`/chat/rooms/${roomId}/members`, 'POST', { user_id: uid });
-        }
-        addLog(`Добавлено участников: ${userIds.length}`, 'success');
-        document.getElementById('add-member-modal').style.display = 'none';
-    } catch(e) {
-        console.error('Error adding members:', e);
-        addLog('Ошибка при добавлении', 'error');
-    }
-};
-
-// --- CREATOR PLAQUE AND MATRIX BRANDING ---
-window.openCreatorPlaque = function(e) {
-    if (e) e.preventDefault();
-    document.getElementById('creator-plaque-modal').style.display = 'flex';
-};
-
-// Matrix Scramble Text Effect function
-class ScrambleText {
-    constructor(el, delay = 0) {
-        this.el = el;
-        // Matrix style: Latin, Cyrillic, Numbers, and classic Katakana
-        this.chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZАБВГДЕЗИКЛМНОПРСТУФХЦЧШЩЮЯ0123456789アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヰヱヲン';
-        this.original = el.getAttribute('data-text') || el.innerText;
-        this.delay = delay;
-    }
-    start() {
-        // Immediately obfuscate the text so original isn't visible during the delay
-        let initialScrambled = '';
-        for (let i = 0; i < this.original.length; i++) {
-            initialScrambled += this.chars[Math.floor(Math.random() * this.chars.length)];
-        }
-        this.el.innerText = initialScrambled;
-
-        setTimeout(() => {
-            let iteration = 0;
-            const maxIterations = 20;
-            const interval = setInterval(() => {
-                let scrambled = '';
-                for (let i = 0; i < this.original.length; i++) {
-                    if (i < iteration / 2) {
-                        scrambled += this.original[i];
-                    } else {
-                        scrambled += this.chars[Math.floor(Math.random() * this.chars.length)];
-                    }
-                }
-                this.el.innerText = scrambled;
-                if (iteration >= maxIterations) {
-                    clearInterval(interval);
-                    this.el.innerText = this.original;
-                }
-                iteration++;
-            }, 30);
-        }, this.delay);
-    }
-}
-
-// Initialize scramble text effects globally across the board
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        document.querySelectorAll('.scramble-text').forEach((el, index) => {
-            const delay = index * 250;
-            new ScrambleText(el, 100 + delay).start();
-        });
-    }, 500); // Give rendering a brief moment before scrambling
-});
-
-// --- MOBILE MENU LOGIC (SANDWICH) ---
-const mobileToggle = document.getElementById('mobile-menu-toggle');
-const sidePanel = document.getElementById('side-panel');
-if (mobileToggle && sidePanel) {
-    // Create backdrop for mobile sidebar
-    const backdrop = document.createElement('div');
-    backdrop.id = 'mobile-backdrop';
-
-backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); z-index:998; opacity:0; transition:opacity 0.3s ease;';
-
-    // Append to app-container to share stacking context with side-panel 
-    const container = document.querySelector('.app-container') || document.body;
-    container.appendChild(backdrop);
-
-    mobileToggle.addEventListener('click', () => {
-        const isOpen = sidePanel.classList.toggle('open-mobile');
-        if (isOpen) {
-            backdrop.style.display = 'block';
-            setTimeout(() => backdrop.style.opacity = '1', 10);
-        } else {
-            backdrop.style.opacity = '0';
-            setTimeout(() => backdrop.style.display = 'none', 300);
-        }
-    });
-
-    backdrop.addEventListener('click', () => {
-        sidePanel.classList.remove('open-mobile');
-        backdrop.style.opacity = '0';
-        setTimeout(() => backdrop.style.display = 'none', 300);
-    });
-
-    // Close menu when navigating on mobile
-    document.querySelectorAll('.side-panel .nav-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if(window.innerWidth <= 768) {
-                sidePanel.classList.remove('open-mobile');
-                backdrop.style.opacity = '0';
-                setTimeout(() => backdrop.style.display = 'none', 300);
+                if (window.showToast) window.showToast('✅ Регистрация успешна! Войдите.');
+                document.getElementById('toggle-to-login').click();
+            } catch (err) {
+                const errEl = document.getElementById('reg-error');
+                if (errEl) errEl.textContent = err.message;
+                if (btn) btn.textContent = 'РЕГИСТРАЦИЯ';
             }
         });
+    }
+
+    document.getElementById('toggle-to-register')?.addEventListener('click', () => {
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById('register-form').style.display = 'block';
     });
-}
-
-// =============================================================================
-// PWA NATIVE FEEL: Dynamic viewport height + Back button navigation
-// =============================================================================
-
-/**
- * Fix #1 — Address bar overlap
- * Yandex Browser (and Chrome/Firefox on Android) shrink the visual viewport
- * when the address bar appears. We keep --app-height in sync with the actual
- * visible area so nothing gets hidden behind the browser chrome.
- */
-(function setupViewportHeight() {
-    function setAppHeight() {
-        // visualViewport.height is the visible area excluding browser UI
-        const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        document.documentElement.style.setProperty('--app-height', h + 'px');
-    }
-
-    setAppHeight();
-
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', setAppHeight);
-        window.visualViewport.addEventListener('scroll', setAppHeight);
-    }
-    window.addEventListener('resize', setAppHeight);
-    window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 300));
-})();
-
-/**
- * Fix #2 — Back button behavior
- * Without history management, any back press exits the PWA.
- * We push a state entry on each view/chat navigation so the browser
- * back button navigates within the app instead of closing it.
- */
-(function setupHistoryBackNav() {
-    // Push initial state so there's always a "home" entry
-    if (!history.state || !history.state.skufia) {
-        history.replaceState({ skufia: true, view: 'home', chat: false }, '');
-    }
-
-    // Patch switchView to push history
-    const _originalSwitchView = window._switchViewInternal;
-
-    window.addEventListener('popstate', (event) => {
-        const s = event.state;
-        if (!s || !s.skufia) return;
-
-        if (!s.chat) {
-            // Not in chat — ensure chat panel is closed
-            const chatLayout = document.querySelector('.chat-layout');
-            if (chatLayout && chatLayout.classList.contains('chat-open')) {
-                chatLayout.classList.remove('chat-open');
-            }
-        } else {
-            // In chat - ensure chat is open
-            const chatLayout = document.querySelector('.chat-layout');
-            if (chatLayout && !chatLayout.classList.contains('chat-open')) {
-                chatLayout.classList.add('chat-open');
-            }
-        }
-
-        if (s.view && s.view !== 'home') {
-            // Switch to previous view without pushing new state (we're going back)
-            const views = document.querySelectorAll('.view');
-            const navBtns = document.querySelectorAll('.nav-btn');
-            views.forEach(v => v.classList.remove('active'));
-            navBtns.forEach(b => b.classList.remove('active'));
-            const targetView = document.getElementById(`view-${s.view}`);
-            if (targetView) targetView.classList.add('active');
-            const targetBtn = document.querySelector(`.nav-btn[data-view="${s.view}"]`);
-            if (targetBtn) targetBtn.classList.add('active');
-        }
-
-// If view === 'home' or no view: the app stays open (we have replaceState for home)
+    document.getElementById('toggle-to-login')?.addEventListener('click', () => {
+        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('login-form').style.display = 'block';
     });
 
-    // Intercept nav button clicks to push state
-    document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const viewId = btn.dataset.view;
-            history.pushState({ skufia: true, view: viewId, chat: false }, '', `#${viewId}`);
-        });
-    });
-})();
-
-
-window.openSettingsModal = function() {
-    const m = document.getElementById('settings-modal');
-    if (m) m.style.display = 'flex';
-    if (!window.location.hash.includes('settings')) {
-        history.pushState({ modal: 'settings' }, '', '#settings');
-    }
-};
-
-window.closeSettingsModal = function() {
-    const m = document.getElementById('settings-modal');
-    if (m) m.style.display = 'none';
-    if (window.location.hash.includes('settings')) {
-        history.back();
-    }
-};
-
-window.addEventListener('popstate', (e) => {
-    if (!window.location.hash.includes('settings')) {
-        const sm = document.getElementById('settings-modal');
-        if (sm && sm.style.display === 'flex') {
-            sm.style.display = 'none';
-        }
-    }
+    // --- INIT ---
+    bootSystem();
+    syncGlobalAlerts();
+    setInterval(syncGlobalAlerts, 60000);
 });

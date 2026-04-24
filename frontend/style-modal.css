@@ -147,3 +147,74 @@
     box-shadow: 0 0 25px rgba(0, 242, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5) !important;
     transform: scale(1.02) !important;
 }
+
+/* PREMIUM ACTION BUTTONS */
+.back-btn-premium {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid var(--border-metal) !important;
+    color: var(--text-dim) !important;
+    border-radius: 12px !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    cursor: pointer !important;
+}
+
+.back-btn-premium:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+    transform: translateX(-3px);
+}
+
+.save-btn-premium {
+    background: linear-gradient(135deg, var(--accent-cyan), #0078ff) !important;
+    border: none !important;
+    color: #000 !important;
+    font-weight: 800 !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 8px 20px rgba(0, 242, 255, 0.3) !important;
+    width: 100% !important;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
+    margin-top: 10px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.save-btn-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0, 242, 255, 0.5) !important;
+    filter: brightness(1.1);
+}
+
+.save-btn-premium:active {
+    transform: translateY(0);
+}
+
+/* PWA INSTALL BUTTON AT BOTTOM */
+.pwa-install-block {
+    margin-top: auto !important;
+    padding-top: 20px !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.pwa-badge {
+    background: rgba(0, 242, 255, 0.1);
+    color: var(--accent-cyan);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    margin-left: 5px;
+}
+
