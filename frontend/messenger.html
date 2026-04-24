@@ -22,77 +22,12 @@
 <!-- Auth Overlay -->
     <div id="auth-overlay" class="modal auth-modal-custom" style="display: flex;">
         <div class="modal-content auth-content">
-            <div class="modal-header">
-                <h2 id="auth-title">АВТОРИЗАЦИЯ</h2>
-            </div>
-            
-            <!-- Login Form -->
-            <form id="login-form">
-                <div class="form-group">
-                    <label>ПОЗЫВНОЙ (USERNAME)</label>
-                    <input type="text" id="login-username" required>
-                </div>
-                <div class="form-group">
-                    <label>ПАРОЛЬ ДЛЯ СВЯЗИ</label>
-                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
-                        <input type="password" id="login-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('login-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
-                    </div>
-                </div>
-                <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-                <button type="submit" class="cyber-btn primary-btn auth-main-btn">ВОЙТИ В СЕТЬ</button>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; font-size: 13px;">
-                    <a href="#" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;" onclick="alert('Доступ восстанавливается через Супер Админа: @up1t3rV (Super Admin)'); return false;">Забыли пароль?</a>
-                    <span>Нет доступа? <a href="#" id="toggle-to-register" style="color: var(--accent-cyan); text-decoration: none;">Получить ID</a></span>
-                </div>
-            </form>
-
-            <!-- Register Form (hidden by default) -->
-            <form id="register-form" style="display: none;">
-                <div class="form-group">
-                    <label>ПОЗЫВНОЙ (USERNAME)</label>
-                    <input type="text" id="reg-username" required>
-                </div>
-                <div class="form-group">
-                    <label>ПОЧТА (EMAIL)</label>
-                    <input type="email" id="reg-email" required>
-                </div>
-                <div class="form-group">
-                    <label>ПАРОЛЬ (ЗАПОМНИ!)</label>
-                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
-                        <input type="password" id="reg-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reg-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
-                    </div>
-                </div>
-                <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-
-                <!-- ФЗ-152: Personal Data Consent -->
-                <div style="background: rgba(0,242,255,0.05); border: 1px solid rgba(0,242,255,0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 12px; color: var(--text-dim); line-height: 1.5;">
-                        <input type="checkbox" id="reg-pd-consent" style="width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--accent-cyan);" onchange="document.getElementById('reg-submit-btn').disabled = !this.checked;">
-                        <span>Я даю согласие на обработку моих персональных данных в соответствии с 
-                            <strong style="color: var(--accent-cyan);">Федеральным законом № 152-ФЗ</strong>
-                            «О персональных данных». Данные используются исключительно для обеспечения работы платформы Skufia-Net и не передаются третьим лицам.
-                        </span>
-                    </label>
-                </div>
-
-                <button type="submit" id="reg-submit-btn" class="cyber-btn primary-btn auth-main-btn" disabled style="opacity: 0.5; cursor: not-allowed; transition: opacity 0.3s;">АКТИВИРОВАТЬ АККАУНТ</button>
-                <div style="text-align: center; margin-top: 15px; font-size: 13px;">
-                    Уже есть ID? <a href="#" id="toggle-to-login" style="color: var(--accent-cyan); text-decoration: none;">Авторизация</a>
-                </div>
-            </form>
-        </div>
-    </div>
-    
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 16px;">
-            <div class="modal-header">
-                <h2>Настройки</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('settings-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <div class="modal-header" style="display: flex; align-items: center; justify-content: flex-start; gap: 15px;">
+                <button class="icon-btn" onclick="window.closeSettingsModal()" style="background: rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 6px; color: var(--text-main); font-size: 14px;">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Назад
                 </button>
+                <h2 style="margin: 0;">Настройки</h2>
             </div>
             
             <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
@@ -156,6 +91,14 @@
                     <button onclick="window.location.href='skufenger.html'" class="cyber-btn" style="width: 100%; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(0, 242, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Установить приложение (PWA)
+                    </button>
+                </div>
+
+                
+                <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
+                    <button type="button" class="cyber-btn" style="width: 100%; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: rgba(0, 242, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);" onclick="window.saveProfileHandle(this)">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        СОХРАНИТЬ НАСТРОЙКИ
                     </button>
                 </div>
 
@@ -405,7 +348,7 @@
                                         <button class="icon-btn" id="sidebar-search-toggle-btn" title="Поиск" onclick="toggleSidebarSearch(true)">
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                         </button>
-                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'">
+                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="window.openSettingsModal()">
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8 1 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                                         </button>
                                     </div>
@@ -467,7 +410,7 @@
                                             <button onclick="window.chatOptionAction('wallpaper')">🎨 Фон чата</button>
                                             <button onclick="window.chatOptionAction('clear')">🗑️ Очистить историю</button>
                                             <button onclick="window.chatOptionAction('encryption')">🔐 Шифрование</button>
-                                            <button onclick="document.getElementById('settings-modal').style.display='flex'; window.toggleChatOptions()">⚙️ Настройки</button>
+                                            <button onclick="window.openSettingsModal(); window.toggleChatOptions()">⚙️ Настройки</button>
                                         </div>
                                     </div>
                                 </div>

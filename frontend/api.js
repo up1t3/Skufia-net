@@ -15,7 +15,8 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
         const res = await fetch(`${window.API_BASE_URL}${endpoint}`, {
             method,
             headers,
-            body: body ? JSON.stringify(body) : null
+            body: body ? JSON.stringify(body) : null,
+            cache: 'no-store'
         });
         if (res.status === 401) {
             localStorage.removeItem('skuf_token');

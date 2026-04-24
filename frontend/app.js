@@ -354,6 +354,47 @@ const handleInput = document.getElementById('settings-handle');
         });
     }
 
+    window.saveProfileHandle = async function() {
+        const input = document.getElementById('settings-handle');
+        if (!input) return;
+        
+        let newVal = input.value.trim();
+        if (newVal && !newVal.startsWith('@')) {
+            newVal = '@' + newVal;
+            input.value = newVal;
+        }
+        
+        const btn = document.getElementById('btn-save-profile');
+        if (btn) btn.innerHTML = 'СОХРАНЕНИЕ...';
+        
+        try {
+            await apiRequest('/me/update', 'POST', { handle: newVal });
+            addLog('Профиль успешно сохранен', 'success');
+            if (btn) {
+                btn.innerHTML = 'СОХРАНЕНО ✓';
+                btn.style.background = 'rgba(0, 255, 65, 0.2)';
+                btn.style.color = '#00ff41';
+                btn.style.borderColor = '#00ff41';
+                setTimeout(() => { 
+                    btn.innerHTML = 'СОХРАНИТЬ ПРОФИЛЬ'; 
+                    btn.style = 'width: 100%; border-radius: 8px; font-size: 13px; padding: 10px;';
+                }, 2000);
+            }
+        } catch (err) {
+            addLog('Ошибка при сохранении', 'error');
+            if (btn) {
+                btn.innerHTML = 'ОШИБКА';
+                btn.style.background = 'rgba(255, 51, 51, 0.2)';
+                btn.style.color = '#ff3333';
+                btn.style.borderColor = '#ff3333';
+                setTimeout(() => { 
+                    btn.innerHTML = 'СОХРАНИТЬ ПРОФИЛЬ'; 
+                    btn.style = 'width: 100%; border-radius: 8px; font-size: 13px; padding: 10px;';
+                }, 2000);
+            }
+        }
+    };
+
     const themeSelect = document.getElementById('settings-theme-select');
     if (themeSelect) {
         themeSelect.addEventListener('change', (e) => {
@@ -628,7 +669,7 @@ window.previewAvatar = async function(input) {
         const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
         if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
         const dashAvatar = document.getElementById('dash-avatar');
-        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
+        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);\n        addLog('Фотография загружена. Не забудьте сохранить настройки.', 'success');
 
         addLog('✅ Аватарка загружена и сохранена!', 'success');
     } catch (e) {
@@ -900,3 +941,28 @@ backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; 
     });
 })();
 
+\n
+window.openSettingsModal = function() {
+    const m = document.getElementById('settings-modal');
+    if (m) m.style.display = 'flex';
+    if (!window.location.hash.includes('settings')) {
+        history.pushState({ modal: 'settings' }, '', '#settings');
+    }
+};
+
+window.closeSettingsModal = function() {
+    const m = document.getElementById('settings-modal');
+    if (m) m.style.display = 'none';
+    if (window.location.hash.includes('settings')) {
+        history.back();
+    }
+};
+
+window.addEventListener('popstate', (e) => {
+    if (!window.location.hash.includes('settings')) {
+        const sm = document.getElementById('settings-modal');
+        if (sm && sm.style.display === 'flex') {
+            sm.style.display = 'none';
+        }
+    }
+});

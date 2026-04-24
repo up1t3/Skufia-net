@@ -77,8 +77,9 @@
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
-        border-radius: 28px 28px 0 0 !important;
-        padding: 30px 24px 80px !important; /* Extra bottom padding for iOS home bar safety */
+        padding: 30px 24px 30px !important; /* Reduced bottom padding for iOS home bar safety */
+        max-height: 90vh !important;
+        overflow-y: auto !important;
         border-bottom: none !important;
         border-left: none !important;
         border-right: none !important;
