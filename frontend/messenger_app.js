@@ -146,6 +146,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.addLog) window.addLog('Инициализация Skufia Enterprise OS...', 'info');
             
             try {
+                if (window.VoiceRecorderService) new window.VoiceRecorderService();
+                if (window.EmojiPickerEngine) new window.EmojiPickerEngine();
+            } catch (e) {
+                console.error('Subsystem init failed:', e);
+            }
+
+            try {
                 if (window.ensureKeys) await window.ensureKeys();
             } catch (e) {
                 console.error('E2EE key init failed (non-fatal):', e);
