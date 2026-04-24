@@ -182,7 +182,8 @@ window.initChatCore = function() {
             
             if (room.avatar_url) {
                 const img = document.createElement('img');
-                img.src = room.avatar_url;
+                const aUrl = room.avatar_url.startsWith('http') ? room.avatar_url : `${BASE_URL}${room.avatar_url}`;
+                img.src = aUrl + `?v=${Date.now()}`;
                 img.alt = 'AV';
                 img.style.width = '100%';
                 img.style.height = '100%';
@@ -313,7 +314,13 @@ window.initChatCore = function() {
             const headerTitle = document.getElementById('chat-header-title');
             
             if (headerAvatar) {
-                headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                const room = (state.chat.rooms || []).find(r => r.id === roomId);
+                if (room && room.avatar_url) {
+                    const avatarUrl = room.avatar_url.startsWith('http') ? room.avatar_url : `${BASE_URL}${room.avatar_url}`;
+                    headerAvatar.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                } else {
+                    headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                }
                 headerAvatar.style.background = 'transparent';
                 headerAvatar.style.color = 'transparent';
             }
@@ -475,20 +482,13 @@ window.initChatCore = function() {
         if (!history) return;
 
         // Prevent duplicates (e.g. from optimistic render + WS echo)
-        let existingDiv = document.getElementById(`msg-${msg.id}`);
-        if (existingDiv) {
-            // For now, if we want to update read status, we can do it here. 
-            // Simple approach: avoid full re-render duplicate
-            return;
-        }
+        if (document.getElementById(`msg-${msg.id}`)) return;
 
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
 
-        const div = document.createElement('div');
         const isMe = msg.sender_id === state.user.id || msg.sender === state.user.username;
-        div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
-        
+
         const dateObj = new Date(msg.timestamp);
         let timeStr = msg.timestamp || '00:00';
         if (!isNaN(dateObj.getTime())) {
@@ -507,43 +507,98 @@ window.initChatCore = function() {
             }
         }
 
+        // ── Telegram-style: wrap bubble in a row ──────────────────────
+        const row = document.createElement('div');
+        row.className = `msg-row ${isMe ? 'msg-row-sent' : 'msg-row-received'}`;
+
+        // Avatar (incoming only)
+        if (!isMe) {
+            const senderName = msg.sender || '?';
+            const initial = senderName.charAt(0).toUpperCase();
+            const charCode = initial.charCodeAt(0) || 65;
+            const hue = (charCode * 137) % 360;
+
+            const avatarEl = document.createElement('div');
+            avatarEl.className = 'msg-avatar';
+
+            const rawAvatarUrl = msg.avatar_url || null;
+            const avatarUrl = rawAvatarUrl
+                ? (rawAvatarUrl.startsWith('http') ? rawAvatarUrl : `${BASE_URL}${rawAvatarUrl}`)
+                : null;
+
+            if (avatarUrl) {
+                const img = document.createElement('img');
+                img.src = `${avatarUrl}?v=${Date.now()}`;
+                img.alt = senderName;
+                img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
+                avatarEl.appendChild(img);
+            } else {
+                avatarEl.style.background = `linear-gradient(135deg,hsl(${hue},65%,55%),hsl(${hue},75%,35%))`;
+                avatarEl.style.color = '#fff';
+                avatarEl.style.display = 'flex';
+                avatarEl.style.alignItems = 'center';
+                avatarEl.style.justifyContent = 'center';
+                avatarEl.style.fontWeight = 'bold';
+                avatarEl.style.fontSize = '14px';
+                avatarEl.textContent = initial;
+            }
+            row.appendChild(avatarEl);
+        }
+
+        // Bubble
+        const div = document.createElement('div');
+        div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
         div.id = `msg-${msg.id}`;
-        
-        let replyHtml = '';
+
+        // Sender name (inside bubble, top — incoming only, groups/channels)
+        if (!isMe) {
+            const senderSpan = document.createElement('div');
+            senderSpan.className = 'msg-sender-name';
+            senderSpan.textContent = msg.sender || '';
+            div.appendChild(senderSpan);
+        }
+
+        // Reply badge
         if (msg.reply_to_id) {
-            replyHtml = `<div class="reply-badge" onclick="document.getElementById('msg-${msg.reply_to_id}')?.scrollIntoView({behavior:'smooth'})">Ответ на сообщение</div>`;
-        }
-        const isEditedHtml = msg.is_edited ? '<span class="is-edited">(изменено)</span>' : '';
-
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'msg-header';
-        headerDiv.textContent = msg.sender + ' ';
-
-        if (msg.is_secure || msg.iv) {
-            const secureSpan = document.createElement('span');
-            secureSpan.className = 'msg-secure-icon';
-            secureSpan.textContent = '🔒';
-            headerDiv.appendChild(secureSpan);
-        }
-        if (msg.is_edited) {
-            const editedSpan = document.createElement('span');
-            editedSpan.className = 'is-edited';
-            editedSpan.textContent = '(изменено)';
-            headerDiv.appendChild(editedSpan);
+            const replyEl = document.createElement('div');
+            replyEl.className = 'reply-badge';
+            replyEl.textContent = 'Ответ на сообщение';
+            replyEl.onclick = () => document.getElementById(`msg-${msg.reply_to_id}`)?.scrollIntoView({behavior:'smooth'});
+            div.appendChild(replyEl);
         }
 
         const textDiv = document.createElement('div');
         textDiv.className = 'msg-text';
         textDiv.textContent = msg.text || msg.content || '';
+        div.appendChild(textDiv);
+
+        if (fileHtml) {
+            const fileContainer = document.createElement('div');
+            fileContainer.innerHTML = fileHtml;
+            while (fileContainer.firstChild) div.appendChild(fileContainer.firstChild);
+        }
 
         const footerDiv = document.createElement('div');
         footerDiv.className = 'msg-footer';
+        
+        if (msg.is_secure || msg.iv) {
+            const secureSpan = document.createElement('span');
+            secureSpan.className = 'msg-secure-icon';
+            secureSpan.textContent = '🔒 ';
+            footerDiv.appendChild(secureSpan);
+        }
+        if (msg.is_edited) {
+            const editedSpan = document.createElement('span');
+            editedSpan.className = 'is-edited';
+            editedSpan.textContent = 'изм. ';
+            footerDiv.appendChild(editedSpan);
+        }
+
         const timeSpan = document.createElement('span');
         timeSpan.className = 'msg-time';
-        timeSpan.innerHTML = `${timeStr} `;
+        timeSpan.textContent = timeStr;
         if (isMe) {
             const isRead = msg.is_read;
-            // Skufia distinct ticks
             const checkSvg = isRead 
                 ? '<svg viewBox="0 0 24 24" width="18" height="18" style="color:#00ffaa; margin-left:4px; vertical-align: middle;"><path d="M2 12l4 4 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M8 12l4 4 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
                 : '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--text-dim); margin-left:3px; vertical-align: middle;"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
@@ -556,26 +611,9 @@ window.initChatCore = function() {
             }));
         }
         footerDiv.appendChild(timeSpan);
-
-        div.appendChild(headerDiv);
-        if (replyHtml) {
-            const replyContainer = document.createElement('div');
-            replyContainer.innerHTML = replyHtml; // Assuming this is safe, otherwise can be handled further
-            while (replyContainer.firstChild) {
-                div.appendChild(replyContainer.firstChild);
-            }
-        }
-        div.appendChild(textDiv);
-        if (fileHtml) {
-            const fileContainer = document.createElement('div');
-            fileContainer.innerHTML = fileHtml; // Assuming safe URL
-            while (fileContainer.firstChild) {
-                div.appendChild(fileContainer.firstChild);
-            }
-        }
         div.appendChild(footerDiv);
         
-        // Context menu logic
+        // Context menu
         div.oncontextmenu = (e) => {
             e.preventDefault();
             document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
@@ -607,8 +645,9 @@ window.initChatCore = function() {
             document.body.appendChild(menu);
             setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
         };
-        
-        history.appendChild(div);
+
+        row.appendChild(div);
+        history.appendChild(row);
         history.scrollTop = history.scrollHeight;
     }
 
@@ -844,8 +883,9 @@ window.initChatCore = function() {
             const initial = (u.username || '?').charAt(0).toUpperCase();
             const charCode = initial.charCodeAt(0) || 65;
             const hue = (charCode * 137) % 360;
-            const avatarHtml = u.avatar_url 
-                ? `<img src="${u.avatar_url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` 
+            const avatarUrl = u.avatar_url ? (u.avatar_url.startsWith('http') ? u.avatar_url : `${BASE_URL}${u.avatar_url}`) : null;
+            const avatarHtml = avatarUrl 
+                ? `<img src="${avatarUrl}?v=${Date.now()}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` 
                 : `<div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;">${initial}</div>`;
             const onlineDot = u.is_online ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00f2ff;margin-left:5px;vertical-align:middle;"></span>` : '';
             const handleText = u.handle ? `<span style="color:var(--text-dim);font-size:11px;">${u.handle}</span>` : '';
@@ -965,8 +1005,9 @@ window.initChatCore = function() {
         const membersHTML = members.map(m => {
             const canKick = isAdmin && m.role !== 'owner' && !(m.role === 'admin' && !isOwner) && m.user_id !== state.user.id;
             const canChangeRole = isOwner && m.role !== 'owner' && m.user_id !== state.user.id;
-            const avatar = m.avatar_url
-                ? `<img src="${m.avatar_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
+            const avatarUrl = m.avatar_url ? (m.avatar_url.startsWith('http') ? m.avatar_url : `${BASE_URL}${m.avatar_url}`) : null;
+            const avatar = avatarUrl
+                ? `<img src="${avatarUrl}?v=${Date.now()}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
                 : `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${m.username}" style="width:36px;height:36px;border-radius:50%;">`;
 
             return `
