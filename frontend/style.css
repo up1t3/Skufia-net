@@ -2825,11 +2825,34 @@ body.skufenger-fullscreen .chat-layout {
         transform: translateX(-100%);
     }
 
+    /* FIX: chat-main also needs translateX so closing chat (removing chat-open) slides it away */
+    body.skufenger-fullscreen .chat-main {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        z-index: 50;
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
     body.skufenger-fullscreen .chat-layout.chat-open .chat-main {
+        transform: translateX(0);
         display: flex;
     }
 
     body.skufenger-fullscreen .mobile-back-btn {
         display: flex;
     }
+}
+
+/* FIX: In fullscreen PWA, always show back button regardless of screen width */
+body.skufenger-fullscreen .mobile-back-btn {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    margin-right: 4px;
+    flex-shrink: 0;
 }

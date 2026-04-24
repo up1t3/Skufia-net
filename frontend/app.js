@@ -475,11 +475,19 @@ const handleInput = document.getElementById('settings-handle');
     // --- CONTACT SEARCH FILTER ---
     window.closeChatMobile = function(fromHistory = false) {
         const chatLayout = document.querySelector('.chat-layout');
-        if (chatLayout && chatLayout.classList.contains('chat-open')) {
+        if (!chatLayout) return;
+
+        const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
+        const isMobile = window.innerWidth <= 768;
+
+        // Remove chat-open in all cases — this triggers CSS transition
+        if (chatLayout.classList.contains('chat-open')) {
             chatLayout.classList.remove('chat-open');
-            if (fromHistory !== true && window.innerWidth <= 768) {
-                try { history.back(); } catch(e) {}
-            }
+        }
+
+        // Push history back for mobile or fullscreen PWA so swipe-back works
+        if (fromHistory !== true && (isMobile || isFullscreen)) {
+            try { history.back(); } catch(e) {}
         }
     };
 
