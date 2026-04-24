@@ -136,6 +136,17 @@ document.addEventListener('DOMContentLoaded', () => {
             state.user.id = me.id;
             state.user.username = me.username;
             state.user.profile = me;
+            
+            const headerAvatar = document.getElementById('header-avatar');
+            if (headerAvatar && me.avatar_url) {
+                const baseUrl = window.BASE_URL || '';
+                const aUrl = me.avatar_url.startsWith('http') ? me.avatar_url : `${baseUrl}${me.avatar_url}`;
+                if (typeof applyAvatarDisplay === 'function') {
+                    applyAvatarDisplay(headerAvatar, aUrl);
+                } else {
+                    headerAvatar.innerHTML = `<img src="${aUrl}?v=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                }
+            }
 
             // We will remove the overlay after subsystems load to prevent flash of empty app
             // if (authOverlay) authOverlay.style.display = 'none';
@@ -158,17 +169,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('E2EE key init failed (non-fatal):', e);
                 if (window.addLog) window.addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
             }
-            if (window.connectWebSocket) window.connectWebSocket();
-            if (window.loadChatRooms) window.loadChatRooms();
-            if (window.loadFolders) window.loadFolders();
+            if (window.connectWebSocket) {
+                if (state.user.token) {
+                    window.connectWebSocket();
+                } else {
+                    console.warn('Skipping connectWebSocket: missing token.');
+                }
+            }
+            if (window.loadChatRooms) await window.loadChatRooms(); // make it await if it's async, or wait
+            if (window.loadFolders) await window.loadFolders();
             
             console.log('--- SYSTEM BOOT COMPLETE ---');
-            
-            // Forcefully remove auth overlay and set logged-in state to unblock interface
-            if (authOverlay) {
-                authOverlay.remove();
+
+            // Integrity check before showing the app
+            const roomsList = document.getElementById('chat-rooms-list');
+            if (roomsList && roomsList.children.length === 0) {
+                console.warn('BOOT INTEGRITY: #chat-rooms-list is empty. It might be hydrating.');
             }
+            
+            // Set logged-in state to unblock interface
             document.documentElement.classList.add('is-logged-in');
+            
+            // Hide auth overlay instead of removing it completely so it can be restored on logout
+            if (authOverlay) {
+                authOverlay.style.display = 'none';
+            }
             
             if (window.addLog) {
                 window.addLog('Loading Cyber-Industrial HUD...', 'system');
@@ -398,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const profile = await apiRequest('/me');
                 if (profile) {
-                    const handleInput = document.getElementById('settings-handle-input');
+                    const handleInput = document.getElementById('settings-handle');
                     if (handleInput) handleInput.value = (profile.handle || '').replace('@', '');
                     
                     const avatarPreview = document.getElementById('settings-avatar-preview');
@@ -495,6 +520,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
             const dashAvatar = document.getElementById('dash-avatar');
             if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
+            const headerAvatar = document.getElementById('header-avatar');
+            if (headerAvatar) {
+                if (typeof applyAvatarDisplay === 'function') {
+                    applyAvatarDisplay(headerAvatar, avatarUrl);
+                } else {
+                    headerAvatar.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                }
+            }
             
             if (typeof addLog === 'function') addLog('Аватарка успешно обновлена', 'success');
             if (typeof showToast === 'function') showToast('✅ Фото профиля обновлено!');

@@ -153,8 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // This prevents the PWA from running stale broken JS after an update
             navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'SW_UPDATED') {
-                    console.log('[PWA] New SW activated (' + event.data.version + '), reloading...');
-                    window.location.reload();
+                    console.log('[PWA] New SW activated (' + event.data.version + '), update available.');
+                    if (window.showToast) {
+                        window.showToast('✅ Доступно обновление. Перезагрузите для применения.', 10000);
+                    }
                 }
             });
         }

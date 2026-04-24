@@ -118,6 +118,13 @@
                         <input type="text" id="settings-handle" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="username">
                     </div>
                     <small style="color: var(--text-dim); font-size: 11px; margin-top: 4px; display: block;">По этой ссылке вас смогут найти другие.</small>
+                    <button id="btn-save-profile" class="cyber-btn primary-btn" style="width: 100%; margin-top: 10px;" onclick="window.saveProfileHandle()">СОХРАНИТЬ ИМЯ</button>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <button onclick="document.getElementById('settings-modal').style.display='none'; document.getElementById('theme-switcher-modal').style.display='flex';" class="cyber-btn" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(0, 242, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">
+                        🎨 Выбрать цветовую тему
+                    </button>
                 </div>
 
                 <!-- Toggles Section -->

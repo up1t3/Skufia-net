@@ -12,6 +12,11 @@ window.initChatCore = function() {
         if (state.chat.socket) return;
         
         const token = state.user.token;
+        if (!token) {
+            console.warn('Cannot connect WebSocket: No token available.');
+            return;
+        }
+        
         state.chat.socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
 
         state.chat.socket.onopen = () => {
