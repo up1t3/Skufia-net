@@ -134,6 +134,23 @@ function runTests() {
   }
 }
 
+// ─── 2.5. Обновление версии Service Worker ─────────────────────────
+function bumpServiceWorker() {
+  step('Обновление версии Service Worker (chat-sw.js)');
+  const fs = require('fs');
+  const path = require('path');
+  const swPath = path.join(__dirname, 'frontend', 'chat-sw.js');
+  try {
+    let content = fs.readFileSync(swPath, 'utf8');
+    const timestamp = Date.now();
+    content = content.replace(/const CACHE_NAME = 'skufia-chat-v\d+';/, `const CACHE_NAME = 'skufia-chat-v${timestamp}';`);
+    fs.writeFileSync(swPath, content);
+    success(`Версия кэша обновлена до v${timestamp}`);
+  } catch (e) {
+    warn('Не удалось обновить версию Service Worker');
+  }
+}
+
 // ─── 3. Сборка Docker-образов ───────────────────────────────────
 function buildImages() {
   step('Сборка Docker-образов (локально)');
@@ -220,6 +237,7 @@ async function main() {
 
   checkConfig();
   runTests();
+  bumpServiceWorker();
   buildImages();
   pushImages();
   await deployToServer();

@@ -144,6 +144,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('chat-sw.js').then(reg => {
                 addLog('Service Worker Connected (PWA Active)', 'system');
+                
+                // Explicitly check for updates on load
+                reg.update();
+
+                // Check for updates when app comes back to foreground
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        reg.update();
+                    }
+                });
             }).catch(err => {
                 console.error('SW registration failed:', err);
             });
