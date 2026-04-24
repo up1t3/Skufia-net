@@ -146,8 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.addLog) window.addLog('Инициализация Skufia Enterprise OS...', 'info');
             
             try {
-                if (window.VoiceRecorderService) new window.VoiceRecorderService();
-                if (window.EmojiPickerEngine) new window.EmojiPickerEngine();
+                if (typeof VoiceRecorderService !== 'undefined') new VoiceRecorderService();
+                if (typeof EmojiPickerEngine !== 'undefined') new EmojiPickerEngine();
             } catch (e) {
                 console.error('Subsystem init failed:', e);
             }

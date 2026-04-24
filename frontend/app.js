@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewId === 'wiki') loadWiki();
             if (viewId === 'trade') loadMarket();
             if (viewId === 'registry') loadRegistry();
-            if (viewId === 'messages') { loadChatRooms(); if (window.loadFolders) window.loadFolders(); }
+            if (viewId === 'messages') { if(window.loadChatRooms) window.loadChatRooms(); }
             if (viewId === 'events') loadEvents();
             if (viewId === 'dashboard') loadDashboard();
         }
@@ -428,7 +428,7 @@ const handleInput = document.getElementById('settings-handle');
                         });
                         if (resp.ok) {
                             addLog(`Успешно подтянуто абонентов: ${contacts.length}`, 'success');
-                            loadChatRooms(); // refresh sidebar 
+                            if(window.loadChatRooms) window.loadChatRooms(); // refresh sidebar 
                         } else throw new Error();
                     } else {
                         addLog('Контакты не выбраны', 'info');
@@ -458,16 +458,14 @@ const handleInput = document.getElementById('settings-handle');
     window.loadWiki = loadWiki;
     window.loadMarket = loadMarket;
     window.loadRegistry = loadRegistry;
-    window.loadChatRooms = loadChatRooms;
-    window.loadFolders = loadFolders;
-    window.renderChatRooms = renderChatRooms;
+    // Extracted to chat_core.js
     window.loadTopicPosts = loadTopicPosts;
     window.likePost = likePost;
     window.likeWiki = likeWiki;
     window.switchView = switchView;
-    window.selectChatRoom = selectChatRoom;
+    // Extracted to chat_core.js
     // [FIX-06] Alias: selectChatRoom renders new #chat-input with inline onclick="window.sendChatMessage()"
-    window.sendChatMessage = sendChatMsg;
+    // window.sendChatMessage = sendChatMsg;
     window.openSkufenger = function() {
         window.open(window.location.pathname + '?app=skufenger', '_blank', 'width=1200,height=800,menubar=no,toolbar=no,location=no,status=no');
     };
