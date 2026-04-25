@@ -206,13 +206,6 @@
             };
         }
 
-        /**
-         * Decrypt AES-256-GCM ciphertext.
-         * @param {CryptoKey} key
-         * @param {string} base64Content
-         * @param {string} base64Iv
-         * @returns {Promise<string>}
-         */
         static async decryptMessage(key, base64Content, base64Iv) {
             const iv = Uint8Array.from(atob(base64Iv), c => c.charCodeAt(0));
             const ciphertext = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
@@ -222,6 +215,38 @@
                 ciphertext
             );
             return new TextDecoder().decode(decrypted);
+        }
+
+        /**
+         * Decrypt with key history fallback
+         * @param {Object} sessionKeysMap 
+         * @param {string} base64Content 
+         * @param {string} base64Iv 
+         * @param {number} msgKeyVersion 
+         */
+        static async decryptWithKeyHistory(sessionKeysMap, base64Content, base64Iv, msgKeyVersion) {
+            // Priority 1: Use specific key version if provided and available
+            if (msgKeyVersion && sessionKeysMap.keys && sessionKeysMap.keys[msgKeyVersion]) {
+                try {
+                    return await CryptoManager.decryptMessage(sessionKeysMap.keys[msgKeyVersion], base64Content, base64Iv);
+                } catch(e) {}
+            }
+            // Priority 2: Blind try all available keys (Telegram-style history fallback)
+            if (sessionKeysMap.keys) {
+                const versions = Object.keys(sessionKeysMap.keys).sort((a,b) => b - a);
+                for (let v of versions) {
+                    if (v == msgKeyVersion) continue; // Already tried
+                    try {
+                        return await CryptoManager.decryptMessage(sessionKeysMap.keys[v], base64Content, base64Iv);
+                    } catch(e) {}
+                }
+            } else if (sessionKeysMap instanceof CryptoKey) {
+                // Legacy format fallback
+                try {
+                    return await CryptoManager.decryptMessage(sessionKeysMap, base64Content, base64Iv);
+                } catch(e) {}
+            }
+            throw new Error('DECRYPTION_FAILED_ALL_KEYS');
         }
 
         // ── Identity Export / Import (PBKDF2 + AES-GCM) ───────────────────────────
@@ -470,14 +495,33 @@
 
         try {
             const keyBundle = await apiRequest(`/chat/rooms/${roomId}/key`);
-            if (keyBundle && keyBundle.wrapped_key) {
+            if (keyBundle && keyBundle.keys) {
+                let sessionKeysMap = { keys: {}, active_version: 1 };
+                for (const b of keyBundle.keys) {
+                    try {
+                        const sessionKey = await CryptoManager.unwrapKey(
+                            state.chat.keys.privateKey,
+                            b.wrapped_key
+                        );
+                        sessionKeysMap.keys[b.key_version] = sessionKey;
+                        if (b.is_active) sessionKeysMap.active_version = b.key_version;
+                    } catch(e) { console.warn('Could not unwrap key version', b.key_version, e); }
+                }
+                if (Object.keys(sessionKeysMap.keys).length > 0) {
+                    state.chat.sessionKeys[roomId] = sessionKeysMap;
+                    await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKeysMap).catch(() => {});
+                    return sessionKeysMap;
+                }
+            } else if (keyBundle && keyBundle.wrapped_key) {
+                // Legacy fallback
                 const sessionKey = await CryptoManager.unwrapKey(
                     state.chat.keys.privateKey,
                     keyBundle.wrapped_key
                 );
-                state.chat.sessionKeys[roomId] = sessionKey;
-                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
-                return sessionKey;
+                const sessionKeysMap = { keys: { 1: sessionKey }, active_version: 1 };
+                state.chat.sessionKeys[roomId] = sessionKeysMap;
+                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKeysMap).catch(() => {});
+                return sessionKeysMap;
             }
         } catch (e) {
             console.warn('Failed to fetch existing session key bundle:', e);
@@ -514,10 +558,21 @@
             keysPayload[String(receiverId)] = wrappedForRecipient;
             keysPayload[String(myUserId)] = wrappedForSelf;
             
-            await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
+            const data = await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
+            const newVersion = data.key_version || 1;
 
-            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
-            return sessionKey;
+            let sessionKeysMap = { keys: {}, active_version: newVersion };
+            sessionKeysMap.keys[newVersion] = sessionKey;
+            
+            // Try to merge with existing keys if any
+            const existing = state.chat.sessionKeys[roomId];
+            if (existing && existing.keys) {
+                sessionKeysMap.keys = { ...existing.keys, ...sessionKeysMap.keys };
+            }
+
+            state.chat.sessionKeys[roomId] = sessionKeysMap;
+            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKeysMap).catch(() => {});
+            return sessionKeysMap;
         } catch (e) {
             console.error('Failed to establish new session key:', e);
             // Re-throw so caller knows encryption setup failed and doesn't send in plaintext by accident if it shouldn't

@@ -119,6 +119,7 @@ app = FastAPI(
 os.makedirs("uploads", exist_ok=True)
 os.makedirs(os.path.join("uploads", "voice"), exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+app.mount("/api/uploads", StaticFiles(directory="uploads"), name="api_uploads")
 
 from ws_manager import broadcast, manager
 
@@ -162,11 +163,18 @@ app.include_router(events_router, prefix="/api", tags=["events"])
 async def websocket_endpoint(websocket: WebSocket, token: str):
     try:
         user_data = decode_token(token)
-        user_id = user_data.get("user_id")
-        if not user_id:
+        if not user_data:
+            print(f"WS AUTH ERROR: decode_token returned None for token {token[:10]}...")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-    except Exception:
+            
+        user_id = user_data.get("user_id")
+        if not user_id:
+            print(f"WS AUTH ERROR: user_data has no user_id: {user_data}")
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except Exception as e:
+        print(f"WS AUTH ERROR Exception: {e}")
         await websocket.close(code=4003) # Unauthorized
         return
 

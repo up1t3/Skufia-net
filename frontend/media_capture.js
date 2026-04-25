@@ -43,10 +43,10 @@ async function startAudioRecording() {
             if (nameEl) nameEl.textContent = \`🎤 Голосовое сообщение (\${(file.size / 1024).toFixed(1)} KB) - Готово к отправке\`;
             
             // Fake upload directly into state since voice is singular in intent
-            // In a real app we'd upload directly or pass to uploadChatFiles.
-            // But our uploadChatFiles does the network request immediately.
-            if (window.uploadChatFiles) {
-                await window.uploadChatFiles([file]);
+            // In a real app we'd upload directly or pass to uploadChatFile.
+            // But our uploadChatFile does the network request immediately.
+            if (window.uploadChatFile) {
+                await window.uploadChatFile(file);
             }
         };
 

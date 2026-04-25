@@ -414,29 +414,54 @@ const handleInput = document.getElementById('settings-handle');
         if (btn) btn.innerHTML = 'СОХРАНЕНИЕ...';
         
         try {
-            await apiRequest('/me/update', 'POST', { handle: newVal });
-            addLog('Профиль успешно сохранен', 'success');
+            const result = await apiRequest('/me/update', 'POST', { handle: newVal });
+            
+            if (result.handle_status === 'already_set') {
+                if (window.showToast) window.showToast('ℹ️ У вас уже сохранён данный handle');
+                addLog('У вас уже сохранен данный handle', 'info');
+                if (btn) {
+                    btn.innerHTML = 'УЖЕ СОХРАНЁН ✓';
+                    btn.style.background = 'rgba(0, 255, 65, 0.2)';
+                    btn.style.color = '#00ff41';
+                    btn.style.borderColor = '#00ff41';
+                }
+            } else {
+                addLog('Профиль успешно сохранен', 'success');
+                if (window.showToast) window.showToast('✅ Handle успешно сохранен');
+                if (btn) {
+                    btn.innerHTML = 'СОХРАНЕНО ✓';
+                    btn.style.background = 'rgba(0, 255, 65, 0.2)';
+                    btn.style.color = '#00ff41';
+                    btn.style.borderColor = '#00ff41';
+                }
+            }
+            
             if (btn) {
-                btn.innerHTML = 'СОХРАНЕНО ✓';
-                btn.style.background = 'rgba(0, 255, 65, 0.2)';
-                btn.style.color = '#00ff41';
-                btn.style.borderColor = '#00ff41';
                 setTimeout(() => { 
                     btn.innerHTML = 'СОХРАНИТЬ ПРОФИЛЬ'; 
                     btn.style = 'width: 100%; border-radius: 8px; font-size: 13px; padding: 10px;';
-                }, 2000);
+                }, 2800);
             }
         } catch (err) {
-            addLog('Ошибка при сохранении', 'error');
+            const isTaken = err.status === 409 || err.code === 'HANDLE_TAKEN' || (err.message && err.message.includes('занят'));
+            
+            if (isTaken) {
+                if (window.showToast) window.showToast('⚠️ Данный handle уже занят');
+                addLog('Данный handle уже занят', 'error');
+                if (btn) btn.innerHTML = 'ЗАНЯТ ✕';
+            } else {
+                addLog('Ошибка при сохранении', 'error');
+                if (btn) btn.innerHTML = 'ОШИБКА';
+            }
+            
             if (btn) {
-                btn.innerHTML = 'ОШИБКА';
                 btn.style.background = 'rgba(255, 51, 51, 0.2)';
                 btn.style.color = '#ff3333';
                 btn.style.borderColor = '#ff3333';
                 setTimeout(() => { 
                     btn.innerHTML = 'СОХРАНИТЬ ПРОФИЛЬ'; 
                     btn.style = 'width: 100%; border-radius: 8px; font-size: 13px; padding: 10px;';
-                }, 2000);
+                }, 2800);
             }
         }
     };

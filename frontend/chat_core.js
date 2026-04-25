@@ -49,10 +49,11 @@ window.initChatCore = function() {
                     }
                     if (state.chat.sessionKeys[msg.room_id]) {
                         try {
-                            msg.content = await window.CryptoManager.decryptMessage(
+                            msg.content = await window.CryptoManager.decryptWithKeyHistory(
                                 state.chat.sessionKeys[msg.room_id],
                                 msg.content,
-                                msg.iv
+                                msg.iv,
+                                msg.key_version
                             );
                             msg.text = msg.content;
                             msg.is_secure = true;
@@ -86,7 +87,7 @@ window.initChatCore = function() {
                     if (txtEl) {
                         let decryptedContent = data.content;
                         if (data.iv && state.chat.sessionKeys[data.room_id]) {
-                            try { decryptedContent = await window.CryptoManager.decryptMessage(state.chat.sessionKeys[data.room_id], data.content, data.iv); } 
+                            try { decryptedContent = await window.CryptoManager.decryptWithKeyHistory(state.chat.sessionKeys[data.room_id], data.content, data.iv, data.key_version); } 
                             catch(e) {}
                         }
                         txtEl.innerText = decryptedContent; 
@@ -402,10 +403,11 @@ window.initChatCore = function() {
                     if (m.iv && m.iv.length > 0) {
                         if (state.chat.sessionKeys[roomId]) {
                             try {
-                                m.text = await window.CryptoManager.decryptMessage(
+                                m.text = await window.CryptoManager.decryptWithKeyHistory(
                                     state.chat.sessionKeys[roomId],
                                     m.text,
-                                    m.iv
+                                    m.iv,
+                                    m.key_version
                                 );
                                 m.is_secure = true;
                             } catch(e) {
@@ -607,12 +609,20 @@ window.initChatCore = function() {
             // --- E2EE: ENCRYPTION ---
             let isEncrypted = false;
             if (state.chat.currentRoomType === 'private' && typeof getOrEstablishSessionKey === 'function') {
-                const sessionKey = await getOrEstablishSessionKey(roomId, receiverId);
-                if (sessionKey) {
-                    const encrypted = await window.CryptoManager.encryptMessage(sessionKey, content);
-                    payload.content = encrypted.content;
-                    payload.encryption_iv = encrypted.iv;
-                    isEncrypted = true;
+                const sessionKeyMap = await getOrEstablishSessionKey(roomId, receiverId);
+                if (sessionKeyMap) {
+                    let activeKey;
+                    if (sessionKeyMap.keys && sessionKeyMap.active_version) {
+                        activeKey = sessionKeyMap.keys[sessionKeyMap.active_version];
+                    } else {
+                        activeKey = sessionKeyMap; // fallback for legacy structure
+                    }
+                    if (activeKey) {
+                        const encrypted = await window.CryptoManager.encryptMessage(activeKey, content);
+                        payload.content = encrypted.content;
+                        payload.encryption_iv = encrypted.iv;
+                        isEncrypted = true;
+                    }
                 }
             }
 

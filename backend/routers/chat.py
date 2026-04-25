@@ -218,20 +218,28 @@ def store_room_keys(
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this room")
 
+    # Calculate the next version for this room
+    from sqlalchemy import func
+    max_version = db.query(func.max(RoomKeyBundle.key_version)).filter(
+        RoomKeyBundle.room_id == room_id
+    ).scalar() or 0
+    new_version = max_version + 1
+
     for uid_str, wrapped_key in payload.keys.items():
         try:
             uid = int(uid_str)
         except ValueError:
             continue
-        # Upsert: update if exists, insert if not
-        existing = db.query(RoomKeyBundle).filter(
+            
+        # Deactivate previous active keys for this user in this room
+        db.query(RoomKeyBundle).filter(
             RoomKeyBundle.room_id == room_id,
-            RoomKeyBundle.user_id == uid
-        ).first()
-        if existing:
-            existing.wrapped_key = wrapped_key
-        else:
-            db.add(RoomKeyBundle(room_id=room_id, user_id=uid, wrapped_key=wrapped_key))
+            RoomKeyBundle.user_id == uid,
+            RoomKeyBundle.is_active == True
+        ).update({"is_active": False})
+        
+        # Insert new key
+        db.add(RoomKeyBundle(room_id=room_id, user_id=uid, wrapped_key=wrapped_key, key_version=new_version, is_active=True))
 
     db.commit()
     
@@ -244,7 +252,7 @@ def store_room_keys(
         user_ids
     )
 
-    return {"status": "Keys stored", "count": len(payload.keys)}
+    return {"status": "Keys stored", "count": len(payload.keys), "key_version": new_version}
 
 @router.get('/chat/rooms/{room_id}/key')
 def get_room_key(
@@ -253,7 +261,7 @@ def get_room_key(
     db: Session = Depends(get_db)
 ):
     """
-    Retrieves the current user's RSA-wrapped copy of the AES session key
+    Retrieves all the user's RSA-wrapped copies of the AES session keys
     for the given room. Returns 404 if no key has been distributed yet
     (initiator hasn't opened the chat yet).
     """
@@ -264,14 +272,18 @@ def get_room_key(
     if not membership:
         raise HTTPException(status_code=403, detail="Not a member of this room")
 
-    bundle = db.query(RoomKeyBundle).filter(
+    bundles = db.query(RoomKeyBundle).filter(
         RoomKeyBundle.room_id == room_id,
         RoomKeyBundle.user_id == current_user.id
-    ).first()
-    if not bundle:
+    ).order_by(RoomKeyBundle.key_version.desc()).all()
+    
+    if not bundles:
         raise HTTPException(status_code=404, detail="No key bundle found for this room")
 
-    return {"wrapped_key": bundle.wrapped_key}
+    return {
+        "keys": [{"key_version": b.key_version, "wrapped_key": b.wrapped_key, "is_active": b.is_active}
+                 for b in bundles]
+    }
 
 # --- SECURE CHANNEL (Private Messaging) ---
 
@@ -1011,6 +1023,7 @@ def get_room_history(
                 "avatar_url": m.sender.profile.avatar_url if m.sender and m.sender.profile else None,
                 "text": m.content, 
                 "iv": m.encryption_iv,
+                "key_version": getattr(m, 'key_version', 1),
                 "file_url": m.file_url,
                 "reply_to_id": m.reply_to_id,
                 "is_edited": m.is_edited,
@@ -1232,12 +1245,21 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         if room and room.room_type == 'channel' and membership.role != 'admin':
             raise HTTPException(status_code=403, detail="Писать сообщения в этот канал могут только администраторы")
 
+    # Retrieve active key_version to store with message
+    active_bundle = db.query(RoomKeyBundle).filter(
+        RoomKeyBundle.room_id == room_id,
+        RoomKeyBundle.user_id == current_user.id,
+        RoomKeyBundle.is_active == True
+    ).first()
+    msg_key_version = active_bundle.key_version if active_bundle else 1
+
     db_msg = Message(
         sender_id=current_user.id, 
         receiver_id=None, 
         room_id=room_id, 
         content=msg.content,
         encryption_iv=msg.encryption_iv,
+        key_version=msg_key_version,
         file_url=msg.file_url,
         reply_to_id=msg.reply_to_id
     )
@@ -1253,6 +1275,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "sender_id": current_user.id,
         "content": msg.content,
         "iv": msg.encryption_iv,
+        "key_version": msg_key_version,
         "file_url": msg.file_url,
         "reply_to_id": msg.reply_to_id,
         "is_edited": False,

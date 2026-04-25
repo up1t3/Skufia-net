@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Index, Numeric, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, String, Text, ForeignKey, DateTime, Boolean, Index, Numeric, UniqueConstraint, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import JSONB
@@ -218,6 +218,7 @@ class Message(Base):
     content = Column(Text, nullable=False) # Encrypted content blob for E2EE
     file_url = Column(String, nullable=True) # Attached file URL
     encryption_iv = Column(String, nullable=True) # Initialization Vector for AES
+    key_version = Column(Integer, nullable=True, default=1)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_read = Column(Boolean, default=False)
     
@@ -280,11 +281,13 @@ class RoomKeyBundle(Base):
     # The AES session key, wrapped (encrypted) with the user's RSA public key
     wrapped_key = Column(Text, nullable=False)
     key_version = Column(Integer, default=1, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint('room_id', 'user_id', name='uix_room_user_key'),
+        UniqueConstraint('room_id', 'user_id', 'key_version', name='uix_room_user_key_version'),
+        Index('idx_rkb_active', 'room_id', 'user_id', postgresql_where=text("is_active = true")),
     )
 
 def init_db():
