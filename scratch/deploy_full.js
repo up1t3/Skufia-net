@@ -14,6 +14,10 @@ const LOCAL_BASE_BACKEND = path.join(__dirname, '..', 'backend');
 
 const FILES_TO_UPLOAD = [
   { local: path.join(LOCAL_BASE_FRONTEND, 'style.css'), remote: `${REMOTE_BASE_FRONTEND}/style.css` },
+  { local: path.join(LOCAL_BASE_FRONTEND, 'chat_core.js'), remote: `${REMOTE_BASE_FRONTEND}/chat_core.js` },
+  { local: path.join(LOCAL_BASE_FRONTEND, 'ui.js'), remote: `${REMOTE_BASE_FRONTEND}/ui.js` },
+  { local: path.join(LOCAL_BASE_FRONTEND, 'crypto.js'), remote: `${REMOTE_BASE_FRONTEND}/crypto.js` },
+  { local: path.join(LOCAL_BASE_FRONTEND, 'messenger_app.js'), remote: `${REMOTE_BASE_FRONTEND}/messenger_app.js` },
   { local: path.join(LOCAL_BASE_FRONTEND, 'app.js'), remote: `${REMOTE_BASE_FRONTEND}/app.js` },
   { local: path.join(LOCAL_BASE_FRONTEND, 'index.html'), remote: `${REMOTE_BASE_FRONTEND}/index.html` },
   { local: path.join(LOCAL_BASE_FRONTEND, 'manifest.json'), remote: `${REMOTE_BASE_FRONTEND}/manifest.json` },

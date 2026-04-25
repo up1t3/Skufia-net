@@ -585,15 +585,21 @@ window.initChatCore = function() {
 
     async function sendChatMsg() {
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
-        if (!input || !input.value.trim() || !state.chat.currentRoomId) return;
+        const hasContent = input && input.value.trim();
+        const hasFile = !!state.pendingFile;
+        
+        if (!state.chat.currentRoomId || (!hasContent && !hasFile)) return;
 
         // Prevent double sending
-        if (input.disabled) return;
-        input.disabled = true;
-        const originalPlaceholder = input.placeholder;
-        input.placeholder = 'Отправка...';
+        if (input && input.disabled) return;
+        let originalPlaceholder = '';
+        if (input) {
+            originalPlaceholder = input.placeholder;
+            input.disabled = true;
+            input.placeholder = 'Отправка...';
+        }
         
-        let content = input.value.trim();
+        let content = input ? input.value.trim() : '';
 
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
@@ -671,11 +677,20 @@ window.initChatCore = function() {
             console.error('sendChatMsg error:', e);
             addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
             // Restore input on failure so user can retry
-            input.value = content;
+            if (input) input.value = content;
+            if (savedFile) {
+                state.pendingFile = savedFile;
+                const preview = document.getElementById('chat-file-preview');
+                const nameEl = document.getElementById('chat-file-name');
+                if (preview) preview.style.display = 'flex';
+                if (nameEl) nameEl.textContent = `📎 ${savedFile.name}`;
+            }
         } finally {
-            input.disabled = false;
-            input.placeholder = originalPlaceholder;
-            input.focus();
+            if (input) {
+                input.disabled = false;
+                if (originalPlaceholder) input.placeholder = originalPlaceholder;
+                input.focus();
+            }
         }
     }
 
@@ -719,8 +734,10 @@ window.initChatCore = function() {
         state.pendingFile = null;
         const preview = document.getElementById('chat-file-preview');
         const fileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
+        const mediaInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-media-input'));
         if (preview) preview.style.display = 'none';
         if (fileInput) fileInput.value = '';
+        if (mediaInput) mediaInput.value = '';
     }
     // @ts-ignore
     window.clearChatFile = clearChatFile;
@@ -1365,6 +1382,75 @@ window.initChatCore = function() {
             }
         });
     }
+
+    const chatMediaInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-media-input'));
+    if (chatMediaInput) {
+        chatMediaInput.addEventListener('change', () => {
+            if (chatMediaInput.files && chatMediaInput.files[0]) {
+                uploadChatFile(chatMediaInput.files[0]);
+            }
+        });
+    }
+
+    // Attachment menu logic
+    window.toggleAttachMenu = function(event) {
+        if (event) event.stopPropagation();
+        const popup = document.getElementById('attach-menu-popup');
+        if (popup) {
+            popup.style.display = (popup.style.display === 'none' || !popup.style.display) ? 'flex' : 'none';
+        }
+    };
+
+    window.attachMedia = function() {
+        const popup = document.getElementById('attach-menu-popup');
+        if (popup) popup.style.display = 'none';
+        if (chatMediaInput) chatMediaInput.click();
+    };
+
+    window.attachDocument = function() {
+        const popup = document.getElementById('attach-menu-popup');
+        if (popup) popup.style.display = 'none';
+        if (chatFileInput) chatFileInput.click();
+    };
+
+    window.attachLocation = function() {
+        const popup = document.getElementById('attach-menu-popup');
+        if (popup) popup.style.display = 'none';
+        
+        if (!navigator.geolocation) {
+            addLog('Геопозиция не поддерживается браузером', 'error');
+            return;
+        }
+        
+        addLog('Получение геопозиции...', 'info');
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const locationUrl = `https://www.google.com/maps?q=${lat},${lon}`;
+                
+                const chatInput = document.getElementById('chat-input');
+                if (chatInput) {
+                    chatInput.value = locationUrl;
+                    if (window.sendChatMsg) window.sendChatMsg();
+                }
+            },
+            (error) => {
+                addLog(`Ошибка получения геопозиции: ${error.message}`, 'error');
+            }
+        );
+    };
+
+    // Close attach menu when clicking outside
+    document.addEventListener('click', function(event) {
+        const popup = document.getElementById('attach-menu-popup');
+        const attachBtn = document.getElementById('chat-attach-btn');
+        if (popup && popup.style.display !== 'none') {
+            if (!popup.contains(event.target) && (!attachBtn || !attachBtn.contains(event.target))) {
+                popup.style.display = 'none';
+            }
+        }
+    });
 
     // [PERF-204] Local Debounced Contact Search
     const searchInput = document.getElementById('contact-search');
