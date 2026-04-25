@@ -1064,7 +1064,7 @@ class ChatContent(BaseModel):
     encryption_iv: Optional[str] = ""
     file_url: Optional[str] = None
 
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
 MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10 MB
 
 def validate_magic_bytes(contents: bytes, expected_type: str = "all") -> bool:
@@ -1165,10 +1165,10 @@ async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: U
 
 @router.post('/chat/upload')
 async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), idem_key: str = Depends(validate_idempotency)):
-    """Upload a file attachment for chat (max 5 MB)"""
+    """Upload a file attachment for chat (max 20 MB)"""
     contents = await file.read()
     if len(contents) > MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="Файл превышает лимит 5 МБ")
+        raise HTTPException(status_code=413, detail="Файл превышает лимит 20 МБ")
     
     # [SEC-102] Security Check: Magic Bytes Validation
     if not validate_magic_bytes(contents, expected_type="all"):

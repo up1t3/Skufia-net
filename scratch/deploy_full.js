@@ -20,6 +20,7 @@ const FILES_TO_UPLOAD = [
   { local: path.join(LOCAL_BASE_FRONTEND, 'messenger_app.js'), remote: `${REMOTE_BASE_FRONTEND}/messenger_app.js` },
   { local: path.join(LOCAL_BASE_FRONTEND, 'app.js'), remote: `${REMOTE_BASE_FRONTEND}/app.js` },
   { local: path.join(LOCAL_BASE_FRONTEND, 'index.html'), remote: `${REMOTE_BASE_FRONTEND}/index.html` },
+  { local: path.join(LOCAL_BASE_FRONTEND, 'messenger.html'), remote: `${REMOTE_BASE_FRONTEND}/messenger.html` },
   { local: path.join(LOCAL_BASE_FRONTEND, 'manifest.json'), remote: `${REMOTE_BASE_FRONTEND}/manifest.json` },
   { local: path.join(LOCAL_BASE_BACKEND, 'routes.py'), remote: `${REMOTE_BASE_BACKEND}/routes.py` },
   { local: path.join(LOCAL_BASE_BACKEND, 'database.py'), remote: `${REMOTE_BASE_BACKEND}/database.py` }

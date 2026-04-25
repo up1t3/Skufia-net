@@ -2084,13 +2084,13 @@ body.super-user .nav-btn.active {
     position: absolute;
     bottom: calc(100% + 10px);
     left: 10px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
+    background: var(--bg-panel);
+    border: 1px solid var(--border-metal);
     border-radius: 12px;
     padding: 8px 0;
     min-width: 200px;
     z-index: 1000;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
+    box-shadow: var(--panel-shadow);
     backdrop-filter: var(--backdrop-blur);
     animation: fadeIn 0.2s ease;
     display: flex;
@@ -2109,7 +2109,7 @@ body.super-user .nav-btn.active {
 }
 
 .attach-menu-item:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bg-accent);
 }
 
 .attach-menu-item svg {

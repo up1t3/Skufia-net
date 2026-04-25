@@ -697,8 +697,10 @@ window.initChatCore = function() {
 
     /** Upload a file to the server and store the URL in pendingFile */
     async function uploadChatFile(/** @type {File} */ file) {
-        if (file.size > 5 * 1024 * 1024) {
-            addLog('Файл превышает лимит 5 МБ', 'error');
+        if (file.size > 20 * 1024 * 1024) {
+            if (window.showToast) window.showToast('Файл превышает лимит 20 МБ');
+            addLog('Файл превышает лимит 20 МБ', 'error');
+            clearChatFile();
             return;
         }
         const formData = new FormData();
@@ -708,7 +710,8 @@ window.initChatCore = function() {
             /** @type {Record<string, string>} */
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            const resp = await fetch(`${API_BASE_URL}/chat/upload`, {
+            const apiBase = window.API_BASE_URL || '/api';
+            const resp = await fetch(`${apiBase}/chat/upload`, {
                 method: 'POST',
                 headers,
                 body: formData
@@ -726,7 +729,10 @@ window.initChatCore = function() {
             if (nameEl) nameEl.textContent = `📎 ${state.pendingFile.name} (${(file.size / 1024).toFixed(1)} KB)`;
             addLog(`Файл '${file.name}' загружен`, 'success');
         } catch (e) {
-            addLog(`Ошибка загрузки файла: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
+            const errorMsg = e instanceof Error ? e.message : 'unknown';
+            if (window.showToast) window.showToast(`Ошибка загрузки: ${errorMsg}`);
+            addLog(`Ошибка загрузки файла: ${errorMsg}`, 'error');
+            clearChatFile();
         }
     }
 
