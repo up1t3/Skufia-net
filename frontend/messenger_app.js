@@ -117,6 +117,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (!state.user.password) {
+            const sessionPw = sessionStorage.getItem('skuf_session_pw');
+            if (sessionPw) {
+                state.user.password = sessionPw;
+            }
+        }
+
         console.log('BOOT: Token found. Initializing system...');
         
         // Show loading state on the overlay if it's still visible
@@ -201,9 +208,29 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                if (window.ensureKeys) await window.ensureKeys();
+                if (window.ensureKeys) {
+                    await window.ensureKeys();
+                    if (!state.chat.keys.publicKey || !state.chat.keys.privateKey) {
+                        throw new Error('NO_KEYS');
+                    }
+                }
             } catch (e) {
-                console.error('E2EE key init failed (non-fatal):', e);
+                console.error('E2EE key init failed:', e);
+                if (e.message === 'NO_KEYS' || (e.message && e.message.includes('NO_KEYS'))) {
+                    const authOverlay = document.getElementById('auth-overlay');
+                    if (authOverlay) {
+                        authOverlay.style.display = 'flex';
+                        const authTitle = document.getElementById('auth-title');
+                        if (authTitle) authTitle.textContent = 'ХРАНИЛИЩЕ ЗАБЛОКИРОВАНО';
+                        const loginForm = document.getElementById('login-form');
+                        if (loginForm) loginForm.style.display = 'none';
+                        const registerForm = document.getElementById('register-form');
+                        if (registerForm) registerForm.style.display = 'none';
+                        const unlockForm = document.getElementById('unlock-form');
+                        if (unlockForm) unlockForm.style.display = 'block';
+                    }
+                    return; // Stop boot process until unlocked
+                }
                 if (window.addLog) window.addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
             }
             if (window.connectWebSocket) {
@@ -387,6 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('skuf_token', data.access_token);
                 state.user.token = data.access_token;
                 state.user.password = document.getElementById('login-password').value; // Temporary store for E2EE key sync
+                sessionStorage.setItem('skuf_session_pw', state.user.password);
                 if (authOverlay) authOverlay.style.display = 'none';
                 if (window.addLog) window.addLog('Аутентификация успешна', 'system');
                 
@@ -398,6 +426,44 @@ document.addEventListener('DOMContentLoaded', () => {
             } finally {
                 if (btn) btn.textContent = 'ВОЙТИ В СЕТЬ';
             }
+        });
+    }
+
+    const unlockForm = document.getElementById('unlock-form');
+    if (unlockForm) {
+        unlockForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            if (btn) btn.textContent = 'ОЖИДАНИЕ...';
+            try {
+                state.user.password = document.getElementById('unlock-password').value;
+                sessionStorage.setItem('skuf_session_pw', state.user.password);
+                
+                await window.ensureKeys();
+                if (!state.chat.keys.publicKey || !state.chat.keys.privateKey) {
+                    throw new Error('Неверный пароль. Хранилище не расшифровано.');
+                }
+                
+                document.getElementById('auth-overlay').style.display = 'none';
+                bootSystem(); // Resume boot
+            } catch (err) {
+                const errEl = document.getElementById('unlock-error');
+                if (errEl) errEl.textContent = err.message;
+            } finally {
+                if (btn) btn.textContent = 'РАЗБЛОКИРОВАТЬ ВАЛТ';
+            }
+        });
+    }
+
+    const toggleToLoginAlt = document.getElementById('toggle-to-login');
+    if (toggleToLoginAlt) {
+        toggleToLoginAlt.addEventListener('click', (e) => {
+            e.preventDefault();
+            localStorage.removeItem('skuf_token');
+            sessionStorage.removeItem('skuf_session_pw');
+            state.user.token = null;
+            state.user.password = null;
+            window.location.reload();
         });
     }
 

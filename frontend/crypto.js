@@ -380,27 +380,37 @@
                 const myKeys = await apiRequest(`/users/${state.user.id}/key`);
                 if (myKeys && myKeys.encrypted_private_key && myKeys.public_key) {
                     // Found in cloud!
-                    const password = state.user.password;
+                    const password = state.user.password || sessionStorage.getItem('skuf_session_pw');
                     if (password) {
                         addLog('☁️ Ключи найдены в облаке. Синхронизация...', 'info');
-                        const { privateKey, publicKey } = await CryptoManager.importIdentityWithPassword(myKeys.encrypted_private_key, password);
-                        
-                        // Save to IDB
-                        await vaultPut(IDB_STORE_KEYS, 'pub_base64', publicKey);
-                        await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', privateKey);
-                        
-                        // Load to memory
-                        state.chat.keys.publicKey = await CryptoManager.importPublicKey(publicKey);
-                        state.chat.keys.privateKey = privateKey;
-                        state.chat.keyFingerprint = await CryptoManager.keyFingerprint(publicKey);
-                        addLog('✅ Ключи восстановлены из облака', 'success');
-                        return;
+                        try {
+                            const { privateKey, publicKey } = await CryptoManager.importIdentityWithPassword(myKeys.encrypted_private_key, password);
+                            
+                            // Save to IDB
+                            await vaultPut(IDB_STORE_KEYS, 'pub_base64', publicKey);
+                            await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', privateKey);
+                            
+                            // Load to memory
+                            state.chat.keys.publicKey = await CryptoManager.importPublicKey(publicKey);
+                            state.chat.keys.privateKey = privateKey;
+                            state.chat.keyFingerprint = await CryptoManager.keyFingerprint(publicKey);
+                            addLog('✅ Ключи восстановлены из облака', 'success');
+                            return;
+                        } catch (decryptErr) {
+                            addLog('❌ Ошибка расшифровки облачного ключа. Неверный пароль?', 'error');
+                            // Clear bad password
+                            state.user.password = null;
+                            sessionStorage.removeItem('skuf_session_pw');
+                            throw new Error('NO_KEYS'); // Force UI to ask for password
+                        }
                     } else {
                         addLog('⚠️ Требуется пароль для расшифровки облачного ключа', 'warning');
+                        throw new Error('NO_KEYS');
                     }
                 }
             } catch (err) {
                 console.error('Cloud key check failed:', err);
+                if (err.message === 'NO_KEYS') throw err;
             }
         } else {
             console.warn('ensureKeys: skipping cloud check — state.user.id is not set yet');
@@ -438,107 +448,23 @@
         addLog('✅ Личность создана и сохранена в облаке', 'success');
     }
 
-    async function getAllSessionKeys(roomId) {
-        if (state.chat.sessionKeys[roomId] && Array.isArray(state.chat.sessionKeys[roomId])) {
-            return state.chat.sessionKeys[roomId];
-        }
+    async function getOrEstablishSessionKey(roomId, receiverId) {
+        if (state.chat.sessionKeys[roomId]) return state.chat.sessionKeys[roomId];
         try {
-            let cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
+            const cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
             if (cached) {
-                if (!Array.isArray(cached)) {
-                    cached = [cached];
-                    await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, cached).catch(()=>{});
-                }
                 state.chat.sessionKeys[roomId] = cached;
                 return cached;
             }
         } catch(e) {
             console.warn('IDB session read error:', e);
         }
-        return [];
-    }
-    window.getAllSessionKeys = getAllSessionKeys;
-
-    window.renegotiateSessionKey = async function(roomId, receiverId) {
-        if (!receiverId) return null;
-        try {
-            await ensureKeys();
-            const targetKeyData = await apiRequest(`/users/${receiverId}/key`).catch(() => null);
-            if (!targetKeyData || !targetKeyData.public_key) return null;
-
-            const sessionKey = await CryptoManager.generateSessionKey();
-            
-            // Append to our local array instead of replacing
-            let keys = await getAllSessionKeys(roomId);
-            keys.push(sessionKey);
-            state.chat.sessionKeys[roomId] = keys;
-
-            const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
-            const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
-
-            const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
-            if (!myPubBase64) throw new Error("Public key not found in vault");
-            
-            const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
-            const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
-
-            let myUserId = state.user?.id;
-            if (!myUserId) {
-                const me = await apiRequest('/me');
-                myUserId = me.id;
-                state.user.id = myUserId;
-            }
-
-            const keysPayload = {};
-            keysPayload[String(receiverId)] = wrappedForRecipient;
-            keysPayload[String(myUserId)] = wrappedForSelf;
-            
-            await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
-            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, keys).catch(() => {});
-            console.log(`Session key RENEGOTIATED and saved for room ${roomId}`);
-            return sessionKey;
-        } catch (e) {
-            console.error('Failed to renegotiate new session key:', e);
-            throw e;
-        }
-    };
-
-    window.refreshSessionKey = async function(roomId, receiverId) {
-        try {
-            await ensureKeys();
-            const keyBundle = await apiRequest(`/chat/rooms/${roomId}/key`);
-            if (keyBundle && keyBundle.wrapped_key) {
-                try {
-                    const sessionKey = await CryptoManager.unwrapKey(
-                        state.chat.keys.privateKey,
-                        keyBundle.wrapped_key
-                    );
-                    let keys = await getAllSessionKeys(roomId);
-                    keys.push(sessionKey);
-                    state.chat.sessionKeys[roomId] = keys;
-                    await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, keys).catch(() => {});
-                    console.log(`Session key synced and saved for room ${roomId}`);
-                    return sessionKey;
-                } catch (unwrapErr) {
-                    console.warn("Failed to unwrap existing session key bundle (wrong RSA key). Triggering renegotiation.", unwrapErr);
-                    return await window.renegotiateSessionKey(roomId, receiverId);
-                }
-            }
-        } catch(e) {
-            console.error('refreshSessionKey failed:', e);
-        }
-        return null;
-    };
-
-    async function getOrEstablishSessionKey(roomId, receiverId) {
-        let keys = await getAllSessionKeys(roomId);
-        if (keys.length > 0) return keys[keys.length - 1];
 
         try {
             await ensureKeys();
             if (!state.chat.keys.privateKey) return null;
         } catch (e) {
-            console.error('ensureKeys failed:', e);
+            console.error('ensureKeys failed in getOrEstablishSessionKey:', e);
             return null;
         }
 
@@ -549,8 +475,8 @@
                     state.chat.keys.privateKey,
                     keyBundle.wrapped_key
                 );
-                state.chat.sessionKeys[roomId] = [sessionKey];
-                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, [sessionKey]).catch(() => {});
+                state.chat.sessionKeys[roomId] = sessionKey;
+                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
                 return sessionKey;
             }
         } catch (e) {
@@ -564,7 +490,7 @@
 
         try {
             const sessionKey = await CryptoManager.generateSessionKey();
-            state.chat.sessionKeys[roomId] = [sessionKey];
+            state.chat.sessionKeys[roomId] = sessionKey;
 
             const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
             const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
@@ -577,6 +503,7 @@
 
             let myUserId = state.user?.id;
             if (!myUserId) {
+                console.warn('state.user.id is undefined during key generation, fetching /me...');
                 const me = await apiRequest('/me');
                 myUserId = me.id;
                 if (!myUserId) throw new Error("Could not determine user ID");
@@ -589,10 +516,11 @@
             
             await apiRequest(`/chat/rooms/${roomId}/key`, 'POST', { keys: keysPayload });
 
-            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, [sessionKey]).catch(() => {});
+            await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
             return sessionKey;
         } catch (e) {
             console.error('Failed to establish new session key:', e);
+            // Re-throw so caller knows encryption setup failed and doesn't send in plaintext by accident if it shouldn't
             throw e;
         }
     }

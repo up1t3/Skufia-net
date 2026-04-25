@@ -115,8 +115,21 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await window.ensureKeys();
         } catch (e) {
-            console.error('E2EE key init failed (non-fatal):', e);
-            addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
+            if (e.message === 'NO_KEYS') {
+                // Password needed for decryption
+                document.getElementById('auth-overlay').style.display = 'flex';
+                const loginForm = document.getElementById('login-form');
+                if (loginForm) loginForm.style.display = 'none';
+                const registerForm = document.getElementById('register-form');
+                if (registerForm) registerForm.style.display = 'none';
+                const unlockForm = document.getElementById('unlock-form');
+                if (unlockForm) unlockForm.style.display = 'block';
+                addLog('Vault Locked. Please enter password to decrypt keys.', 'warning');
+                return; // Pause boot process
+            } else {
+                console.error('E2EE key init failed (non-fatal):', e);
+                addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
+            }
         }
 
         addLog('Loading Cyber-Industrial HUD...', 'system');
@@ -259,8 +272,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!res.ok) throw new Error(data.detail || 'Login failed');
             
             localStorage.setItem('skuf_token', data.access_token);
+            sessionStorage.setItem('skuf_session_pw', document.getElementById('login-password').value);
             state.user.token = data.access_token;
             state.user.password = document.getElementById('login-password').value; // Temporary store for E2EE key sync
+            document.documentElement.classList.add('is-logged-in'); // FIX: Ensure UI state updates
             authOverlay.style.display = 'none';
             addLog('Аутентификация успешна', 'system');
             
@@ -272,6 +287,35 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btn) btn.textContent = 'ВОЙТИ В СЕТЬ';
         }
     });
+
+    const unlockForm = document.getElementById('unlock-form');
+    if (unlockForm) {
+        unlockForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            if (btn) btn.textContent = 'ОЖИДАНИЕ...';
+            try {
+                const pwd = document.getElementById('unlock-password').value;
+                if (!pwd) throw new Error('Password is required');
+                sessionStorage.setItem('skuf_session_pw', pwd);
+                state.user.password = pwd;
+                
+                // Retry key loading
+                await window.ensureKeys();
+                
+                document.documentElement.classList.add('is-logged-in');
+                authOverlay.style.display = 'none';
+                addLog('Хранилище разблокировано', 'success');
+                
+                // Resume boot process
+                bootSystem();
+            } catch (err) {
+                document.getElementById('unlock-error').textContent = err.message || 'Ошибка расшифровки';
+            } finally {
+                if (btn) btn.textContent = 'РАЗБЛОКИРОВАТЬ ВАЛТ';
+            }
+        });
+    }
 
     document.getElementById('register-form').addEventListener('submit', async (e) => {
         e.preventDefault();

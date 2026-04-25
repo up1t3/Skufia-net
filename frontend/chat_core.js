@@ -8,15 +8,10 @@ window.initChatCore = function() {
         }
     };
 
-    window.connectWebSocket = function() {
+    function connectWebSocket() {
         if (state.chat.socket) return;
         
         const token = state.user.token;
-        if (!token) {
-            console.warn('Cannot connect WebSocket: No token available.');
-            return;
-        }
-        
         state.chat.socket = new WebSocket(`${WS_URL}/ws/chat/${token}`);
 
         state.chat.socket.onopen = () => {
@@ -44,37 +39,21 @@ window.initChatCore = function() {
                 
                 // --- E2EE DECRYPTION (graceful) ---
                 if (msg.iv && msg.iv.length > 0) {
-                    let decrypted = false;
-                    let keysArr = [];
-                    const keys = state.chat.sessionKeys[msg.room_id];
-                    if (keys) {
-                        keysArr = Array.isArray(keys) ? keys : [keys];
-                        for (let i = keysArr.length - 1; i >= 0; i--) {
-                            try {
-                                msg.content = await window.CryptoManager.decryptMessage(keysArr[i], msg.content, msg.iv);
-                                msg.is_secure = true;
-                                decrypted = true;
-                                break;
-                            } catch (e) {}
+                    if (state.chat.sessionKeys[msg.room_id]) {
+                        try {
+                            msg.content = await window.CryptoManager.decryptMessage(
+                                state.chat.sessionKeys[msg.room_id],
+                                msg.content,
+                                msg.iv
+                            );
+                            msg.is_secure = true;
+                        } catch (e) {
+                            // Key mismatch — show as encrypted, don't crash
+                            msg.content = '🔒 Зашифрованное сообщение';
                         }
-                    }
-
-                    // Auto-healing: If all cached keys fail, fetch new bundle or renegotiate
-                    if (!decrypted && typeof window.refreshSessionKey === 'function') {
-                        const targetId = msg.sender_id;
-                        const newKey = await window.refreshSessionKey(msg.room_id, targetId);
-                        if (newKey) {
-                            try {
-                                msg.content = await window.CryptoManager.decryptMessage(newKey, msg.content, msg.iv);
-                                msg.is_secure = true;
-                                decrypted = true;
-                            } catch (e) {}
-                        }
-                    }
-
-                    if (!decrypted) {
-                        msg.content = '🔒 Зашифрованное сообщение (ключ недоступен)';
-                        msg.text = msg.content;
+                    } else {
+                        // No session key at all — show as encrypted
+                        msg.content = '🔒 Зашифрованное сообщение';
                     }
                 }
                 // If msg.iv is empty/null, content is plaintext — show as-is
@@ -91,38 +70,18 @@ window.initChatCore = function() {
             } else if (data.type === 'edit_message') {
                 const el = document.getElementById(`msg-${data.message_id}`);
                 if (el) {
-                    let decryptedContent = data.content;
-                    if (data.iv && state.chat.sessionKeys[data.room_id]) {
-                        const keysArr = Array.isArray(state.chat.sessionKeys[data.room_id]) ? state.chat.sessionKeys[data.room_id] : [state.chat.sessionKeys[data.room_id]];
-                        for (let i = keysArr.length - 1; i >= 0; i--) {
-                            try {
-                                decryptedContent = await window.CryptoManager.decryptMessage(keysArr[i], data.content, data.iv);
-                                break;
-                            } catch(e) {}
-                        }
-                    }
-                    
-                    let txtEl = el.querySelector('.msg-text');
+                    const txtEl = el.querySelector('.msg-text');
                     if (txtEl) {
-                        txtEl.textContent = decryptedContent;
-                    } else {
-                        txtEl = document.createElement('div');
-                        txtEl.className = 'msg-text';
-                        txtEl.textContent = decryptedContent;
-                        const footer = el.querySelector('.msg-footer');
-                        if (footer) {
-                            el.insertBefore(txtEl, footer);
-                        } else {
-                            el.appendChild(txtEl);
+                        let decryptedContent = data.content;
+                        if (data.iv && state.chat.sessionKeys[data.room_id]) {
+                            try { decryptedContent = await window.CryptoManager.decryptMessage(state.chat.sessionKeys[data.room_id], data.content, data.iv); } 
+                            catch(e) {}
                         }
+                        txtEl.innerText = decryptedContent; 
                     }
-                    
-                    const footerDiv = el.querySelector('.msg-footer');
-                    if (footerDiv && !footerDiv.querySelector('.is-edited')) {
-                        const editedSpan = document.createElement('span');
-                        editedSpan.className = 'is-edited';
-                        editedSpan.textContent = 'изм. ';
-                        footerDiv.insertBefore(editedSpan, footerDiv.firstChild);
+                    if (!el.querySelector('.is-edited')) {
+                        const mheader = el.querySelector('.msg-header');
+                        if (mheader) mheader.insertAdjacentHTML('beforeend', '<span class="is-edited">(изменено)</span>');
                     }
                 }
             } else if (data.type === 'delete_message') {
@@ -152,48 +111,6 @@ window.initChatCore = function() {
                 }
             } else if (data.type === 'status_update') {
                 loadChatRooms();
-            } else if (data.type === 'profile_update') {
-                loadChatRooms();
-                const profile = data.profile;
-                const updatedUserId = data.user_id;
-                
-                // Update header if applicable (simple check, full redraw better handled by loadChatRooms but we do it manually for active chat)
-                if (state.chat.currentRoomId) {
-                    setTimeout(() => {
-                        const headerAvatar = document.getElementById('header-avatar');
-                        const room = (state.chat.rooms || []).find(r => r.id === state.chat.currentRoomId);
-                        if (headerAvatar && room && room.type === 'direct' && room.other_user_id == updatedUserId) {
-                             if (typeof window.applyAvatarDisplay === 'function') {
-                                 window.applyAvatarDisplay(headerAvatar, profile.avatar_url, profile.nickname || profile.username);
-                             } else if (profile.avatar_url) {
-                                 const avatarUrl = profile.avatar_url.startsWith('http') ? profile.avatar_url : `${BASE_URL}${profile.avatar_url}`;
-                                 headerAvatar.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-                             }
-                        }
-                    }, 500); // Wait for loadChatRooms to update state.rooms
-                }
-                
-                // Update in-chat avatars dynamically
-                const msgAvatars = document.querySelectorAll(`.msg-avatar[data-user-id="${updatedUserId}"]`);
-                msgAvatars.forEach(el => {
-                    if (typeof window.applyAvatarDisplay === 'function') {
-                         window.applyAvatarDisplay(el, profile.avatar_url, profile.nickname || profile.username);
-                    } else if (profile.avatar_url) {
-                         const avatarUrl = profile.avatar_url.startsWith('http') ? profile.avatar_url : `${BASE_URL}${profile.avatar_url}`;
-                         el.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-                         el.style.background = 'transparent';
-                    }
-                });
-
-                // Update in-chat names dynamically
-                const msgNames = document.querySelectorAll(`.msg-sender-name[data-user-id="${updatedUserId}"]`);
-                msgNames.forEach(el => {
-                    el.textContent = profile.nickname || profile.username;
-                });
-            } else if (data.type === 'room_key_rotated') {
-                if (window.refreshSessionKey) {
-                    window.refreshSessionKey(data.room_id);
-                }
             }
         };
 
@@ -240,8 +157,7 @@ window.initChatCore = function() {
             
             if (room.avatar_url) {
                 const img = document.createElement('img');
-                const aUrl = room.avatar_url.startsWith('http') ? room.avatar_url : `${BASE_URL}${room.avatar_url}`;
-                img.src = aUrl + `?v=${Date.now()}`;
+                img.src = room.avatar_url;
                 img.alt = 'AV';
                 img.style.width = '100%';
                 img.style.height = '100%';
@@ -281,32 +197,6 @@ window.initChatCore = function() {
             statusSpan.className = `status-dot ${room.is_online ? 'online' : ''}`;
             // Show status dot only for private chats
             statusSpan.style.display = room.type === 'private' ? 'inline-block' : 'none';
-
-            // Unread badge
-            let unreadBadge = null;
-            if (room.unread_count && room.unread_count > 0) {
-                unreadBadge = document.createElement('div');
-                unreadBadge.className = 'unread-badge';
-                unreadBadge.textContent = room.unread_count > 99 ? '99+' : room.unread_count;
-                unreadBadge.style.cssText = `
-                    background: var(--accent-cyan);
-                    color: #000;
-                    border-radius: 10px;
-                    padding: 0 6px;
-                    font-size: 11px;
-                    font-weight: bold;
-                    height: 20px;
-                    min-width: 20px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    position: absolute;
-                    right: 15px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    box-shadow: 0 0 5px var(--accent-cyan);
-                `;
-            }
 
             // Delete/Leave button (visible on hover)
             const deleteBtn = document.createElement('button');
@@ -348,7 +238,6 @@ window.initChatCore = function() {
             div.appendChild(avatarDiv);
             div.appendChild(infoDiv);
             div.appendChild(statusSpan);
-            if (unreadBadge) div.appendChild(unreadBadge);
             div.appendChild(deleteBtn);
             div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
             list.appendChild(div);
@@ -391,12 +280,6 @@ window.initChatCore = function() {
         state.chat.currentRoomType = type;
         state.chat.receiverId = receiverId;
 
-        // Reset local unread count and remove badge visually
-        const roomState = (state.chat.rooms || []).find(r => r.id === roomId);
-        if (roomState) roomState.unread_count = 0;
-        const activeRoomEl = document.querySelector(`.chat-room-item[data-room-id="${roomId}"] .unread-badge`);
-        if (activeRoomEl) activeRoomEl.remove();
-
         const chatHistoryEl = document.getElementById('chat-history');
         const header = document.getElementById('chat-header');
 
@@ -405,13 +288,7 @@ window.initChatCore = function() {
             const headerTitle = document.getElementById('chat-header-title');
             
             if (headerAvatar) {
-                const room = (state.chat.rooms || []).find(r => r.id === roomId);
-                if (room && room.avatar_url) {
-                    const avatarUrl = room.avatar_url.startsWith('http') ? room.avatar_url : `${BASE_URL}${room.avatar_url}`;
-                    headerAvatar.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-                } else {
-                    headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-                }
+                headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
                 headerAvatar.style.background = 'transparent';
                 headerAvatar.style.color = 'transparent';
             }
@@ -490,16 +367,7 @@ window.initChatCore = function() {
         if (btnGroupSettings) btnGroupSettings.style.display = isGroupOrChannel ? 'block' : 'none';
 
         const chatLayout = document.querySelector('.chat-layout');
-        if (chatLayout && !chatLayout.classList.contains('chat-open')) {
-            chatLayout.classList.add('chat-open');
-            const isMobile = window.innerWidth <= 768;
-            const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
-            if (isMobile || isFullscreen) {
-                try {
-                    history.pushState({ skufia: true, view: 'messages', chat: true }, "Chat", "");
-                } catch(e) {}
-            }
-        }
+        if (chatLayout) chatLayout.classList.add('chat-open');
 
         if (chatHistoryEl) {
             chatHistoryEl.innerHTML = `
@@ -515,41 +383,24 @@ window.initChatCore = function() {
                 const messages = response.messages || response; // backward compat
                 state.chat.hasMore = response.has_more || false;
                 state.chat.nextCursor = response.next_cursor || null;
-                let hasAttemptedRefresh = false;
                 // @ts-ignore
                 for (const m of messages) {
                     // Try decrypting history if we have the key
                     if (m.iv && m.iv.length > 0) {
-                        let decrypted = false;
-                        const keys = state.chat.sessionKeys[roomId];
-                        if (keys) {
-                            const keysArr = Array.isArray(keys) ? keys : [keys];
-                            for (let i = keysArr.length - 1; i >= 0; i--) {
-                                try {
-                                    m.text = await window.CryptoManager.decryptMessage(keysArr[i], m.text, m.iv);
-                                    m.is_secure = true;
-                                    decrypted = true;
-                                    break;
-                                } catch(e) {}
+                        if (state.chat.sessionKeys[roomId]) {
+                            try {
+                                m.text = await window.CryptoManager.decryptMessage(
+                                    state.chat.sessionKeys[roomId],
+                                    m.text,
+                                    m.iv
+                                );
+                                m.is_secure = true;
+                            } catch(e) {
+                                m.text = '🔒 Зашифрованное сообщение';
                             }
-                        }
-
-                        // Try to auto-heal ONCE per batch if decryption fails
-                        if (!decrypted && typeof window.refreshSessionKey === 'function' && !hasAttemptedRefresh) {
-                            hasAttemptedRefresh = true;
-                            const targetId = m.sender_id == state.user.id ? state.chat.receiverId : m.sender_id;
-                            const newKey = await window.refreshSessionKey(roomId, targetId);
-                            if (newKey) {
-                                try {
-                                    m.text = await window.CryptoManager.decryptMessage(newKey, m.text, m.iv);
-                                    m.is_secure = true;
-                                    decrypted = true;
-                                } catch (e) {}
-                            }
-                        }
-
-                        if (!decrypted) {
-                            m.text = '🔒 Зашифрованное сообщение (ключ недоступен)';
+                        } else {
+                            // No key — show friendly placeholder
+                            m.text = '🔒 Зашифрованное сообщение';
                         }
                     }
                     // If iv is empty/null, m.text is plaintext — render as-is
@@ -559,14 +410,6 @@ window.initChatCore = function() {
             } catch (e) { chatHistoryEl.innerHTML = '<div class="chat-placeholder">ERROR: HISTORY UNAVAILABLE</div>'; }
 
         }
-
-        // Scroll to input to ensure it's visible inside embedded viewports on mobile
-        setTimeout(() => {
-            const chatInput = document.getElementById('msg-input');
-            if (chatInput) {
-                chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }
-        }, 100);
     }
 
     /** @param {any} msg */
@@ -574,14 +417,13 @@ window.initChatCore = function() {
         const history = document.getElementById('chat-history');
         if (!history) return;
 
-        // Prevent duplicates (e.g. from optimistic render + WS echo)
-        if (document.getElementById(`msg-${msg.id}`)) return;
-
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
 
+        const div = document.createElement('div');
         const isMe = msg.sender_id === state.user.id || msg.sender === state.user.username;
-
+        div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+        
         const dateObj = new Date(msg.timestamp);
         let timeStr = msg.timestamp || '00:00';
         if (!isNaN(dateObj.getTime())) {
@@ -591,168 +433,55 @@ window.initChatCore = function() {
         const fileUrl = msg.file_url || null;
         let fileHtml = '';
         if (fileUrl) {
-            let urls = [];
-            try {
-                urls = fileUrl.startsWith('[') ? JSON.parse(fileUrl) : [fileUrl];
-            } catch (e) {
-                urls = [fileUrl];
-            }
-            
-            if (urls.length > 1) {
-                fileHtml = '<div class="msg-gallery">';
-                urls.forEach(url => {
-                    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
-                    if (isImage) {
-                        fileHtml += `<a href="${BASE_URL}${url}" target="_blank" onclick="window.openLightbox(event, '${BASE_URL}${url}')"><img class="msg-gallery-img" src="${BASE_URL}${url}" alt="attachment"></a>`;
-                    } else {
-                        const fname = url.split('/').pop() || 'file';
-                        fileHtml += `<a class="msg-file-attachment" href="${BASE_URL}${url}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
-                    }
-                });
-                fileHtml += '</div>';
-            } else if (urls.length === 1) {
-                const url = urls[0];
-                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
-                if (isImage) {
-                    fileHtml = `<a href="${BASE_URL}${url}" target="_blank" onclick="window.openLightbox(event, '${BASE_URL}${url}')"><img class="msg-file-img-preview" src="${BASE_URL}${url}" alt="attachment"></a>`;
-                } else {
-                    const fname = url.split('/').pop() || 'file';
-                    fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${url}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
-                }
-            }
-        }
-
-        // ── Telegram-style: wrap bubble in a row ──────────────────────
-        const row = document.createElement('div');
-        row.className = `msg-row ${isMe ? 'msg-row-sent' : 'msg-row-received'}`;
-
-        // Avatar (incoming only)
-        if (!isMe) {
-            const senderName = msg.sender || '?';
-            const initial = senderName.charAt(0).toUpperCase();
-            const charCode = initial.charCodeAt(0) || 65;
-            const hue = (charCode * 137) % 360;
-
-            const avatarEl = document.createElement('div');
-            avatarEl.className = 'msg-avatar';
-            avatarEl.dataset.userId = msg.sender_id;
-
-            const rawAvatarUrl = msg.avatar_url || null;
-            const avatarUrl = rawAvatarUrl
-                ? (rawAvatarUrl.startsWith('http') ? rawAvatarUrl : `${BASE_URL}${rawAvatarUrl}`)
-                : null;
-
-            if (avatarUrl) {
-                const img = document.createElement('img');
-                img.src = `${avatarUrl}?v=${Date.now()}`;
-                img.alt = senderName;
-                img.style.cssText = 'width:100%;height:100%;border-radius:50%;object-fit:cover;';
-                avatarEl.appendChild(img);
+            const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
+            if (isImage) {
+                fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
             } else {
-                avatarEl.style.background = `linear-gradient(135deg,hsl(${hue},65%,55%),hsl(${hue},75%,35%))`;
-                avatarEl.style.color = '#fff';
-                avatarEl.style.display = 'flex';
-                avatarEl.style.alignItems = 'center';
-                avatarEl.style.justifyContent = 'center';
-                avatarEl.style.fontWeight = 'bold';
-                avatarEl.style.fontSize = '14px';
-                avatarEl.textContent = initial;
+                const fname = fileUrl.split('/').pop() || 'file';
+                fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
             }
-            row.appendChild(avatarEl);
         }
 
-        // Bubble
-        const div = document.createElement('div');
-        div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
         div.id = `msg-${msg.id}`;
-
-        // Sender name (inside bubble, top — incoming only, groups/channels)
-        if (!isMe) {
-            const senderSpan = document.createElement('div');
-            senderSpan.className = 'msg-sender-name';
-            senderSpan.dataset.userId = msg.sender_id;
-            senderSpan.textContent = msg.sender || '';
-            div.appendChild(senderSpan);
-        }
-
-        // Reply badge
+        
+        let replyHtml = '';
         if (msg.reply_to_id) {
-            const replyEl = document.createElement('div');
-            replyEl.className = 'reply-badge';
-            
-            // Try to find original message in DOM for context
-            const origMsgEl = document.getElementById(`msg-${msg.reply_to_id}`);
-            let quotedText = 'Перейти к сообщению...';
-            let quotedSender = '';
-            
-            if (origMsgEl) {
-                const textEl = origMsgEl.querySelector('.msg-text');
-                if (textEl) {
-                    quotedText = textEl.innerText.substring(0, 40);
-                    if (textEl.innerText.length > 40) quotedText += '...';
-                }
-                const senderEl = origMsgEl.querySelector('.msg-sender-name');
-                if (senderEl) {
-                    quotedSender = senderEl.innerText;
-                } else if (origMsgEl.classList.contains('msg-sent')) {
-                    quotedSender = state.user.username || 'Я';
-                }
-            }
-            
-            if (quotedSender) {
-                replyEl.innerHTML = `<div style="font-weight:bold; color:var(--accent-cyan); font-size:11px; margin-bottom:2px;">${quotedSender}</div><div>${quotedText}</div>`;
-            } else {
-                replyEl.innerHTML = `<div>${quotedText}</div>`;
-            }
+            replyHtml = `<div class="reply-badge" onclick="document.getElementById('msg-${msg.reply_to_id}')?.scrollIntoView({behavior:'smooth'})">Ответ на сообщение</div>`;
+        }
+        const isEditedHtml = msg.is_edited ? '<span class="is-edited">(изменено)</span>' : '';
 
-            replyEl.onclick = () => {
-                const target = document.getElementById(`msg-${msg.reply_to_id}`);
-                if (target) {
-                    target.scrollIntoView({behavior:'smooth', block: 'center'});
-                    target.style.transition = 'background 0.5s';
-                    const oldBg = target.style.background;
-                    target.style.background = 'rgba(0, 242, 255, 0.3)';
-                    setTimeout(() => target.style.background = oldBg, 1500);
-                }
-            };
-            div.appendChild(replyEl);
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'msg-header';
+        headerDiv.textContent = msg.sender + ' ';
+
+        if (msg.is_secure || msg.iv) {
+            const secureSpan = document.createElement('span');
+            secureSpan.className = 'msg-secure-icon';
+            secureSpan.textContent = '🔒';
+            headerDiv.appendChild(secureSpan);
+        }
+        if (msg.is_edited) {
+            const editedSpan = document.createElement('span');
+            editedSpan.className = 'is-edited';
+            editedSpan.textContent = '(изменено)';
+            headerDiv.appendChild(editedSpan);
         }
 
         const textDiv = document.createElement('div');
         textDiv.className = 'msg-text';
         textDiv.textContent = msg.text || msg.content || '';
-        div.appendChild(textDiv);
-
-        if (fileHtml) {
-            const fileContainer = document.createElement('div');
-            fileContainer.innerHTML = fileHtml;
-            while (fileContainer.firstChild) div.appendChild(fileContainer.firstChild);
-        }
 
         const footerDiv = document.createElement('div');
         footerDiv.className = 'msg-footer';
-        
-        if (msg.is_secure || msg.iv) {
-            const secureSpan = document.createElement('span');
-            secureSpan.className = 'msg-secure-icon';
-            secureSpan.textContent = '🔒 ';
-            footerDiv.appendChild(secureSpan);
-        }
-        if (msg.is_edited) {
-            const editedSpan = document.createElement('span');
-            editedSpan.className = 'is-edited';
-            editedSpan.textContent = 'изм. ';
-            footerDiv.appendChild(editedSpan);
-        }
-
         const timeSpan = document.createElement('span');
         timeSpan.className = 'msg-time';
-        timeSpan.textContent = timeStr;
+        timeSpan.innerHTML = `${timeStr} `;
         if (isMe) {
             const isRead = msg.is_read;
+            // Telegram-style checks
             const checkSvg = isRead 
-                ? '<svg viewBox="0 0 24 24" width="18" height="18" style="color:#00ffaa; margin-left:4px; vertical-align: middle;"><path d="M2 12l4 4 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><path d="M8 12l4 4 8-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>'
-                : '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--text-dim); margin-left:3px; vertical-align: middle;"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+                ? '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--accent-cyan); filter: drop-shadow(0px 0px 2px rgba(0,255,255,0.5)); margin-left:3px; vertical-align: middle;"><path d="M7 11.5L10 14.5L17 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M11 11.5L14 14.5L21 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>'
+                : '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--text-dim); margin-left:3px; vertical-align: middle;"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>';
             timeSpan.insertAdjacentHTML('beforeend', checkSvg);
         } else if (!msg.is_read && state.chat.socket && state.chat.socket.readyState === 1) {
             state.chat.socket.send(JSON.stringify({
@@ -762,78 +491,59 @@ window.initChatCore = function() {
             }));
         }
         footerDiv.appendChild(timeSpan);
+
+        div.appendChild(headerDiv);
+        if (replyHtml) {
+            const replyContainer = document.createElement('div');
+            replyContainer.innerHTML = replyHtml; // Assuming this is safe, otherwise can be handled further
+            while (replyContainer.firstChild) {
+                div.appendChild(replyContainer.firstChild);
+            }
+        }
+        div.appendChild(textDiv);
+        if (fileHtml) {
+            const fileContainer = document.createElement('div');
+            fileContainer.innerHTML = fileHtml; // Assuming safe URL
+            while (fileContainer.firstChild) {
+                div.appendChild(fileContainer.firstChild);
+            }
+        }
         div.appendChild(footerDiv);
         
-        // Action Button for Discoverable Context Menu
-        const actionBtn = document.createElement('div');
-        actionBtn.className = 'msg-action-btn';
-        actionBtn.innerHTML = '&#8942;'; // vertical ellipsis
-        actionBtn.title = 'Меню сообщения';
-        div.appendChild(actionBtn);
-
-        const showContextMenu = (e) => {
+        // Context menu logic
+        div.oncontextmenu = (e) => {
             e.preventDefault();
-            e.stopPropagation();
             document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
             const menu = document.createElement('div');
             menu.className = 'msg-context-menu';
+            menu.style.left = `${e.pageX}px`;
+            menu.style.top = `${e.pageY}px`;
             
             // @ts-ignore
             let cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
             menu.innerHTML = '';
             const replyDiv = document.createElement('div');
             replyDiv.textContent = 'Ответить';
-            replyDiv.onclick = (ev) => { ev.stopPropagation(); setReply(msg.id, cleanText); menu.remove(); };
+            replyDiv.onclick = () => setReply(msg.id, cleanText);
             menu.appendChild(replyDiv);
 
             if (isMe) {
                 const editDiv = document.createElement('div');
                 editDiv.textContent = 'Редактировать';
-                editDiv.onclick = (ev) => { ev.stopPropagation(); setEdit(msg.id, cleanText); menu.remove(); };
+                editDiv.onclick = () => setEdit(msg.id, cleanText);
                 menu.appendChild(editDiv);
 
                 const deleteDiv = document.createElement('div');
                 deleteDiv.className = 'delete-ctx';
                 deleteDiv.textContent = 'Удалить';
-                deleteDiv.onclick = (ev) => { ev.stopPropagation(); deleteMessage(msg.id); menu.remove(); };
+                deleteDiv.onclick = () => deleteMessage(msg.id);
                 menu.appendChild(deleteDiv);
             }
             document.body.appendChild(menu);
-            
-            // Adjust position to keep within viewport
-            const rect = menu.getBoundingClientRect();
-            let left = e.pageX;
-            let top = e.pageY;
-            
-            if (left + rect.width > window.innerWidth) {
-                left = window.innerWidth - rect.width - 10;
-            }
-            if (top + rect.height > window.innerHeight) {
-                top = window.innerHeight - rect.height - 10;
-            }
-            
-            menu.style.left = `${Math.max(10, left)}px`;
-            menu.style.top = `${Math.max(10, top)}px`;
-
             setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
         };
-
-        // Context menu bindings
-        div.oncontextmenu = showContextMenu;
-        actionBtn.onclick = showContextMenu;
         
-        // Touch support for long press
-        let touchTimer;
-        div.addEventListener('touchstart', (e) => {
-            touchTimer = setTimeout(() => {
-                showContextMenu(e.touches[0]);
-            }, 600); // 600ms long press
-        }, {passive: true});
-        div.addEventListener('touchend', () => clearTimeout(touchTimer));
-        div.addEventListener('touchmove', () => clearTimeout(touchTimer));
-
-        row.appendChild(div);
-        history.appendChild(row);
+        history.appendChild(div);
         history.scrollTop = history.scrollHeight;
     }
 
@@ -852,21 +562,10 @@ window.initChatCore = function() {
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
 
-        let fileUrlPayload = null;
-        if (state.pendingFiles && state.pendingFiles.length > 0) {
-            if (state.pendingFiles.length === 1) {
-                fileUrlPayload = state.pendingFiles[0].url;
-            } else {
-                fileUrlPayload = JSON.stringify(state.pendingFiles.map(f => f.url));
-            }
-        } else if (state.pendingFile) { // Fallback for old code
-            fileUrlPayload = state.pendingFile.url;
-        }
-
         let payload = {
             content,
             encryption_iv: '',
-            file_url: fileUrlPayload,
+            file_url: state.pendingFile ? state.pendingFile.url : null,
             reply_to_id: state.chat.replyToId
         };
 
@@ -888,49 +587,25 @@ window.initChatCore = function() {
             const savedContent = content;
             const savedFile = state.pendingFile ? { ...state.pendingFile } : null;
             const savedReplyId = state.chat.replyToId;
-            const savedEditingId = state.chat.editingId;
             
             input.value = '';
             localStorage.removeItem(`skuf_draft_${roomId}`);
             // @ts-ignore
-            if (window.cancelReply) window.cancelReply(); // this clears editingId!
+            if (window.cancelReply) window.cancelReply();
             clearChatFile();
 
             let response;
-            if (savedEditingId) {
-                response = await apiRequest(`/chat/messages/${savedEditingId}`, 'PUT', payload);
-                // Optimistic UI update for edit
-                const el = document.getElementById(`msg-${savedEditingId}`);
-                if (el) {
-                    let textDiv = el.querySelector('.msg-text');
-                    if (textDiv) {
-                        textDiv.textContent = savedContent;
-                    } else {
-                        textDiv = document.createElement('div');
-                        textDiv.className = 'msg-text';
-                        textDiv.textContent = savedContent;
-                        const footer = el.querySelector('.msg-footer');
-                        if (footer) {
-                            el.insertBefore(textDiv, footer);
-                        } else {
-                            el.appendChild(textDiv);
-                        }
-                    }
-                    
-                    const footerDiv = el.querySelector('.msg-footer');
-                    if (footerDiv && !footerDiv.querySelector('.is-edited')) {
-                        const editedSpan = document.createElement('span');
-                        editedSpan.className = 'is-edited';
-                        editedSpan.textContent = 'изм. ';
-                        footerDiv.insertBefore(editedSpan, footerDiv.firstChild);
-                    }
-                }
+            if (state.chat.editingId) {
+                response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
             } else {
                 response = await apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
-                // Optimistic render — show message immediately, don't wait for WS echo
+            }
+
+            // Optimistic render — show message immediately, don't wait for WS echo
+            if (!state.chat.editingId) {
                 const optimisticMsg = {
                     id: response?.id || Date.now(),
-                    sender: state.user?.username || state.user?.display_name || 'Я',
+                    sender: state.user?.username || state.user?.display_name || '\u042f',
                     sender_id: state.user?.id,
                     text: savedContent,
                     content: savedContent,
@@ -944,6 +619,7 @@ window.initChatCore = function() {
                 };
                 renderChatMessage(optimisticMsg);
             }
+            state.chat.editingId = null;
             const editBanner = document.getElementById('edit-banner');
             if (editBanner) editBanner.style.display = 'none';
             playSound('click');
@@ -961,81 +637,19 @@ window.initChatCore = function() {
 
 
     /** Upload a file to the server and store the URL in pendingFile */
-    async function compressImage(file) {
-        if (!file.type.startsWith('image/')) return file;
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    const max_size = 1920; // max dimension
-                    
-                    if (width > height && width > max_size) {
-                        height *= max_size / width;
-                        width = max_size;
-                    } else if (height > max_size) {
-                        width *= max_size / height;
-                        height = max_size;
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // Compress as JPEG (0.8 quality)
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            });
-                            // Use the compressed file only if it's actually smaller
-                            resolve(newFile.size < file.size ? newFile : file);
-                        } else {
-                            resolve(file);
-                        }
-                    }, 'image/jpeg', 0.8);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    /** Upload multiple files to the server and store the URLs in pendingFiles */
-    async function uploadChatFiles(/** @type {FileList | File[]} */ files) {
-        const formData = new FormData();
-        let totalSize = 0;
-        let validFilesCount = 0;
-        
-        // Wait for all potential image compressions
-        for (let i = 0; i < files.length; i++) {
-            let file = files[i];
-            
-            if (file.type.startsWith('image/')) {
-                file = await compressImage(file);
-            }
-            
-            if (file.size > 5 * 1024 * 1024) {
-                addLog(`Файл ${file.name} превышает лимит 5 МБ`, 'error');
-                continue;
-            }
-            formData.append('files', file);
-            totalSize += file.size;
-            validFilesCount++;
+    async function uploadChatFile(/** @type {File} */ file) {
+        if (file.size > 5 * 1024 * 1024) {
+            addLog('Файл превышает лимит 5 МБ', 'error');
+            return;
         }
-        if (validFilesCount === 0) return;
-
+        const formData = new FormData();
+        formData.append('file', file);
         try {
             const token = state.user.token;
             /** @type {Record<string, string>} */
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            const resp = await fetch(`${API_BASE_URL}/chat/upload_multiple`, {
+            const resp = await fetch(`${API_BASE_URL}/chat/upload`, {
                 method: 'POST',
                 headers,
                 body: formData
@@ -1045,28 +659,20 @@ window.initChatCore = function() {
                 throw new Error(err.detail || 'Upload failed');
             }
             const data = await resp.json();
-            
-            if (!state.pendingFiles) state.pendingFiles = [];
-            for (let i = 0; i < data.file_urls.length; i++) {
-                // We use Array.from if it's FileList just to be safe
-                const fileList = Array.from(files);
-                state.pendingFiles.push({ url: data.file_urls[i], name: fileList[i] ? fileList[i].name : `file_${i}` });
-            }
-            
+            state.pendingFile = { url: data.file_url, name: data.original_name || file.name };
             // Show preview strip
             const preview = document.getElementById('chat-file-preview');
             const nameEl = document.getElementById('chat-file-name');
             if (preview) preview.style.display = 'flex';
-            if (nameEl) nameEl.textContent = `📎 ${state.pendingFiles.length} файл(ов) (${(totalSize / 1024).toFixed(1)} KB)`;
-            addLog(`Загружено ${validFilesCount} файл(ов)`, 'success');
+            if (nameEl) nameEl.textContent = `📎 ${state.pendingFile.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            addLog(`Файл '${file.name}' загружен`, 'success');
         } catch (e) {
-            addLog(`Ошибка загрузки: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
+            addLog(`Ошибка загрузки файла: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
         }
     }
 
     function clearChatFile() {
         state.pendingFile = null;
-        state.pendingFiles = [];
         const preview = document.getElementById('chat-file-preview');
         const fileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
         if (preview) preview.style.display = 'none';
@@ -1173,9 +779,8 @@ window.initChatCore = function() {
             const initial = (u.username || '?').charAt(0).toUpperCase();
             const charCode = initial.charCodeAt(0) || 65;
             const hue = (charCode * 137) % 360;
-            const avatarUrl = u.avatar_url ? (u.avatar_url.startsWith('http') ? u.avatar_url : `${BASE_URL}${u.avatar_url}`) : null;
-            const avatarHtml = avatarUrl 
-                ? `<img src="${avatarUrl}?v=${Date.now()}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` 
+            const avatarHtml = u.avatar_url 
+                ? `<img src="${u.avatar_url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` 
                 : `<div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;">${initial}</div>`;
             const onlineDot = u.is_online ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00f2ff;margin-left:5px;vertical-align:middle;"></span>` : '';
             const handleText = u.handle ? `<span style="color:var(--text-dim);font-size:11px;">${u.handle}</span>` : '';
@@ -1295,9 +900,8 @@ window.initChatCore = function() {
         const membersHTML = members.map(m => {
             const canKick = isAdmin && m.role !== 'owner' && !(m.role === 'admin' && !isOwner) && m.user_id !== state.user.id;
             const canChangeRole = isOwner && m.role !== 'owner' && m.user_id !== state.user.id;
-            const avatarUrl = m.avatar_url ? (m.avatar_url.startsWith('http') ? m.avatar_url : `${BASE_URL}${m.avatar_url}`) : null;
-            const avatar = avatarUrl
-                ? `<img src="${avatarUrl}?v=${Date.now()}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
+            const avatar = m.avatar_url
+                ? `<img src="${m.avatar_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">`
                 : `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${m.username}" style="width:36px;height:36px;border-radius:50%;">`;
 
             return `
@@ -1668,7 +1272,10 @@ window.initChatCore = function() {
         }
     }
 
-    // closeChatMobile is defined in messenger_app.js (removes 'chat-open' from .chat-layout)
+    window['closeChatMobile'] = function() {
+        const chatMain = document.querySelector('.chat-main');
+        if (chatMain) chatMain.classList.remove('active');
+    }
 
     // Attach local listeners
     const chatInput = document.getElementById('chat-input');
@@ -1709,8 +1316,8 @@ window.initChatCore = function() {
     const chatFileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
     if (chatFileInput) {
         chatFileInput.addEventListener('change', () => {
-            if (chatFileInput.files && chatFileInput.files.length > 0) {
-                uploadChatFiles(chatFileInput.files);
+            if (chatFileInput.files && chatFileInput.files[0]) {
+                uploadChatFile(chatFileInput.files[0]);
             }
         });
     }
@@ -1751,22 +1358,13 @@ window.initChatCore = function() {
         async start() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                // FIX: iOS Safari doesn't support audio/webm — pick compatible mimeType
-                const mimeType = [
-                    'audio/webm;codecs=opus',
-                    'audio/webm',
-                    'audio/mp4',
-                    'audio/ogg;codecs=opus',
-                    ''
-                ].find(t => t === '' || MediaRecorder.isTypeSupported(t));
-                this.mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+                this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
                 this.audioChunks = [];
                 this.mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) this.audioChunks.push(event.data);
                 };
                 this.mediaRecorder.onstop = async () => {
-                    const type = this.mediaRecorder.mimeType || 'audio/webm';
-                    const audioBlob = new Blob(this.audioChunks, { type });
+                    const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
                     this.audioChunks = [];
                     stream.getTracks().forEach(t => t.stop());
                     this.btn.style.color = '';
