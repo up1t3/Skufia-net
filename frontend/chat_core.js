@@ -680,10 +680,6 @@ window.initChatCore = function() {
             if (input) input.value = content;
             if (savedFile) {
                 state.pendingFile = savedFile;
-                const preview = document.getElementById('chat-file-preview');
-                const nameEl = document.getElementById('chat-file-name');
-                if (preview) preview.style.display = 'flex';
-                if (nameEl) nameEl.textContent = `📎 ${savedFile.name}`;
             }
         } finally {
             if (input) {
@@ -695,19 +691,91 @@ window.initChatCore = function() {
     }
 
 
-    /** Upload a file to the server and store the URL in pendingFile */
-    async function uploadChatFile(/** @type {File} */ file) {
-        if (file.size > 20 * 1024 * 1024) {
-            if (window.showToast) window.showToast('Файл превышает лимит 20 МБ');
-            addLog('Файл превышает лимит 20 МБ', 'error');
+    /** Intercept file selection and open preview modal */
+    function uploadChatFile(/** @type {File} */ file) {
+        if (file.size > 50 * 1024 * 1024) {
+            if (window.showToast) window.showToast('Файл превышает лимит 50 МБ');
+            addLog('Файл превышает лимит 50 МБ', 'error');
             clearChatFile();
             return;
         }
-        const formData = new FormData();
-        formData.append('file', file);
+
+        // Save file to state for modal
+        state.modalFile = file;
+        
+        const previewContainer = document.getElementById('media-preview-container');
+        if (previewContainer) {
+            previewContainer.innerHTML = ''; // clear
+            
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '100%';
+                img.style.objectFit = 'contain';
+                previewContainer.appendChild(img);
+            } else if (file.type.startsWith('video/')) {
+                const vid = document.createElement('video');
+                vid.src = URL.createObjectURL(file);
+                vid.controls = true;
+                vid.style.maxWidth = '100%';
+                vid.style.maxHeight = '100%';
+                previewContainer.appendChild(vid);
+            } else if (file.type.startsWith('audio/')) {
+                const aud = document.createElement('audio');
+                aud.src = URL.createObjectURL(file);
+                aud.controls = true;
+                aud.style.width = '100%';
+                previewContainer.appendChild(aud);
+                
+                const label = document.createElement('div');
+                label.style.marginTop = '15px';
+                label.style.color = 'white';
+                label.textContent = file.name;
+                previewContainer.appendChild(label);
+            } else {
+                previewContainer.innerHTML = `<div style="text-align: center; color: white; padding: 20px;">
+                    <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" stroke-width="1.5" fill="none" style="margin-bottom: 15px;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                    <div style="font-size: 14px; word-break: break-all;">${file.name}</div>
+                    <div style="margin-top: 5px; font-size: 12px; opacity: 0.7;">${(file.size / 1024).toFixed(1)} KB</div>
+                </div>`;
+            }
+        }
+
+        const captionInput = document.getElementById('media-preview-caption');
+        if (captionInput) captionInput.value = '';
+        
+        const modal = document.getElementById('media-preview-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    // @ts-ignore
+    window.closeMediaPreview = function() {
+        const modal = document.getElementById('media-preview-modal');
+        if (modal) modal.style.display = 'none';
+        state.modalFile = null;
+        clearChatFile();
+    };
+
+    // @ts-ignore
+    window.sendMediaPreview = async function() {
+        const file = state.modalFile;
+        if (!file) return;
+
+        const captionInput = /** @type {HTMLInputElement | null} */ (document.getElementById('media-preview-caption'));
+        const caption = captionInput ? captionInput.value.trim() : '';
+        const sendBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('media-preview-send-btn'));
+        const sendText = document.getElementById('media-send-text');
+        
+        if (sendBtn) sendBtn.disabled = true;
+        if (sendText) sendText.textContent = 'Загрузка...';
+
         try {
+            // 1. Upload file
+            const formData = new FormData();
+            formData.append('file', file);
+            
             const token = state.user.token;
-            /** @type {Record<string, string>} */
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
             headers['X-Idempotency-Key'] = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
@@ -719,36 +787,38 @@ window.initChatCore = function() {
             });
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({detail:'Upload failed'}));
-                let errMsg = err.detail || 'Upload failed';
-                if (Array.isArray(errMsg)) {
-                    errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
-                } else if (typeof errMsg === 'object') {
-                    errMsg = JSON.stringify(errMsg);
-                }
-                throw new Error(errMsg);
+                throw new Error(err.detail || 'Upload failed');
             }
             const data = await resp.json();
+            
+            // 2. Set pendingFile so sendChatMsg can use it
             state.pendingFile = { url: data.file_url, name: data.original_name || file.name };
-            // Show preview strip
-            const preview = document.getElementById('chat-file-preview');
-            const nameEl = document.getElementById('chat-file-name');
-            if (preview) preview.style.display = 'flex';
-            if (nameEl) nameEl.textContent = `📎 ${state.pendingFile.name} (${(file.size / 1024).toFixed(1)} KB)`;
-            addLog(`Файл '${file.name}' загружен`, 'success');
+            
+            // 3. Put caption in the main chat input
+            const chatInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-input'));
+            if (chatInput) {
+                chatInput.value = caption;
+                // If the user hasn't typed anything else, the caption will be sent as message text
+            }
+            
+            // 4. Send message
+            await window.sendChatMsg();
+            
+            window.closeMediaPreview();
         } catch (e) {
             const errorMsg = e instanceof Error ? e.message : 'unknown';
-            if (window.showToast) window.showToast(`Ошибка загрузки: ${errorMsg}`);
-            addLog(`Ошибка загрузки файла: ${errorMsg}`, 'error');
-            clearChatFile();
+            if (window.showToast) window.showToast(`Ошибка: ${errorMsg}`);
+            addLog(`Ошибка отправки медиа: ${errorMsg}`, 'error');
+        } finally {
+            if (sendBtn) sendBtn.disabled = false;
+            if (sendText) sendText.textContent = 'Отправить';
         }
-    }
+    };
 
     function clearChatFile() {
         state.pendingFile = null;
-        const preview = document.getElementById('chat-file-preview');
         const fileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
         const mediaInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-media-input'));
-        if (preview) preview.style.display = 'none';
         if (fileInput) fileInput.value = '';
         if (mediaInput) mediaInput.value = '';
     }
