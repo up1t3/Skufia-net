@@ -65,11 +65,10 @@ window.debounce = function(func, wait) {
     };
 };
 
-const silentWav = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 window.sounds = {
-    click: new Audio(silentWav),
-    alert: new Audio(silentWav),
-    ambient: new Audio(silentWav)
+    click: new Audio('assets/sounds/ui_click.mp3'),
+    alert: new Audio('assets/sounds/system_alert.mp3'),
+    ambient: new Audio('assets/sounds/industrial_hum.mp3')
 };
 
 window.playSound = function(soundName, loop = false) {
@@ -79,9 +78,20 @@ window.playSound = function(soundName, loop = false) {
         if (s) {
             s.loop = loop;
             s.volume = loop ? 0.2 : 0.5;
+            s.currentTime = 0;
             s.play().catch(() => {});
         }
     } catch (e) { console.log('Audio play failed'); }
+};
+
+window.stopSound = function(soundName) {
+    try {
+        const s = window.sounds[soundName];
+        if (s) {
+            s.pause();
+            s.currentTime = 0;
+        }
+    } catch (e) {}
 };
 
 window.addLog = function(message, type = 'info') {

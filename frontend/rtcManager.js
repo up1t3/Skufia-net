@@ -307,6 +307,7 @@ class RTCManager {
                 }
             }
             
+            if (window.playSound) window.playSound('alert', true);
             this.showModal('Входящий вызов...', name, avatarHtml, true);
         } else if(type === 'answer') {
             if(this.peerConnection) {
@@ -325,6 +326,7 @@ class RTCManager {
 
     async acceptCall() {
         if(!this.incomingOffer) return;
+        if(window.stopSound) window.stopSound('alert');
         this.statusText.textContent = 'Соединение...';
         document.getElementById('rtc-actions-incoming').style.display = 'none';
         document.getElementById('rtc-actions-audio').style.display = 'flex';
@@ -519,6 +521,7 @@ class RTCManager {
     }
 
     endCall(emit = true) {
+        if(window.stopSound) window.stopSound('alert');
         if(this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
         }
