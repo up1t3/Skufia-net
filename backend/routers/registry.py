@@ -181,48 +181,79 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
 
 @router.post('/me/update')
 def update_my_profile(data: ProfileUpdate, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
+    from sqlalchemy.exc import IntegrityError
+
     # 1. Update User table (Username/Callsign)
     user_db = db.query(User).filter(User.id == current_user.id).first()
     if data.username and data.username != user_db.username:
-        # Check if username exists
         existing = db.query(User).filter(User.username == data.username).first()
         if existing:
             raise HTTPException(status_code=400, detail="Callsign already taken by another operative")
         user_db.username = data.username
 
+    # Handle validation: check ownership before assignment
+    handle_status = "saved"  # default: new value saved
     if data.handle is not None:
-        user_db.handle = data.handle
+        normalized = data.handle.strip()
+        if normalized:
+            # Check if this exact handle is already owned by the current user
+            if user_db.handle and user_db.handle.lower() == normalized.lower():
+                handle_status = "already_set"
+            else:
+                # Check if another user owns this handle
+                taken_by = db.query(User).filter(
+                    User.handle == normalized,
+                    User.id != current_user.id
+                ).first()
+                if taken_by:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={"code": "HANDLE_TAKEN", "message": f"Handle {normalized} уже занят другим пользователем"}
+                    )
+                user_db.handle = normalized
+        else:
+            # Clearing handle
+            user_db.handle = None
 
     # 2. Update Profile table
     profile = db.query(Profile).filter(Profile.user_id == user_db.id).first()
     if not profile:
         profile = Profile(user_id=user_db.id)
         db.add(profile)
-    
+
     if data.nickname is not None: profile.nickname = data.nickname
     if data.bio is not None: profile.bio = data.bio
     if data.avatar_url is not None: profile.avatar_url = data.avatar_url
-    
-    db.commit()
-    
-    # Notify other users about profile update via WebSocket
+
     try:
-        from ws_manager import notify_profile_update
-        import asyncio
-        user_data = {
-            "username": user_db.username,
-            "handle": user_db.handle if user_db.handle else "",
-            "nickname": profile.nickname,
-            "avatar_url": profile.avatar_url
-        }
-        background_tasks.add_task(asyncio.run, notify_profile_update(user_db.id, user_data))
-    except Exception as e:
-        print(f"Failed to queue profile update: {e}")
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "HANDLE_TAKEN", "message": "Этот handle уже занят другим пользователем"}
+        )
+
+    # Notify other users about profile update via WebSocket
+    if handle_status != "already_set":
+        try:
+            from ws_manager import notify_profile_update
+            import asyncio
+            user_data = {
+                "username": user_db.username,
+                "handle": user_db.handle if user_db.handle else "",
+                "nickname": profile.nickname,
+                "avatar_url": profile.avatar_url
+            }
+            background_tasks.add_task(asyncio.run, notify_profile_update(user_db.id, user_data))
+        except Exception as e:
+            print(f"Failed to queue profile update: {e}")
 
     return {
         "id": user_db.id,
         "username": user_db.username,
         "handle": user_db.handle if user_db.handle else "",
+        "handle_status": handle_status,
         "is_superadmin": user_db.is_superadmin,
         "nickname": profile.nickname,
         "display_name": profile.nickname if profile.nickname else user_db.username,

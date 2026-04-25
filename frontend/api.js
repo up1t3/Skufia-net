@@ -49,7 +49,25 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
             }
             throw new Error('Unauthorized');
         }
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            let detail = `HTTP ${res.status}`;
+            let errorCode = null;
+            try {
+                const errBody = await res.json();
+                if (errBody && errBody.detail) {
+                    if (typeof errBody.detail === 'string') {
+                        detail = errBody.detail;
+                    } else if (typeof errBody.detail === 'object' && errBody.detail.message) {
+                        detail = errBody.detail.message;
+                        errorCode = errBody.detail.code || null;
+                    }
+                }
+            } catch (_) { /* keep default message */ }
+            const err = new Error(detail);
+            err.status = res.status;
+            err.code = errorCode;
+            throw err;
+        }
         return await res.json();
     } catch (e) {
         if (window.addLog) window.addLog(`API Error [${endpoint}]: ${e.message}`, 'error');

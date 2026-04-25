@@ -117,6 +117,25 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Client-side JWT expiration check
+        try {
+            const payloadStr = atob(state.user.token.split('.')[1]);
+            const payload = JSON.parse(payloadStr);
+            if (payload.exp && (payload.exp * 1000 < Date.now())) {
+                console.warn('BOOT: Token expired locally. Forcing re-auth.');
+                state.user.token = null;
+                localStorage.removeItem('skuf_token');
+                if (authOverlay) authOverlay.style.display = 'flex';
+                return;
+            }
+        } catch(e) {
+            console.warn('BOOT: Invalid token format. Forcing re-auth.');
+            state.user.token = null;
+            localStorage.removeItem('skuf_token');
+            if (authOverlay) authOverlay.style.display = 'flex';
+            return;
+        }
+
         if (!state.user.password) {
             const sessionPw = sessionStorage.getItem('skuf_session_pw');
             if (sessionPw) {
@@ -552,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rawVal = rawVal.substring(1);
             input.value = rawVal;
         }
-        
+
         const sendVal = rawVal ? '@' + rawVal : '';
 
         const originalHTML = btn.innerHTML;
@@ -560,28 +579,46 @@ document.addEventListener('DOMContentLoaded', () => {
         btn.disabled = true;
 
         try {
-            await apiRequest('/me/update', 'POST', { handle: sendVal });
-            if (typeof addLog === 'function') addLog('Профиль успешно сохранен', 'success');
-            if (typeof showToast === 'function') showToast('✅ Настройки сохранены!');
-            
-            btn.innerHTML = '✓ СОХРАНЕНО';
-            btn.classList.add('btn-success');
+            const result = await apiRequest('/me/update', 'POST', { handle: sendVal });
+
+            if (result.handle_status === 'already_set') {
+                // Handle already saved under this account — inform, not error
+                if (typeof showToast === 'function') showToast('ℹ️ У вас уже сохранён этот handle');
+                btn.innerHTML = '✓ УЖЕ СОХРАНЁН';
+                btn.classList.add('btn-success');
+            } else {
+                // Successfully saved new handle
+                if (state.user) state.user.handle = result.handle;
+                if (typeof addLog === 'function') addLog('Handle успешно сохранён', 'success');
+                if (typeof showToast === 'function') showToast('✅ Handle сохранён: ' + (result.handle || '(очищен)'));
+                btn.innerHTML = '✓ СОХРАНЕНО';
+                btn.classList.add('btn-success');
+            }
+
             btn.disabled = false;
             setTimeout(() => {
                 btn.innerHTML = originalHTML;
                 btn.classList.remove('btn-success');
-            }, 2500);
+            }, 2800);
+
         } catch (err) {
-            if (typeof addLog === 'function') addLog('Ошибка при сохранении', 'error');
-            if (typeof showToast === 'function') showToast('❌ Ошибка: ' + (err.message || 'не удалось сохранить'));
-            
-            btn.innerHTML = '✕ ОШИБКА';
+            const isTaken = err.status === 409 || err.code === 'HANDLE_TAKEN';
+
+            if (isTaken) {
+                if (typeof showToast === 'function') showToast('⚠️ ' + (err.message || 'Этот handle уже занят другим пользователем'));
+                btn.innerHTML = '✕ ЗАНЯТ';
+            } else {
+                if (typeof addLog === 'function') addLog('Ошибка при сохранении handle', 'error');
+                if (typeof showToast === 'function') showToast('❌ Ошибка: ' + (err.message || 'не удалось сохранить'));
+                btn.innerHTML = '✕ ОШИБКА';
+            }
+
             btn.classList.add('btn-danger');
             btn.disabled = false;
             setTimeout(() => {
                 btn.innerHTML = originalHTML;
                 btn.classList.remove('btn-danger');
-            }, 2500);
+            }, 2800);
         }
     };
 
