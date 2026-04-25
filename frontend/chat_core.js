@@ -435,7 +435,9 @@ window.initChatCore = function() {
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
 
-        const isMe = msg.sender_id === state.user.id || msg.sender === state.user.username;
+        const currentUserId = state.user ? state.user.id : null;
+        const currentUsername = state.user ? state.user.username : null;
+        const isMe = (msg.sender_id && msg.sender_id === currentUserId) || (msg.sender && msg.sender === currentUsername);
 
         const dateObj = new Date(msg.timestamp);
         let timeStr = msg.timestamp || '00:00';
@@ -583,9 +585,11 @@ window.initChatCore = function() {
         history.scrollTop = history.scrollHeight;
     }
 
-    async function sendChatMsg() {
+    async function sendChatMsg(directCaption = null) {
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
-        const hasContent = input && input.value.trim();
+        
+        let content = directCaption !== null ? directCaption : (input ? input.value.trim() : '');
+        const hasContent = !!content.trim();
         const hasFile = !!state.pendingFile;
         
         if (state.chat.currentRoomId == null || (!hasContent && !hasFile)) {
@@ -594,15 +598,11 @@ window.initChatCore = function() {
         }
 
         // Prevent double sending
-        if (input && input.disabled) return;
-        let originalPlaceholder = '';
+        if (input && input.dataset.sending === 'true' && directCaption === null) return;
         if (input) {
-            originalPlaceholder = input.placeholder;
-            input.disabled = true;
-            input.placeholder = 'Отправка...';
+            input.dataset.sending = 'true';
+            // Do not disable input to prevent keyboard from closing on mobile!
         }
-        
-        let content = input ? input.value.trim() : '';
 
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
@@ -691,8 +691,7 @@ window.initChatCore = function() {
             }
         } finally {
             if (input) {
-                input.disabled = false;
-                if (originalPlaceholder) input.placeholder = originalPlaceholder;
+                input.dataset.sending = 'false';
                 input.focus();
             }
         }
@@ -798,14 +797,8 @@ window.initChatCore = function() {
             // 2. Set pendingFile so sendChatMsg can use it
             state.pendingFile = { url: data.file_url, name: data.original_name || file.name };
             
-            // 3. Put caption in the main chat input
-            const chatInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-input'));
-            if (chatInput) {
-                chatInput.value = caption;
-            }
-            
-            // 4. Send message
-            await window.sendChatMsg();
+            // 3. Send message passing the caption directly
+            await window.sendChatMsg(caption);
             
             window.closeMediaPreview();
         } catch (e) {
@@ -813,8 +806,10 @@ window.initChatCore = function() {
             if (window.showToast) window.showToast(`Ошибка: ${errorMsg}`);
             addLog(`Ошибка отправки медиа: ${errorMsg}`, 'error');
         } finally {
-            if (sendBtn) sendBtn.disabled = false;
-            if (sendText) sendText.textContent = 'Отправить';
+            if (sendBtn) {
+                sendBtn.disabled = false;
+                if (originalBtnHTML) sendBtn.innerHTML = originalBtnHTML;
+            }
         }
     };
 

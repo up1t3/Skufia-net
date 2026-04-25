@@ -1005,6 +1005,15 @@ backdrop.style.cssText = 'display:none; position:fixed; top:0; left:0; right:0; 
         // visualViewport.height is the visible area excluding browser UI
         const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         document.documentElement.style.setProperty('--app-height', h + 'px');
+        
+        // Ensure chat history scrolls to bottom when layout resizes (e.g. keyboard opens)
+        const historyEl = document.getElementById('chat-history');
+        if (historyEl) {
+            // Minimal delay to ensure DOM layout has updated
+            setTimeout(() => {
+                historyEl.scrollTop = historyEl.scrollHeight;
+            }, 10);
+        }
     }
 
     setAppHeight();

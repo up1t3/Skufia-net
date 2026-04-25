@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1777337200000'; // Force re-cache with glassmorphism media modal
+const CACHE_NAME = 'skufia-chat-v1777140010722'; // Force re-cache for mobile keyboard fix
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
