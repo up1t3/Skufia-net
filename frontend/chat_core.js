@@ -152,6 +152,44 @@ window.initChatCore = function() {
                 }
             } else if (data.type === 'status_update') {
                 loadChatRooms();
+            } else if (data.type === 'profile_update') {
+                loadChatRooms();
+                const profile = data.profile;
+                const updatedUserId = data.user_id;
+                
+                // Update header if applicable (simple check, full redraw better handled by loadChatRooms but we do it manually for active chat)
+                if (state.chat.currentRoomId) {
+                    setTimeout(() => {
+                        const headerAvatar = document.getElementById('header-avatar');
+                        const room = (state.chat.rooms || []).find(r => r.id === state.chat.currentRoomId);
+                        if (headerAvatar && room && room.type === 'direct' && room.other_user_id == updatedUserId) {
+                             if (typeof window.applyAvatarDisplay === 'function') {
+                                 window.applyAvatarDisplay(headerAvatar, profile.avatar_url, profile.nickname || profile.username);
+                             } else if (profile.avatar_url) {
+                                 const avatarUrl = profile.avatar_url.startsWith('http') ? profile.avatar_url : `${BASE_URL}${profile.avatar_url}`;
+                                 headerAvatar.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                             }
+                        }
+                    }, 500); // Wait for loadChatRooms to update state.rooms
+                }
+                
+                // Update in-chat avatars dynamically
+                const msgAvatars = document.querySelectorAll(`.msg-avatar[data-user-id="${updatedUserId}"]`);
+                msgAvatars.forEach(el => {
+                    if (typeof window.applyAvatarDisplay === 'function') {
+                         window.applyAvatarDisplay(el, profile.avatar_url, profile.nickname || profile.username);
+                    } else if (profile.avatar_url) {
+                         const avatarUrl = profile.avatar_url.startsWith('http') ? profile.avatar_url : `${BASE_URL}${profile.avatar_url}`;
+                         el.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                         el.style.background = 'transparent';
+                    }
+                });
+
+                // Update in-chat names dynamically
+                const msgNames = document.querySelectorAll(`.msg-sender-name[data-user-id="${updatedUserId}"]`);
+                msgNames.forEach(el => {
+                    el.textContent = profile.nickname || profile.username;
+                });
             } else if (data.type === 'room_key_rotated') {
                 if (window.refreshSessionKey) {
                     window.refreshSessionKey(data.room_id);
@@ -597,6 +635,7 @@ window.initChatCore = function() {
 
             const avatarEl = document.createElement('div');
             avatarEl.className = 'msg-avatar';
+            avatarEl.dataset.userId = msg.sender_id;
 
             const rawAvatarUrl = msg.avatar_url || null;
             const avatarUrl = rawAvatarUrl
@@ -631,6 +670,7 @@ window.initChatCore = function() {
         if (!isMe) {
             const senderSpan = document.createElement('div');
             senderSpan.className = 'msg-sender-name';
+            senderSpan.dataset.userId = msg.sender_id;
             senderSpan.textContent = msg.sender || '';
             div.appendChild(senderSpan);
         }

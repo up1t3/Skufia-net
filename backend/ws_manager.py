@@ -54,3 +54,25 @@ class ConnectionManager:
             print(f"Broadcast error (Redis down?): {e}")
 
 manager = ConnectionManager()
+
+async def notify_profile_update(user_id: int, user_data: dict):
+    from database import SessionLocal, ChatRoomMember
+    db = SessionLocal()
+    try:
+        # Get all rooms this user is in
+        user_rooms = db.query(ChatRoomMember.room_id).filter(ChatRoomMember.user_id == user_id).subquery()
+        # Get all unique users in those rooms
+        members = db.query(ChatRoomMember.user_id).filter(ChatRoomMember.room_id.in_(user_rooms)).distinct().all()
+        uids = [m[0] for m in members if m[0] != user_id]
+        
+        if uids:
+            relay_msg = {
+                "type": "profile_update",
+                "user_id": user_id,
+                "profile": user_data
+            }
+            await manager.broadcast_msg(relay_msg, user_ids=uids)
+    except Exception as e:
+        print(f"Failed to broadcast profile update: {e}")
+    finally:
+        db.close()

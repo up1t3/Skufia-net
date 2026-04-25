@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File as FastAPIFile, Header
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File as FastAPIFile, Header, BackgroundTasks
 import uuid
 import os
 import secrets
@@ -180,7 +180,7 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
     }
 
 @router.post('/me/update')
-def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
+def update_my_profile(data: ProfileUpdate, background_tasks: BackgroundTasks, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     # 1. Update User table (Username/Callsign)
     user_db = db.query(User).filter(User.id == current_user.id).first()
     if data.username and data.username != user_db.username:
@@ -204,6 +204,21 @@ def update_my_profile(data: ProfileUpdate, current_user: User = Depends(get_curr
     if data.avatar_url is not None: profile.avatar_url = data.avatar_url
     
     db.commit()
+    
+    # Notify other users about profile update via WebSocket
+    try:
+        from ws_manager import notify_profile_update
+        import asyncio
+        user_data = {
+            "username": user_db.username,
+            "handle": user_db.handle if user_db.handle else "",
+            "nickname": profile.nickname,
+            "avatar_url": profile.avatar_url
+        }
+        background_tasks.add_task(asyncio.run, notify_profile_update(user_db.id, user_data))
+    except Exception as e:
+        print(f"Failed to queue profile update: {e}")
+
     return {
         "id": user_db.id,
         "username": user_db.username,

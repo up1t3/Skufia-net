@@ -130,6 +130,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
+            // Force clear any old API caches to prevent stale profiles on boot
+            if ('caches' in window) {
+                try {
+                    const cacheKeys = await caches.keys();
+                    for (const key of cacheKeys) {
+                        if (key.startsWith('skufia-chat-')) {
+                            const cache = await caches.open(key);
+                            const requests = await cache.keys();
+                            for (const req of requests) {
+                                if (req.url.includes('/api/')) {
+                                    await cache.delete(req);
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to clear API caches:', e);
+                }
+            }
+
             console.log('BOOT: Verifying token with /me...');
             const me = await apiRequest('/me');
             console.log('BOOT: Token verified. User:', me.username);

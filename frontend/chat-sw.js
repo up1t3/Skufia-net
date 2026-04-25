@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1777065738767'; // Add SW_UPDATED auto-reload for PWA
+const CACHE_NAME = 'skufia-chat-v1777104360265'; // Add SW_UPDATED auto-reload for PWA
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
