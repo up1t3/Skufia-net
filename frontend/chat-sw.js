@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-cache-v7'; // Force re-cache for mobile keyboard layout fix
+const CACHE_NAME = 'skufia-chat-v8'; // Force re-cache for mobile keyboard layout fix
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
