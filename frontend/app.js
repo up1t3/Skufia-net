@@ -786,7 +786,13 @@ window.previewAvatar = async function(input) {
         });
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            throw new Error(err.detail || 'Upload failed');
+            let errMsg = err.detail || 'Upload failed';
+            if (Array.isArray(errMsg)) {
+                errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
+            } else if (typeof errMsg === 'object') {
+                errMsg = JSON.stringify(errMsg);
+            }
+            throw new Error(errMsg);
         }
         const data = await resp.json();
         const avatarUrl = data.avatar_url;

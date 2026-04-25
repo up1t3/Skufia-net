@@ -1172,6 +1172,7 @@ async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: Us
     
     # [SEC-102] Security Check: Magic Bytes Validation
     if not validate_magic_bytes(contents, expected_type="all"):
+        print(f"[SECURITY] Upload rejected: Invalid magic bytes. Filename: {file.filename}, Size: {len(contents)}")
         raise HTTPException(status_code=415, detail="Отклонено: Недопустимый или подозрительный тип файла")
         
     safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))

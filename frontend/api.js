@@ -57,9 +57,15 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
                 if (errBody && errBody.detail) {
                     if (typeof errBody.detail === 'string') {
                         detail = errBody.detail;
-                    } else if (typeof errBody.detail === 'object' && errBody.detail.message) {
-                        detail = errBody.detail.message;
-                        errorCode = errBody.detail.code || null;
+                    } else if (Array.isArray(errBody.detail)) {
+                        detail = errBody.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+                    } else if (typeof errBody.detail === 'object') {
+                        if (errBody.detail.message) {
+                            detail = errBody.detail.message;
+                            errorCode = errBody.detail.code || null;
+                        } else {
+                            detail = JSON.stringify(errBody.detail);
+                        }
                     }
                 }
             } catch (_) { /* keep default message */ }

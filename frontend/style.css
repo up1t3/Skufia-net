@@ -2106,6 +2106,11 @@ body.super-user .nav-btn.active {
     cursor: pointer;
     transition: var(--transition);
     font-size: 14px;
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+    text-align: left;
 }
 
 .attach-menu-item:hover {

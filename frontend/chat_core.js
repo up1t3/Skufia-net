@@ -588,7 +588,7 @@ window.initChatCore = function() {
         const hasContent = input && input.value.trim();
         const hasFile = !!state.pendingFile;
         
-        if (!state.chat.currentRoomId || (!hasContent && !hasFile)) return;
+        if (state.chat.currentRoomId == null || (!hasContent && !hasFile)) return;
 
         // Prevent double sending
         if (input && input.disabled) return;
@@ -710,6 +710,7 @@ window.initChatCore = function() {
             /** @type {Record<string, string>} */
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
+            headers['X-Idempotency-Key'] = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
             const apiBase = window.API_BASE_URL || '/api';
             const resp = await fetch(`${apiBase}/chat/upload`, {
                 method: 'POST',
@@ -718,7 +719,13 @@ window.initChatCore = function() {
             });
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({detail:'Upload failed'}));
-                throw new Error(err.detail || 'Upload failed');
+                let errMsg = err.detail || 'Upload failed';
+                if (Array.isArray(errMsg)) {
+                    errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
+                } else if (typeof errMsg === 'object') {
+                    errMsg = JSON.stringify(errMsg);
+                }
+                throw new Error(errMsg);
             }
             const data = await resp.json();
             state.pendingFile = { url: data.file_url, name: data.original_name || file.name };
@@ -1213,7 +1220,7 @@ window.initChatCore = function() {
     let addMemberSelectedIds = new Set();
     window.openAddMemberModal = function() {
         const modal = document.getElementById('add-member-modal');
-        if (!modal || !state.chat.currentRoomId) return;
+        if (!modal || state.chat.currentRoomId == null) return;
         addMemberSelectedIds.clear();
         document.getElementById('add-member-search').value = '';
         window.filterAddMemberContacts(); // Will render un-filtered
@@ -1273,7 +1280,7 @@ window.initChatCore = function() {
     };
 
     window.submitAddMembers = async function() {
-        if (!state.chat.currentRoomId || addMemberSelectedIds.size === 0) return;
+        if (state.chat.currentRoomId == null || addMemberSelectedIds.size === 0) return;
         
         const userIds = Array.from(addMemberSelectedIds);
         try {
@@ -1350,7 +1357,7 @@ window.initChatCore = function() {
     if (chatInput) {
         let typingTimer;
         chatInput.addEventListener('input', (e) => {
-            if (state.chat.currentRoomId) {
+            if (state.chat.currentRoomId != null) {
                 localStorage.setItem(`skuf_draft_${state.chat.currentRoomId}`, e.target.value);
             }
             if (state.chat.socket && state.chat.socket.readyState === 1) {
@@ -1532,12 +1539,22 @@ window.initChatCore = function() {
             try {
                 const headers = {};
                 if (state.user.token) headers['Authorization'] = `Bearer ${state.user.token}`;
+                headers['X-Idempotency-Key'] = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
                 const resp = await fetch(`${API_BASE_URL}/chat/upload_audio`, {
                     method: 'POST',
                     headers,
                     body: formData
                 });
-                if (!resp.ok) throw new Error('Upload failed');
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({detail:'Upload failed'}));
+                    let errMsg = err.detail || 'Upload failed';
+                    if (Array.isArray(errMsg)) {
+                        errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
+                    } else if (typeof errMsg === 'object') {
+                        errMsg = JSON.stringify(errMsg);
+                    }
+                    throw new Error(errMsg);
+                }
                 const data = await resp.json();
                 
                 const msgInput = document.getElementById('chat-input');

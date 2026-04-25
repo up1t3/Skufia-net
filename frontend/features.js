@@ -659,7 +659,13 @@
 
             if (!resp.ok) {
                 const err = await resp.json().catch(() => ({detail:'Upload failed'}));
-                throw new Error(err.detail || 'Upload failed');
+                let errMsg = err.detail || 'Upload failed';
+                if (Array.isArray(errMsg)) {
+                    errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
+                } else if (typeof errMsg === 'object') {
+                    errMsg = JSON.stringify(errMsg);
+                }
+                throw new Error(errMsg);
             }
 
             const data = await resp.json();

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1777124012860'; // Add SW_UPDATED auto-reload for PWA
+const CACHE_NAME = 'skufia-chat-v1777200000000'; // Add SW_UPDATED auto-reload for PWA
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -77,14 +77,14 @@ self.addEventListener('fetch', (event) => {
                 }
                 return networkResponse;
             }).catch(() => {
-                return caches.match(event.request, { ignoreSearch: true });
+                return caches.match(event.request);
             })
         );
     } else {
         // Apply Stale-While-Revalidate strategy for JS/CSS/Assets
         event.respondWith(
             caches.open(CACHE_NAME).then((cache) => {
-                return cache.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
+                return cache.match(event.request).then((cachedResponse) => {
                     const fetchedResponse = fetch(event.request).then((networkResponse) => {
                         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                             if (event.request.url.startsWith('http')) {
