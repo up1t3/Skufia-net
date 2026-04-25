@@ -632,10 +632,19 @@ window.initChatCore = function() {
                         activeKey = sessionKeyMap; // fallback for legacy structure
                     }
                     if (activeKey) {
-                        const encrypted = await window.CryptoManager.encryptMessage(activeKey, content);
-                        payload.content = encrypted.content;
-                        payload.encryption_iv = encrypted.iv;
-                        isEncrypted = true;
+                        try {
+                            const encrypted = await window.CryptoManager.encryptMessage(activeKey, content);
+                            payload.content = encrypted.content;
+                            payload.encryption_iv = encrypted.iv;
+                            isEncrypted = true;
+                        } catch (encryptErr) {
+                            console.error("Encryption failed, cached key might be corrupt:", encryptErr);
+                            delete state.chat.sessionKeys[roomId];
+                            if (typeof window.vaultDelete === 'function') {
+                                await window.vaultDelete('session_keys', `room_${roomId}`).catch(() => {});
+                            }
+                            throw new Error("Локальный ключ шифрования был поврежден и очищен. Пожалуйста, нажмите 'Отправить' еще раз для создания нового ключа.");
+                        }
                     }
                 }
             }

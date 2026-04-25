@@ -536,7 +536,13 @@
             const sessionKey = await CryptoManager.generateSessionKey();
             state.chat.sessionKeys[roomId] = sessionKey;
 
-            const recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
+            let recipientPubKey;
+            try {
+                recipientPubKey = await CryptoManager.importPublicKey(targetKeyData.public_key);
+            } catch (err) {
+                console.warn(`Recipient public key is corrupt: ${err.message}. Falling back to plaintext.`);
+                return null;
+            }
             const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
 
             const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
