@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1777127490250'; // Add SW_UPDATED auto-reload for PWA
+const CACHE_NAME = 'skufia-chat-v1777337200000'; // Force re-cache with glassmorphism media modal
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
