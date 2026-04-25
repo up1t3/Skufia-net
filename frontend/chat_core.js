@@ -588,7 +588,10 @@ window.initChatCore = function() {
         const hasContent = input && input.value.trim();
         const hasFile = !!state.pendingFile;
         
-        if (state.chat.currentRoomId == null || (!hasContent && !hasFile)) return;
+        if (state.chat.currentRoomId == null || (!hasContent && !hasFile)) {
+            console.warn('[sendChatMsg] Skipped: roomId=', state.chat.currentRoomId, 'hasContent=', !!hasContent, 'hasFile=', hasFile);
+            return;
+        }
 
         // Prevent double sending
         if (input && input.disabled) return;
@@ -603,6 +606,11 @@ window.initChatCore = function() {
 
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
+
+        // Declare outside try so catch can restore them on failure
+        let savedContent = content;
+        let savedFile = state.pendingFile ? { ...state.pendingFile } : null;
+        let savedReplyId = state.chat.replyToId;
 
         let payload = {
             content,
@@ -634,11 +642,11 @@ window.initChatCore = function() {
 
             // At this point encryption succeeded or we fell back intentionally.
             // Clear input AFTER successful encryption, BEFORE network
-            const savedContent = content;
-            const savedFile = state.pendingFile ? { ...state.pendingFile } : null;
-            const savedReplyId = state.chat.replyToId;
+            savedContent = content;
+            savedFile = state.pendingFile ? { ...state.pendingFile } : null;
+            savedReplyId = state.chat.replyToId;
             
-            input.value = '';
+            if (input) input.value = '';
             localStorage.removeItem(`skuf_draft_${roomId}`);
             // @ts-ignore
             if (window.cancelReply) window.cancelReply();
@@ -705,49 +713,43 @@ window.initChatCore = function() {
         
         const previewContainer = document.getElementById('media-preview-container');
         if (previewContainer) {
-            previewContainer.innerHTML = ''; // clear
+            // Preserve the cancel button, clear only media content
+            const cancelBtn = previewContainer.querySelector('.media-cancel-btn');
+            previewContainer.innerHTML = '';
+            if (cancelBtn) previewContainer.appendChild(cancelBtn);
             
             if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
-                img.style.maxWidth = '100%';
-                img.style.maxHeight = '100%';
-                img.style.objectFit = 'contain';
                 previewContainer.appendChild(img);
             } else if (file.type.startsWith('video/')) {
                 const vid = document.createElement('video');
                 vid.src = URL.createObjectURL(file);
                 vid.controls = true;
-                vid.style.maxWidth = '100%';
-                vid.style.maxHeight = '100%';
                 previewContainer.appendChild(vid);
             } else if (file.type.startsWith('audio/')) {
                 const aud = document.createElement('audio');
                 aud.src = URL.createObjectURL(file);
                 aud.controls = true;
-                aud.style.width = '100%';
                 previewContainer.appendChild(aud);
-                
-                const label = document.createElement('div');
-                label.style.marginTop = '15px';
-                label.style.color = 'white';
-                label.textContent = file.name;
-                previewContainer.appendChild(label);
             } else {
-                previewContainer.innerHTML = `<div style="text-align: center; color: white; padding: 20px;">
-                    <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" stroke-width="1.5" fill="none" style="margin-bottom: 15px;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                    <div style="font-size: 14px; word-break: break-all;">${file.name}</div>
-                    <div style="margin-top: 5px; font-size: 12px; opacity: 0.7;">${(file.size / 1024).toFixed(1)} KB</div>
-                </div>`;
+                const card = document.createElement('div');
+                card.className = 'media-file-card';
+                card.innerHTML = `
+                    <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${(file.size / 1024).toFixed(1)} KB</div>`;
+                previewContainer.appendChild(card);
             }
         }
 
         const captionInput = document.getElementById('media-preview-caption');
-        if (captionInput) captionInput.value = '';
+        if (captionInput) /** @type {HTMLInputElement} */ (captionInput).value = '';
         
         const modal = document.getElementById('media-preview-modal');
         if (modal) modal.style.display = 'flex';
     }
+
 
     // @ts-ignore
     window.closeMediaPreview = function() {
@@ -765,10 +767,12 @@ window.initChatCore = function() {
         const captionInput = /** @type {HTMLInputElement | null} */ (document.getElementById('media-preview-caption'));
         const caption = captionInput ? captionInput.value.trim() : '';
         const sendBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('media-preview-send-btn'));
-        const sendText = document.getElementById('media-send-text');
+        const originalBtnHTML = sendBtn ? sendBtn.innerHTML : '';
         
-        if (sendBtn) sendBtn.disabled = true;
-        if (sendText) sendText.textContent = 'Загрузка...';
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke-dasharray="40" stroke-dashoffset="10"/></svg>';
+        }
 
         try {
             // 1. Upload file
@@ -798,7 +802,6 @@ window.initChatCore = function() {
             const chatInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-input'));
             if (chatInput) {
                 chatInput.value = caption;
-                // If the user hasn't typed anything else, the caption will be sent as message text
             }
             
             // 4. Send message
