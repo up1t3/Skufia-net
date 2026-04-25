@@ -842,11 +842,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let targetAvatar = '<div class="avatar-placeholder" style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#555;font-size:40px;">?</div>';
         
         if (state.chat && state.chat.rooms) {
-            const room = state.chat.rooms.find(r => r.id === targetId || r.receiver_id === targetId);
+            const room = state.chat.rooms.find(r => r.id == targetId || r.other_user_id == targetId);
             if (room) {
                 targetName = room.name || room.id;
-                if (room.avatar) {
-                    targetAvatar = `<img src="${room.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-placeholder\\' style=\\'width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#555;font-size:40px;\\'>?</div>'">`;
+                if (room.avatar_url) {
+                    targetAvatar = `<img src="${room.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-placeholder\\' style=\\'width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#555;font-size:40px;\\'>?</div>'">`;
                 } else {
                     targetAvatar = `<div class="avatar-placeholder" style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-cyan);color:#000;font-size:40px;font-weight:bold;">${targetName.charAt(0).toUpperCase()}</div>`;
                 }

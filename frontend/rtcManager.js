@@ -298,11 +298,11 @@ class RTCManager {
             let name = 'User ' + senderId;
             let avatarHtml = '<div style="width:100%;height:100%;background:#555;display:flex;align-items:center;justify-content:center;font-size:40px;">?</div>';
             if (window.state && window.state.chat && window.state.chat.rooms) {
-                const room = window.state.chat.rooms.find(r => r.id === senderId || r.receiver_id === senderId);
+                const room = window.state.chat.rooms.find(r => r.id == senderId || r.other_user_id == senderId);
                 if (room) {
                     name = room.name || room.id;
-                    if (room.avatar) {
-                        avatarHtml = `<img src="${room.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+                    if (room.avatar_url) {
+                        avatarHtml = `<img src="${room.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`;
                     }
                 }
             }
