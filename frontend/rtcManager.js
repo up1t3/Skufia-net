@@ -11,6 +11,8 @@ class RTCManager {
         this.currentCallTarget = null;
         this.isCalling = false;
         this.isVideoCall = false;
+        this.previewStream = null;
+        this.currentFacingMode = 'user';
         
         // Ice Servers - Google STUN as fallback and local Coturn server
         this.iceServers = {
@@ -29,28 +31,83 @@ class RTCManager {
     }
     
     initUI() {
-        // Inject Call Modal with video support
+        // Inject Call Modal with Telegram-style UI
         const modalHtml = `
             <div id="rtc-call-modal" class="rtc-modal" style="display:none;">
-                <div class="rtc-modal-content">
-                    <div class="rtc-modal-header">
-                        <h2 id="rtc-status-text">Входящий вызов...</h2>
-                        <p id="rtc-caller-name">Unknown</p>
-                        <p id="rtc-call-type" style="font-size:12px;opacity:0.7;margin-top:4px;"></p>
-                    </div>
-                    <div class="rtc-video-container" id="rtc-video-container" style="display:none;">
-                        <video id="rtc-remote-video" autoplay playsinline style="width:100%;max-height:300px;border-radius:8px;background:#000;"></video>
-                        <video id="rtc-local-video" autoplay playsinline muted style="width:120px;height:90px;position:absolute;bottom:10px;right:10px;border-radius:6px;border:2px solid rgba(0,242,255,0.5);background:#000;"></video>
-                    </div>
-                    <div class="rtc-timer" id="rtc-timer" style="font-size:20px;font-family:'Orbitron',monospace;color:var(--accent-cyan);margin:12px 0;display:none;">00:00</div>
-                    <div class="rtc-actions">
-                        <button id="rtc-accept-btn" class="rtc-btn accept">📞 Принять</button>
-                        <button id="rtc-toggle-mute-btn" class="rtc-btn" style="display:none;" title="Выключить микрофон">🎙️</button>
-                        <button id="rtc-toggle-video-btn" class="rtc-btn" style="display:none;" title="Переключить камеру">📷</button>
-                        <button id="rtc-reject-btn" class="rtc-btn reject">❌ Завершить</button>
-                    </div>
-                    <audio id="rtc-remote-audio" autoplay></audio>
+                <div class="rtc-modal-bg" id="rtc-modal-bg"></div>
+                
+                <div class="rtc-modal-top">
+                    <button id="rtc-minimize-btn" class="icon-btn" title="Свернуть">↙️</button>
+                    <div style="flex: 1"></div>
                 </div>
+                
+                <div class="rtc-video-container" id="rtc-video-container" style="display:none;">
+                    <video id="rtc-remote-video" autoplay playsinline></video>
+                    <video id="rtc-local-video" autoplay playsinline muted></video>
+                </div>
+                
+                <div class="rtc-modal-content">
+                    <div id="rtc-profile-info" class="rtc-profile-info">
+                        <div id="rtc-avatar-container" class="rtc-avatar-container">
+                            <div class="rtc-avatar-ring"></div>
+                            <div class="rtc-avatar-inner" id="rtc-avatar-inner"></div>
+                        </div>
+                        <h2 id="rtc-caller-name">Unknown</h2>
+                        <p id="rtc-status-text">Ожидание...</p>
+                        <div id="rtc-timer" class="rtc-timer" style="display:none;">00:00</div>
+                    </div>
+                </div>
+                
+                <!-- Normal Audio Controls -->
+                <div class="rtc-actions" id="rtc-actions-audio">
+                    <div class="rtc-btn-col">
+                        <button id="rtc-speaker-btn" class="rtc-btn-circle"><span class="icon">🔊</span></button>
+                        <span>Динамик</span>
+                    </div>
+                    <div class="rtc-btn-col">
+                        <button id="rtc-video-start-btn" class="rtc-btn-circle"><span class="icon">📹<div class="cross-line" id="rtc-video-cross"></div></span></button>
+                        <span>Вкл. видео</span>
+                    </div>
+                    <div class="rtc-btn-col">
+                        <button id="rtc-toggle-mute-btn" class="rtc-btn-circle"><span class="icon">🎤<div class="cross-line" id="rtc-mute-cross" style="display:none;"></div></span></button>
+                        <span>Выкл. звук</span>
+                    </div>
+                    <div class="rtc-btn-col">
+                        <button id="rtc-reject-btn" class="rtc-btn-circle reject" style="transform: rotate(135deg);"><span class="icon">📞</span></button>
+                        <span>Завершить</span>
+                    </div>
+                </div>
+                
+                <!-- Incoming Call Controls -->
+                <div class="rtc-actions" id="rtc-actions-incoming" style="display:none; justify-content: space-around; width: 100%; padding: 0 40px;">
+                    <div class="rtc-btn-col">
+                        <button id="rtc-reject-btn-inc" class="rtc-btn-circle reject" style="transform: rotate(135deg); width: 70px; height: 70px;"><span class="icon" style="font-size:28px;">📞</span></button>
+                        <span>Отклонить</span>
+                    </div>
+                    <div class="rtc-btn-col">
+                        <button id="rtc-accept-btn" class="rtc-btn-circle accept" style="width: 70px; height: 70px;"><span class="icon" style="font-size:28px;">📞</span></button>
+                        <span>Принять</span>
+                    </div>
+                </div>
+                
+                <!-- Video Broadcast Panel -->
+                <div class="rtc-video-options" id="rtc-video-options" style="display:none;">
+                    <button id="rtc-broadcast-btn" class="rtc-broadcast-btn">Включить трансляцию</button>
+                    <div class="rtc-camera-selector">
+                        <div id="rtc-src-screen" class="rtc-src-btn">Экран телефона</div>
+                        <div id="rtc-src-front" class="rtc-src-btn active">Передняя камера</div>
+                        <div id="rtc-src-back" class="rtc-src-btn">Задняя камера</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Floating Bar for Minimized Call -->
+            <div id="rtc-floating-bar" class="rtc-floating-bar" style="display:none;">
+                <span style="display:flex;align-items:center;gap:8px;">
+                    <span class="pulse-dot"></span>
+                    ВЕРНУТЬСЯ К ЗВОНКУ
+                </span>
+                <span id="rtc-floating-mic">🎤</span>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', modalHtml);
@@ -60,81 +117,202 @@ class RTCManager {
         style.textContent = `
             .rtc-modal {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.7); z-index: 10000;
-                display: flex; align-items: center; justify-content: center;
-                backdrop-filter: blur(8px);
+                z-index: 10000; display: flex; flex-direction: column;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            }
+            .rtc-modal-bg {
+                position: absolute; top:0; left:0; width:100%; height:100%;
+                background: linear-gradient(180deg, #2481ce 0%, #765dd1 100%);
+                z-index: -2;
+            }
+            .rtc-modal-top {
+                position: absolute; top: 20px; left: 20px; right: 20px; z-index: 10;
+                display: flex; justify-content: space-between;
+            }
+            .rtc-modal-top .icon-btn {
+                background: transparent; border: none; color: white; font-size: 24px; cursor: pointer;
+            }
+            .rtc-video-container {
+                position: absolute; top:0; left:0; width:100%; height:100%; z-index:-1;
+                background: #000;
+            }
+            .rtc-video-container video {
+                width: 100%; height: 100%; object-fit: cover;
+            }
+            #rtc-local-video {
+                width: 120px; height: 160px; position: absolute; bottom: 150px; right: 20px;
+                border-radius: 12px; border: 2px solid rgba(255,255,255,0.2);
             }
             .rtc-modal-content {
-                background: linear-gradient(135deg, rgba(15,20,30,0.97), rgba(25,30,45,0.97));
-                border: 1px solid var(--border-metal, rgba(100,120,140,0.3));
-                border-radius: 16px; padding: 32px; text-align: center;
-                min-width: 320px; max-width: 500px; position: relative;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+                pointer-events: none;
             }
-            .rtc-modal-header h2 { margin: 0 0 6px; font-size: 18px; color: var(--text-main, #fff); }
-            .rtc-modal-header p { margin: 0; color: var(--accent-cyan, #0ff); font-size: 14px; }
-            .rtc-video-container { position: relative; margin: 16px 0; border-radius: 8px; overflow: hidden; }
-            .rtc-actions { display: flex; gap: 12px; justify-content: center; margin-top: 20px; }
-            .rtc-btn {
-                padding: 10px 20px; border: 1px solid var(--border-metal, #444);
-                border-radius: 24px; cursor: pointer; font-size: 14px;
-                background: rgba(0,0,0,0.3); color: var(--text-main, #fff);
-                transition: all 0.2s;
+            .rtc-profile-info {
+                text-align: center; color: white; display: flex; flex-direction: column; align-items: center;
             }
-            .rtc-btn:hover { background: rgba(0,242,255,0.1); border-color: var(--accent-cyan, #0ff); }
-            .rtc-btn.accept { background: rgba(0,180,80,0.2); border-color: #0b4; color: #0f6; }
-            .rtc-btn.accept:hover { background: rgba(0,180,80,0.35); }
-            .rtc-btn.reject { background: rgba(200,40,40,0.2); border-color: #c44; color: #f66; }
-            .rtc-btn.reject:hover { background: rgba(200,40,40,0.35); }
+            .rtc-avatar-container {
+                position: relative; width: 140px; height: 140px; margin-bottom: 20px;
+            }
+            .rtc-avatar-ring {
+                position: absolute; top:-10px; left:-10px; right:-10px; bottom:-10px;
+                border-radius: 50%; border: 1px solid rgba(255,255,255,0.2);
+                background: rgba(255,255,255,0.05);
+            }
+            .rtc-avatar-inner {
+                width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
+            }
+            .rtc-profile-info h2 { margin: 0; font-size: 28px; font-weight: 500; }
+            .rtc-profile-info p { margin: 8px 0 0; font-size: 16px; opacity: 0.8; }
+            .rtc-timer { margin-top: 8px; font-size: 16px; opacity: 0.9; }
+            
+            .rtc-actions {
+                position: absolute; bottom: 40px; left: 0; width: 100%;
+                display: flex; justify-content: center; gap: 20px; z-index: 10;
+            }
+            .rtc-btn-col {
+                display: flex; flex-direction: column; align-items: center; gap: 8px;
+                color: white; font-size: 12px; font-weight: 500;
+            }
+            .rtc-btn-circle {
+                width: 60px; height: 60px; border-radius: 50%; border: none;
+                background: rgba(255,255,255,0.2); color: white; font-size: 24px;
+                display: flex; align-items: center; justify-content: center;
+                cursor: pointer; position: relative; backdrop-filter: blur(5px);
+            }
+            .rtc-btn-circle:active { background: rgba(255,255,255,0.3); }
+            .rtc-btn-circle.reject { background: #ff3b30; }
+            .rtc-btn-circle.accept { background: #34c759; }
+            .cross-line {
+                position: absolute; top: 15%; left: 50%; width: 2px; height: 70%;
+                background: white; transform: rotate(45deg); transform-origin: center;
+            }
+            
+            .rtc-video-options {
+                position: absolute; bottom: 0; width: 100%; padding: 20px 20px 40px;
+                background: rgba(30,30,30,0.95); border-top-left-radius: 20px; border-top-right-radius: 20px;
+                flex-direction: column; gap: 20px; z-index: 10;
+            }
+            .rtc-broadcast-btn {
+                background: #007AFF; color: #fff; padding: 16px; border-radius: 12px;
+                font-weight: 600; font-size: 16px; border: none; width: 100%; cursor: pointer;
+            }
+            .rtc-camera-selector {
+                display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #888;
+            }
+            .rtc-src-btn { cursor: pointer; text-transform: uppercase; }
+            .rtc-src-btn.active { color: #fff; }
+            
+            .rtc-floating-bar {
+                position: fixed; top: 0; left: 0; width: 100%; height: 44px;
+                background: #34c759; color: #fff; z-index: 9000;
+                display: flex; align-items: center; justify-content: space-between;
+                padding: 0 20px; font-weight: 600; font-size: 14px; cursor: pointer;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            }
+            .pulse-dot {
+                width: 10px; height: 10px; background: white; border-radius: 50%;
+                animation: pulse 1.5s infinite;
+            }
+            @keyframes pulse {
+                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+                70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+            }
         `;
         document.head.appendChild(style);
         
         this.modal = document.getElementById('rtc-call-modal');
         this.statusText = document.getElementById('rtc-status-text');
         this.callerName = document.getElementById('rtc-caller-name');
-        this.callTypeText = document.getElementById('rtc-call-type');
+        this.avatarInner = document.getElementById('rtc-avatar-inner');
         this.timerEl = document.getElementById('rtc-timer');
+        this.floatingBar = document.getElementById('rtc-floating-bar');
+        
         this.timerInterval = null;
         this.callStartTime = null;
+        this.isMinimized = false;
         
+        // Buttons
         document.getElementById('rtc-accept-btn').addEventListener('click', () => this.acceptCall());
         document.getElementById('rtc-reject-btn').addEventListener('click', () => this.endCall());
+        document.getElementById('rtc-reject-btn-inc').addEventListener('click', () => this.endCall());
         document.getElementById('rtc-toggle-mute-btn').addEventListener('click', () => this.toggleMute());
-        document.getElementById('rtc-toggle-video-btn').addEventListener('click', () => this.toggleVideo());
+        document.getElementById('rtc-video-start-btn').addEventListener('click', () => this.showVideoPreview());
+        document.getElementById('rtc-minimize-btn').addEventListener('click', () => this.minimizeCall());
+        this.floatingBar.addEventListener('click', () => this.maximizeCall());
+        
+        // Video broadcast options
+        document.getElementById('rtc-broadcast-btn').addEventListener('click', () => this.startBroadcast());
+        document.getElementById('rtc-src-front').addEventListener('click', (e) => this.switchPreviewSource('user', e.target));
+        document.getElementById('rtc-src-back').addEventListener('click', (e) => this.switchPreviewSource('environment', e.target));
+        document.getElementById('rtc-src-screen').addEventListener('click', (e) => this.switchPreviewSource('screen', e.target));
     }
 
-    startCall(targetUserId, isVideo = false) {
+    startCall(targetUserId, targetName, targetAvatarHtml, isVideo = false) {
         if(this.isCalling) return;
         this.currentCallTarget = targetUserId;
         this.isCalling = true;
         this.isVideoCall = isVideo;
-        this.showModal('Исходящий вызов...', 'User ' + targetUserId, false, isVideo);
+        this.showModal('Ожидание...', targetName, targetAvatarHtml, false);
         this.initiatePeerConnection(targetUserId, true);
     }
 
     handleIncomingSignal(type, payload, senderId) {
         let parsedPayload = payload;
         try {
-            if (typeof payload === 'string') {
-                parsedPayload = JSON.parse(payload);
-            }
+            if (typeof payload === 'string') parsedPayload = JSON.parse(payload);
         } catch (e) {
             console.error("Failed to parse RTC payload", e);
         }
 
         if(type === 'offer') {
-            if(this.isCalling) return; // Busy
+            if(this.isCalling && this.currentCallTarget === senderId && this.peerConnection) {
+                // Renegotiation (added video)
+                this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload))
+                    .then(() => this.peerConnection.createAnswer())
+                    .then(answer => this.peerConnection.setLocalDescription(answer))
+                    .then(() => {
+                        if(window.sendSocketEvent) {
+                            window.sendSocketEvent('rtc_signal', { target: senderId, signal_type: 'answer', payload: JSON.stringify(this.peerConnection.localDescription) });
+                        }
+                    });
+                
+                const hasVideo = parsedPayload.sdp && parsedPayload.sdp.includes('m=video');
+                if (hasVideo) {
+                    document.getElementById('rtc-video-container').style.display = 'block';
+                    document.getElementById('rtc-profile-info').style.display = 'none';
+                    document.getElementById('rtc-modal-bg').style.display = 'none';
+                }
+                return;
+            } else if (this.isCalling) {
+                return; // Busy with someone else
+            }
+            
+            // New Incoming Call
             this.currentCallTarget = senderId;
             this.isCalling = true;
             this.incomingOffer = parsedPayload;
             this.isVideoCall = parsedPayload.sdp && parsedPayload.sdp.includes('m=video');
-            this.showModal('Входящий вызов', 'User ' + senderId, true, this.isVideoCall);
+            
+            // Try to resolve name and avatar
+            let name = 'User ' + senderId;
+            let avatarHtml = '<div style="width:100%;height:100%;background:#555;display:flex;align-items:center;justify-content:center;font-size:40px;">?</div>';
+            if (window.state && window.state.chat && window.state.chat.rooms) {
+                const room = window.state.chat.rooms.find(r => r.id === senderId || r.receiver_id === senderId);
+                if (room) {
+                    name = room.name || room.id;
+                    if (room.avatar) {
+                        avatarHtml = `<img src="${room.avatar}" style="width:100%;height:100%;object-fit:cover;">`;
+                    }
+                }
+            }
+            
+            this.showModal('Входящий вызов...', name, avatarHtml, true);
         } else if(type === 'answer') {
             if(this.peerConnection) {
                 this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload));
                 this.statusText.textContent = 'Звонок активен';
                 this.startTimer();
-                this.showInCallControls();
             }
         } else if(type === 'candidate') {
             if(this.peerConnection) {
@@ -148,7 +326,8 @@ class RTCManager {
     async acceptCall() {
         if(!this.incomingOffer) return;
         this.statusText.textContent = 'Соединение...';
-        document.getElementById('rtc-accept-btn').style.display = 'none';
+        document.getElementById('rtc-actions-incoming').style.display = 'none';
+        document.getElementById('rtc-actions-audio').style.display = 'flex';
         
         await this.initiatePeerConnection(this.currentCallTarget, false);
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(this.incomingOffer));
@@ -160,7 +339,6 @@ class RTCManager {
         }
         this.statusText.textContent = 'Звонок активен';
         this.startTimer();
-        this.showInCallControls();
     }
 
     async initiatePeerConnection(targetId, isInitiator) {
@@ -168,12 +346,12 @@ class RTCManager {
             const constraints = { audio: true, video: this.isVideoCall };
             this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
             
-            // Show local video if video call
             if (this.isVideoCall) {
-                const localVideo = document.getElementById('rtc-local-video');
-                const videoContainer = document.getElementById('rtc-video-container');
-                if (localVideo) localVideo.srcObject = this.localStream;
-                if (videoContainer) videoContainer.style.display = 'block';
+                document.getElementById('rtc-local-video').srcObject = this.localStream;
+                document.getElementById('rtc-video-container').style.display = 'block';
+                document.getElementById('rtc-profile-info').style.display = 'none';
+                document.getElementById('rtc-modal-bg').style.display = 'none';
+                document.getElementById('rtc-video-cross').style.display = 'none';
             }
             
             this.peerConnection = new RTCPeerConnection(this.iceServers);
@@ -182,12 +360,15 @@ class RTCManager {
             });
 
             this.peerConnection.ontrack = (event) => {
-                if (this.isVideoCall) {
-                    const remoteVideo = document.getElementById('rtc-remote-video');
-                    if (remoteVideo) remoteVideo.srcObject = event.streams[0];
-                } else {
-                    document.getElementById('rtc-remote-audio').srcObject = event.streams[0];
+                const hasVideo = event.streams[0].getVideoTracks().length > 0;
+                if (hasVideo || this.isVideoCall) {
+                    this.remoteStream = event.streams[0];
+                    document.getElementById('rtc-remote-video').srcObject = event.streams[0];
+                    document.getElementById('rtc-video-container').style.display = 'block';
+                    document.getElementById('rtc-profile-info').style.display = 'none';
+                    document.getElementById('rtc-modal-bg').style.display = 'none';
                 }
+                document.getElementById('rtc-remote-audio').srcObject = event.streams[0];
             };
 
             this.peerConnection.onicecandidate = (event) => {
@@ -201,7 +382,6 @@ class RTCManager {
                 if (st === 'connected') {
                     this.statusText.textContent = 'Звонок активен';
                     this.startTimer();
-                    this.showInCallControls();
                 } else if (st === 'disconnected' || st === 'failed') {
                     this.endCall(false);
                 }
@@ -221,33 +401,98 @@ class RTCManager {
         }
     }
 
-    showInCallControls() {
-        const muteBtn = document.getElementById('rtc-toggle-mute-btn');
-        const videoBtn = document.getElementById('rtc-toggle-video-btn');
-        if (muteBtn) muteBtn.style.display = 'inline-block';
-        if (videoBtn && this.isVideoCall) videoBtn.style.display = 'inline-block';
-    }
-
     toggleMute() {
         if (!this.localStream) return;
         const audioTrack = this.localStream.getAudioTracks()[0];
         if (audioTrack) {
             audioTrack.enabled = !audioTrack.enabled;
-            const btn = document.getElementById('rtc-toggle-mute-btn');
-            btn.textContent = audioTrack.enabled ? '🎙️' : '🔇';
-            btn.title = audioTrack.enabled ? 'Выключить микрофон' : 'Включить микрофон';
+            const cross = document.getElementById('rtc-mute-cross');
+            cross.style.display = audioTrack.enabled ? 'none' : 'block';
+            document.getElementById('rtc-floating-mic').style.opacity = audioTrack.enabled ? '1' : '0.5';
         }
     }
 
-    toggleVideo() {
-        if (!this.localStream) return;
-        const videoTrack = this.localStream.getVideoTracks()[0];
-        if (videoTrack) {
-            videoTrack.enabled = !videoTrack.enabled;
-            const btn = document.getElementById('rtc-toggle-video-btn');
-            btn.textContent = videoTrack.enabled ? '📷' : '📷❌';
-            btn.title = videoTrack.enabled ? 'Выключить камеру' : 'Включить камеру';
+    async showVideoPreview() {
+        if (this.isVideoCall) return; // Already active
+        try {
+            document.getElementById('rtc-actions-audio').style.display = 'none';
+            document.getElementById('rtc-video-options').style.display = 'flex';
+            
+            // Get preview stream without sending yet
+            this.previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.currentFacingMode } });
+            document.getElementById('rtc-remote-video').srcObject = this.previewStream; // Preview fullscreen
+            document.getElementById('rtc-video-container').style.display = 'block';
+            document.getElementById('rtc-profile-info').style.display = 'none';
+            document.getElementById('rtc-modal-bg').style.display = 'none';
+        } catch (e) {
+            console.error(e);
+            document.getElementById('rtc-actions-audio').style.display = 'flex';
+            document.getElementById('rtc-video-options').style.display = 'none';
         }
+    }
+
+    async switchPreviewSource(sourceType, element) {
+        // Update active tab
+        document.querySelectorAll('.rtc-src-btn').forEach(b => b.classList.remove('active'));
+        element.classList.add('active');
+        
+        if (this.previewStream) {
+            this.previewStream.getTracks().forEach(t => t.stop());
+        }
+        
+        try {
+            if (sourceType === 'screen') {
+                this.previewStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            } else {
+                this.currentFacingMode = sourceType;
+                this.previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: sourceType } });
+            }
+            document.getElementById('rtc-remote-video').srcObject = this.previewStream;
+        } catch (e) {
+            console.error("Switch source error", e);
+        }
+    }
+
+    async startBroadcast() {
+        if (!this.previewStream || !this.peerConnection) return;
+        
+        document.getElementById('rtc-video-options').style.display = 'none';
+        document.getElementById('rtc-actions-audio').style.display = 'flex';
+        document.getElementById('rtc-video-cross').style.display = 'none';
+        
+        const videoTrack = this.previewStream.getVideoTracks()[0];
+        this.localStream.addTrack(videoTrack);
+        this.peerConnection.addTrack(videoTrack, this.localStream);
+        this.isVideoCall = true;
+        
+        // Move preview to local mini video
+        document.getElementById('rtc-local-video').srcObject = this.previewStream;
+        // The remote video will be set when we receive the remote track, currently keep it empty or show what we have
+        document.getElementById('rtc-remote-video').srcObject = this.remoteStream || null;
+        
+        // Send renegotiation offer
+        try {
+            const offer = await this.peerConnection.createOffer();
+            await this.peerConnection.setLocalDescription(offer);
+            if(window.sendSocketEvent) {
+                window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'offer', payload: JSON.stringify(offer) });
+            }
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    minimizeCall() {
+        this.isMinimized = true;
+        this.modal.style.display = 'none';
+        this.floatingBar.style.display = 'flex';
+        // When scrolling chat, wait to show we are minimized
+    }
+
+    maximizeCall() {
+        this.isMinimized = false;
+        this.floatingBar.style.display = 'none';
+        this.modal.style.display = 'flex';
     }
 
     startTimer() {
@@ -277,6 +522,9 @@ class RTCManager {
         if(this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
         }
+        if(this.previewStream) {
+            this.previewStream.getTracks().forEach(track => track.stop());
+        }
         if(this.peerConnection) {
             this.peerConnection.close();
         }
@@ -284,42 +532,48 @@ class RTCManager {
             window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'end' });
         }
         
-        // Clean up video elements
-        const localVideo = document.getElementById('rtc-local-video');
-        const remoteVideo = document.getElementById('rtc-remote-video');
-        const videoContainer = document.getElementById('rtc-video-container');
-        if (localVideo) localVideo.srcObject = null;
-        if (remoteVideo) remoteVideo.srcObject = null;
-        if (videoContainer) videoContainer.style.display = 'none';
+        // Clean up UI elements
+        document.getElementById('rtc-local-video').srcObject = null;
+        document.getElementById('rtc-remote-video').srcObject = null;
+        document.getElementById('rtc-video-container').style.display = 'none';
+        document.getElementById('rtc-profile-info').style.display = 'flex';
+        document.getElementById('rtc-modal-bg').style.display = 'block';
+        document.getElementById('rtc-video-cross').style.display = 'block';
+        document.getElementById('rtc-mute-cross').style.display = 'none';
+        document.getElementById('rtc-video-options').style.display = 'none';
         
-        // Reset controls
-        const muteBtn = document.getElementById('rtc-toggle-mute-btn');
-        const videoBtn = document.getElementById('rtc-toggle-video-btn');
-        if (muteBtn) { muteBtn.style.display = 'none'; muteBtn.textContent = '🎙️'; }
-        if (videoBtn) { videoBtn.style.display = 'none'; videoBtn.textContent = '📷'; }
-
         this.stopTimer();
         this.isCalling = false;
         this.isVideoCall = false;
+        this.isMinimized = false;
         this.peerConnection = null;
         this.localStream = null;
+        this.previewStream = null;
+        this.remoteStream = null;
         this.currentCallTarget = null;
         this.incomingOffer = null;
-        this.hideModal();
+        
+        this.modal.style.display = 'none';
+        this.floatingBar.style.display = 'none';
         
         if(window.addLog) window.addLog('Звонок завершён', 'info');
     }
 
-    showModal(status, name, showAccept, isVideo = false) {
+    showModal(status, name, avatarHtml, isIncoming = false) {
         this.statusText.textContent = status;
         this.callerName.textContent = name;
-        this.callTypeText.textContent = isVideo ? '📹 Видеозвонок' : '📞 Аудиозвонок';
-        document.getElementById('rtc-accept-btn').style.display = showAccept ? 'inline-block' : 'none';
+        this.avatarInner.innerHTML = avatarHtml;
+        
+        if (isIncoming) {
+            document.getElementById('rtc-actions-incoming').style.display = 'flex';
+            document.getElementById('rtc-actions-audio').style.display = 'none';
+        } else {
+            document.getElementById('rtc-actions-incoming').style.display = 'none';
+            document.getElementById('rtc-actions-audio').style.display = 'flex';
+        }
+        
         this.modal.style.display = 'flex';
-    }
-
-    hideModal() {
-        this.modal.style.display = 'none';
+        this.floatingBar.style.display = 'none';
     }
 }
 

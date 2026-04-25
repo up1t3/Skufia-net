@@ -1,8 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Viewport Height Fix for Mobile ---
+    // --- Viewport Height Fix for Mobile & Scroll Anchoring ---
+    let lastViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
     function setAppHeight() {
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        
+        // Scroll adjustment for chat history so messages stick to the bottom when keyboard appears
+        const historyEl = document.getElementById('chat-history');
+        if (historyEl) {
+            // Check if user is currently at the bottom (within 50px tolerance)
+            const isAtBottom = historyEl.scrollHeight - historyEl.scrollTop - historyEl.clientHeight < 50;
+            const delta = lastViewportHeight - vh;
+            
+            // Wait for next animation frame so the DOM updates clientHeight
+            requestAnimationFrame(() => {
+                if (isAtBottom) {
+                    historyEl.scrollTop = historyEl.scrollHeight;
+                } else if (delta !== 0) {
+                    historyEl.scrollTop += delta;
+                }
+            });
+        }
+        lastViewportHeight = vh;
     }
     
     if (window.visualViewport) {
@@ -143,17 +163,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        console.log('BOOT: Token found. Initializing system...');
+        console.log('BOOT: Token found. Initializing system in background...');
         
-        // Show loading state on the overlay if it's still visible
-        if (authOverlay && authOverlay.style.display !== 'none') {
-            if (authTitle) authTitle.textContent = 'СИНХРОНИЗАЦИЯ...';
-            const authBtn = authOverlay.querySelector('.auth-main-btn');
-            if (authBtn) {
-                authBtn.disabled = true;
-                authBtn.textContent = 'ПОДКЛЮЧЕНИЕ...';
-            }
+        // PHASE 1 (Fast): Hide overlay immediately to show UI skeleton
+        if (authOverlay) {
+            authOverlay.style.display = 'none';
         }
+        document.documentElement.classList.add('is-logged-in');
+        switchView('messages');
 
         try {
             // Force clear any old API caches to prevent stale profiles on boot
@@ -245,9 +262,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (loginForm) loginForm.style.display = 'none';
                         const registerForm = document.getElementById('register-form');
                         if (registerForm) registerForm.style.display = 'none';
-                        const unlockForm = document.getElementById('unlock-form');
                         if (unlockForm) unlockForm.style.display = 'block';
                     }
+                    document.documentElement.classList.remove('is-logged-in');
                     return; // Stop boot process until unlocked
                 }
                 if (window.addLog) window.addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
@@ -270,20 +287,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('BOOT INTEGRITY: #chat-rooms-list is empty. It might be hydrating.');
             }
             
-            // Set logged-in state to unblock interface
-            document.documentElement.classList.add('is-logged-in');
-            
-            // Hide auth overlay instead of removing it completely so it can be restored on logout
-            if (authOverlay) {
-                authOverlay.style.display = 'none';
-            }
-            
             if (window.addLog) {
                 window.addLog('Loading Cyber-Industrial HUD...', 'system');
                 window.addLog('System Online. Welcome, Operator.', 'success');
             }
-            
-            switchView('messages');
 
             // PWA Service Worker - Silent registration
             if ('serviceWorker' in navigator) {
@@ -306,15 +313,22 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('BOOT FAILURE:', err);
             if (window.addLog) window.addLog(`System boot failed: ${err.message}`, 'error');
             
-            // If boot failed (e.g. 401 or network), show login again
-            document.documentElement.classList.remove('is-logged-in'); // CRITICAL: Allow overlay to show
-            if (authOverlay) {
-                authOverlay.style.display = 'flex';
-                if (authTitle) authTitle.textContent = 'АВТОРИЗАЦИЯ';
-                const authBtn = authOverlay.querySelector('.auth-main-btn');
-                if (authBtn) {
-                    authBtn.disabled = false;
-                    authBtn.textContent = 'ВОЙТИ В СЕТЬ';
+            // Only redirect to login if it's an explicit auth failure or we lost the token.
+            // Network timeouts or 500s should NOT dump the user back to the login screen.
+            if (err.message === 'Unauthorized' || !state.user.token) {
+                document.documentElement.classList.remove('is-logged-in'); 
+                if (authOverlay) {
+                    authOverlay.style.display = 'flex';
+                    if (authTitle) authTitle.textContent = 'АВТОРИЗАЦИЯ';
+                    const authBtn = authOverlay.querySelector('.auth-main-btn');
+                    if (authBtn) {
+                        authBtn.disabled = false;
+                        authBtn.textContent = 'ВОЙТИ В СЕТЬ';
+                    }
+                }
+            } else {
+                if (window.showToast) {
+                    window.showToast('Ошибка подключения к серверу. Работа в автономном режиме.', 5000);
                 }
             }
         }
@@ -822,8 +836,25 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof showToast === 'function') showToast('⚠️ RTC модуль не инициализирован');
             return;
         }
+        
+        // Find avatar and name from rooms
+        let targetName = 'User ' + targetId;
+        let targetAvatar = '<div class="avatar-placeholder" style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#555;font-size:40px;">?</div>';
+        
+        if (state.chat && state.chat.rooms) {
+            const room = state.chat.rooms.find(r => r.id === targetId || r.receiver_id === targetId);
+            if (room) {
+                targetName = room.name || room.id;
+                if (room.avatar) {
+                    targetAvatar = `<img src="${room.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-placeholder\\' style=\\'width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#555;font-size:40px;\\'>?</div>'">`;
+                } else {
+                    targetAvatar = `<div class="avatar-placeholder" style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-cyan);color:#000;font-size:40px;font-weight:bold;">${targetName.charAt(0).toUpperCase()}</div>`;
+                }
+            }
+        }
+        
         if (typeof showToast === 'function') showToast(`📞 Инициация ${isVideo ? 'видео' : 'аудио'} звонка...`);
-        window.RTCManagerInstance.startCall(targetId, isVideo);
+        window.RTCManagerInstance.startCall(targetId, targetName, targetAvatar, isVideo);
     };
 
     window.chatOptionAction = function(action) {

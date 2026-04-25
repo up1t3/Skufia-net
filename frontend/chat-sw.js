@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1777145000000'; // Force re-cache for mobile E2EE fallback fix
+const CACHE_NAME = 'skufia-chat-cache-v7'; // Force re-cache for mobile keyboard layout fix
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
