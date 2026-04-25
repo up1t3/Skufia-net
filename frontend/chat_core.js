@@ -39,6 +39,14 @@ window.initChatCore = function() {
                 
                 // --- E2EE DECRYPTION (graceful) ---
                 if (msg.iv && msg.iv.length > 0) {
+                    // Try to get or fetch the session key if not cached
+                    if (!state.chat.sessionKeys[msg.room_id] && typeof getOrEstablishSessionKey === 'function') {
+                        try {
+                            await getOrEstablishSessionKey(msg.room_id, msg.sender_id);
+                        } catch(e) {
+                            console.warn('WS: Could not establish session key:', e);
+                        }
+                    }
                     if (state.chat.sessionKeys[msg.room_id]) {
                         try {
                             msg.content = await window.CryptoManager.decryptMessage(
@@ -46,17 +54,21 @@ window.initChatCore = function() {
                                 msg.content,
                                 msg.iv
                             );
+                            msg.text = msg.content;
                             msg.is_secure = true;
                         } catch (e) {
                             // Key mismatch — show as encrypted, don't crash
                             msg.content = '🔒 Зашифрованное сообщение';
+                            msg.text = msg.content;
                         }
                     } else {
                         // No session key at all — show as encrypted
                         msg.content = '🔒 Зашифрованное сообщение';
+                        msg.text = msg.content;
                     }
                 }
                 // If msg.iv is empty/null, content is plaintext — show as-is
+                if (!msg.text) msg.text = msg.content;
 
                 if (state.chat.currentRoomId === msg.room_id) {
                     renderChatMessage(msg);
@@ -334,16 +346,17 @@ window.initChatCore = function() {
                 
                 // Trigger Key Exchange!
                 if (typeof getOrEstablishSessionKey === 'function') {
-                    getOrEstablishSessionKey(roomId, receiverId).then(key => {
+                    try {
+                        const key = await getOrEstablishSessionKey(roomId, receiverId);
                         if (key) {
                             badge.innerHTML = '<span style="color:var(--accent-cyan)">🔒 E2EE Активно</span>';
                         } else {
                             badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ Собеседник без E2EE</span>';
                         }
-                    }).catch(e => {
+                    } catch(e) {
                         console.error('E2EE Error:', e);
                         badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ Ошибка E2EE</span>';
-                    });
+                    }
                 } else {
                     badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ E2EE Недоступно</span>';
                 }
@@ -420,10 +433,8 @@ window.initChatCore = function() {
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
 
-        const div = document.createElement('div');
         const isMe = msg.sender_id === state.user.id || msg.sender === state.user.username;
-        div.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
-        
+
         const dateObj = new Date(msg.timestamp);
         let timeStr = msg.timestamp || '00:00';
         if (!isNaN(dateObj.getTime())) {
@@ -442,46 +453,90 @@ window.initChatCore = function() {
             }
         }
 
-        div.id = `msg-${msg.id}`;
-        
-        let replyHtml = '';
+        // ── Build Telegram-style msg-row ─────────────────────────────────────
+        const rowDiv = document.createElement('div');
+        rowDiv.className = `msg-row ${isMe ? 'msg-row-sent' : 'msg-row-received'}`;
+        rowDiv.id = `msg-${msg.id}`;
+
+        // Avatar (only for received messages)
+        if (!isMe) {
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'msg-avatar';
+            const senderProfile = (state.chat.rooms || []).find(r => r.other_user_id === msg.sender_id);
+            const avatarUrl = msg.avatar_url || msg.sender_avatar || (senderProfile && senderProfile.avatar_url) || null;
+            if (avatarUrl) {
+                const img = document.createElement('img');
+                img.src = avatarUrl;
+                img.alt = msg.sender || '?';
+                img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;';
+                avatarDiv.appendChild(img);
+            } else {
+                const initial = (msg.sender || '?').charAt(0).toUpperCase();
+                const hue = (initial.charCodeAt(0) * 137) % 360;
+                avatarDiv.style.background = `linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%))`;
+                avatarDiv.style.color = '#fff';
+                avatarDiv.style.display = 'flex';
+                avatarDiv.style.alignItems = 'center';
+                avatarDiv.style.justifyContent = 'center';
+                avatarDiv.style.fontSize = '14px';
+                avatarDiv.style.fontWeight = 'bold';
+                avatarDiv.textContent = initial;
+            }
+            rowDiv.appendChild(avatarDiv);
+        }
+
+        // Bubble
+        const bubble = document.createElement('div');
+        bubble.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+
+        // Sender name (for received only)
+        if (!isMe) {
+            const senderNameDiv = document.createElement('div');
+            senderNameDiv.className = 'msg-sender-name';
+            senderNameDiv.textContent = msg.sender || '';
+            bubble.appendChild(senderNameDiv);
+        }
+
+        // Reply badge
         if (msg.reply_to_id) {
-            replyHtml = `<div class="reply-badge" onclick="document.getElementById('msg-${msg.reply_to_id}')?.scrollIntoView({behavior:'smooth'})">Ответ на сообщение</div>`;
-        }
-        const isEditedHtml = msg.is_edited ? '<span class="is-edited">(изменено)</span>' : '';
-
-        const headerDiv = document.createElement('div');
-        headerDiv.className = 'msg-header';
-        headerDiv.textContent = msg.sender + ' ';
-
-        if (msg.is_secure || msg.iv) {
-            const secureSpan = document.createElement('span');
-            secureSpan.className = 'msg-secure-icon';
-            secureSpan.textContent = '🔒';
-            headerDiv.appendChild(secureSpan);
-        }
-        if (msg.is_edited) {
-            const editedSpan = document.createElement('span');
-            editedSpan.className = 'is-edited';
-            editedSpan.textContent = '(изменено)';
-            headerDiv.appendChild(editedSpan);
+            const replyBadge = document.createElement('div');
+            replyBadge.className = 'reply-badge';
+            replyBadge.textContent = 'Ответ на сообщение';
+            replyBadge.onclick = () => document.getElementById(`msg-${msg.reply_to_id}`)?.scrollIntoView({behavior:'smooth'});
+            bubble.appendChild(replyBadge);
         }
 
+        // Text
         const textDiv = document.createElement('div');
         textDiv.className = 'msg-text';
         textDiv.textContent = msg.text || msg.content || '';
+        bubble.appendChild(textDiv);
 
+        // File attachment
+        if (fileHtml) {
+            const fileContainer = document.createElement('div');
+            fileContainer.innerHTML = fileHtml;
+            while (fileContainer.firstChild) bubble.appendChild(fileContainer.firstChild);
+        }
+
+        // Footer: time + lock icon (only when ACTUALLY decrypted) + read ticks
         const footerDiv = document.createElement('div');
         footerDiv.className = 'msg-footer';
         const timeSpan = document.createElement('span');
         timeSpan.className = 'msg-time';
-        timeSpan.innerHTML = `${timeStr} `;
+        // Only show 🔒 if the message was successfully decrypted (is_secure: true)
+        // NOT when it failed decryption (text === placeholder string)
+        const lockHtml = msg.is_secure ? ' <span style="font-size:10px;opacity:0.7;">🔒</span>' : '';
+        if (msg.is_edited) {
+            timeSpan.innerHTML = `${timeStr}${lockHtml} <span class="is-edited">(изм.)</span> `;
+        } else {
+            timeSpan.innerHTML = `${timeStr}${lockHtml} `;
+        }
         if (isMe) {
             const isRead = msg.is_read;
-            // Telegram-style checks
             const checkSvg = isRead 
-                ? '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--accent-cyan); filter: drop-shadow(0px 0px 2px rgba(0,255,255,0.5)); margin-left:3px; vertical-align: middle;"><path d="M7 11.5L10 14.5L17 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M11 11.5L14 14.5L21 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>'
-                : '<svg viewBox="0 0 24 24" width="16" height="16" style="color:var(--text-dim); margin-left:3px; vertical-align: middle;"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>';
+                ? '<svg viewBox="0 0 24 24" width="14" height="14" style="color:var(--accent-cyan);filter:drop-shadow(0 0 2px rgba(0,255,255,0.5));margin-left:2px;vertical-align:middle;"><path d="M7 11.5L10 14.5L17 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><path d="M11 11.5L14 14.5L21 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>'
+                : '<svg viewBox="0 0 24 24" width="14" height="14" style="color:var(--text-dim);margin-left:2px;vertical-align:middle;"><path d="M5 12l5 5L20 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>';
             timeSpan.insertAdjacentHTML('beforeend', checkSvg);
         } else if (!msg.is_read && state.chat.socket && state.chat.socket.readyState === 1) {
             state.chat.socket.send(JSON.stringify({
@@ -491,48 +546,26 @@ window.initChatCore = function() {
             }));
         }
         footerDiv.appendChild(timeSpan);
+        bubble.appendChild(footerDiv);
 
-        div.appendChild(headerDiv);
-        if (replyHtml) {
-            const replyContainer = document.createElement('div');
-            replyContainer.innerHTML = replyHtml; // Assuming this is safe, otherwise can be handled further
-            while (replyContainer.firstChild) {
-                div.appendChild(replyContainer.firstChild);
-            }
-        }
-        div.appendChild(textDiv);
-        if (fileHtml) {
-            const fileContainer = document.createElement('div');
-            fileContainer.innerHTML = fileHtml; // Assuming safe URL
-            while (fileContainer.firstChild) {
-                div.appendChild(fileContainer.firstChild);
-            }
-        }
-        div.appendChild(footerDiv);
-        
         // Context menu logic
-        div.oncontextmenu = (e) => {
+        bubble.oncontextmenu = (e) => {
             e.preventDefault();
             document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
             const menu = document.createElement('div');
             menu.className = 'msg-context-menu';
             menu.style.left = `${e.pageX}px`;
             menu.style.top = `${e.pageY}px`;
-            
-            // @ts-ignore
-            let cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
-            menu.innerHTML = '';
+            const cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
             const replyDiv = document.createElement('div');
             replyDiv.textContent = 'Ответить';
             replyDiv.onclick = () => setReply(msg.id, cleanText);
             menu.appendChild(replyDiv);
-
             if (isMe) {
                 const editDiv = document.createElement('div');
                 editDiv.textContent = 'Редактировать';
                 editDiv.onclick = () => setEdit(msg.id, cleanText);
                 menu.appendChild(editDiv);
-
                 const deleteDiv = document.createElement('div');
                 deleteDiv.className = 'delete-ctx';
                 deleteDiv.textContent = 'Удалить';
@@ -542,8 +575,9 @@ window.initChatCore = function() {
             document.body.appendChild(menu);
             setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
         };
-        
-        history.appendChild(div);
+
+        rowDiv.appendChild(bubble);
+        history.appendChild(rowDiv);
         history.scrollTop = history.scrollHeight;
     }
 
@@ -780,7 +814,7 @@ window.initChatCore = function() {
             const charCode = initial.charCodeAt(0) || 65;
             const hue = (charCode * 137) % 360;
             const avatarHtml = u.avatar_url 
-                ? `<img src="${u.avatar_url}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;">` 
+                ? `<div class="sidebar-item-avatar" style="overflow:hidden;"><img src="${u.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"></div>` 
                 : `<div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;">${initial}</div>`;
             const onlineDot = u.is_online ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00f2ff;margin-left:5px;vertical-align:middle;"></span>` : '';
             const handleText = u.handle ? `<span style="color:var(--text-dim);font-size:11px;">${u.handle}</span>` : '';

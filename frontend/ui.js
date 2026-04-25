@@ -18,8 +18,10 @@ window.applyAvatarDisplay = function(element, url, index = null) {
         element.style.backgroundImage = url ? `url(${url})` : 'none';
         element.style.backgroundSize = 'cover';
         element.style.backgroundPosition = 'center';
+        element.style.borderRadius = '50%';
         if (element instanceof HTMLImageElement && url) {
             element.src = url;
+            element.style.objectFit = 'cover';
         }
     }
 };
