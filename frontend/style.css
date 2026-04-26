@@ -3278,3 +3278,70 @@ body.skufenger-fullscreen .mobile-back-btn {
     --backdrop-blur: blur(12px) saturate(150%);
     --chat-bubble-radius: 16px;
 }
+
+/* Custom Cyber Checkbox */
+.cyber-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+.cyber-checkbox-wrapper:hover {
+    background: var(--bg-glass);
+}
+.cyber-checkbox {
+    appearance: none;
+    background-color: transparent;
+    margin: 0;
+    font: inherit;
+    color: currentColor;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--text-dim);
+    border-radius: 4px;
+    display: grid;
+    place-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.cyber-checkbox::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em var(--accent-cyan);
+    background-color: var(--accent-cyan);
+    transform-origin: center;
+    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+.cyber-checkbox:checked {
+    border-color: var(--accent-cyan);
+    background-color: rgba(0, 242, 255, 0.1);
+}
+.cyber-checkbox:checked::before {
+    transform: scale(1);
+}
+.folder-selected-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg-accent);
+    border: 1px solid var(--border-metal);
+    border-radius: 8px;
+    font-size: 14px;
+}
+.folder-selected-chip-remove {
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+.folder-selected-chip-remove:hover {
+    color: var(--accent-amber);
+}
+

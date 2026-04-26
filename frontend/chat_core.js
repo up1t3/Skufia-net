@@ -177,6 +177,8 @@ window.initChatCore = function() {
 
         tabsContainer.insertAdjacentHTML('beforeend', '<button class="add-folder-btn" onclick="window.openFolderModal()" title="Создать папку">+</button>');
     }
+    // Temporary state for folder creation
+    window._tempFolderRooms = new Set();
 
     window.selectFolder = function(id, el) {
         state.chat.currentFolderId = id;
@@ -192,42 +194,118 @@ window.initChatCore = function() {
         const nameInput = document.getElementById('folder-name-input');
         if (nameInput) nameInput.value = '';
         
-        const roomsContainer = document.getElementById('folder-rooms-selection');
-        if (roomsContainer) {
-            roomsContainer.innerHTML = '';
-            if (state.chat.rooms && state.chat.rooms.length > 0) {
-                state.chat.rooms.forEach(room => {
-                    const label = document.createElement('label');
-                    label.style.display = 'flex';
-                    label.style.alignItems = 'center';
-                    label.style.padding = '8px';
-                    label.style.cursor = 'pointer';
-                    label.style.borderBottom = '1px solid var(--border-metal)';
-                    label.style.transition = 'background-color 0.2s';
-                    label.onmouseover = () => label.style.backgroundColor = 'var(--bg-glass)';
-                    label.onmouseout = () => label.style.backgroundColor = 'transparent';
-                    
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.value = room.id;
-                    checkbox.className = 'folder-room-checkbox';
-                    checkbox.style.marginRight = '10px';
-                    checkbox.style.accentColor = 'var(--accent-cyan)';
-                    
-                    const nameSpan = document.createElement('span');
-                    nameSpan.textContent = room.name || 'Chat';
-                    nameSpan.style.color = 'var(--text-primary)';
-                    
-                    label.appendChild(checkbox);
-                    label.appendChild(nameSpan);
-                    roomsContainer.appendChild(label);
-                });
-            } else {
-                roomsContainer.innerHTML = '<div style="padding:10px;color:var(--text-dim);font-size:12px;">Нет доступных чатов</div>';
-            }
-        }
+        window._tempFolderRooms.clear();
+        window.renderFolderSelectedChats();
         
         modal.style.display = 'flex';
+    };
+
+    window.renderFolderSelectedChats = function() {
+        const container = document.getElementById('folder-selected-chats-container');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (window._tempFolderRooms.size === 0) {
+            container.innerHTML = '<div style="padding:15px; text-align:center; color:var(--text-dim); font-size:13px; border: 1px dashed var(--border-metal); border-radius: 8px;">Нет выбранных чатов</div>';
+            return;
+        }
+
+        window._tempFolderRooms.forEach(roomId => {
+            const room = state.chat.rooms.find(r => r.id === roomId);
+            if (!room) return;
+
+            const chip = document.createElement('div');
+            chip.className = 'folder-selected-chip';
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = room.name || 'Chat';
+            nameSpan.style.color = 'var(--text-main)';
+            nameSpan.style.fontWeight = '500';
+            
+            const removeBtn = document.createElement('div');
+            removeBtn.className = 'folder-selected-chip-remove';
+            removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            removeBtn.onclick = () => {
+                window._tempFolderRooms.delete(roomId);
+                window.renderFolderSelectedChats();
+            };
+
+            chip.appendChild(nameSpan);
+            chip.appendChild(removeBtn);
+            container.appendChild(chip);
+        });
+    };
+
+    window.openFolderAddChatsModal = function() {
+        const modal = document.getElementById('folder-add-chats-modal');
+        if (!modal) return;
+        
+        const searchInput = document.getElementById('folder-chats-search');
+        if (searchInput) searchInput.value = '';
+        
+        window.renderFolderAllChatsList();
+        modal.style.display = 'flex';
+    };
+
+    window.filterFolderChats = function(query) {
+        window.renderFolderAllChatsList(query.toLowerCase());
+    };
+
+    window.renderFolderAllChatsList = function(query = '') {
+        const container = document.getElementById('folder-all-chats-list');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        let availableRooms = state.chat.rooms || [];
+        if (query) {
+            availableRooms = availableRooms.filter(r => (r.name || '').toLowerCase().includes(query));
+        }
+
+        if (availableRooms.length === 0) {
+            container.innerHTML = '<div style="padding:20px; text-align:center; color:var(--text-dim); font-size:14px;">Чаты не найдены</div>';
+            return;
+        }
+
+        availableRooms.forEach(room => {
+            const label = document.createElement('label');
+            label.className = 'cyber-checkbox-wrapper';
+            
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = room.id;
+            checkbox.className = 'cyber-checkbox folder-room-checkbox-modal';
+            // Check if it's already selected
+            if (window._tempFolderRooms.has(room.id)) {
+                checkbox.checked = true;
+            }
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.textContent = room.name || 'Chat';
+            nameSpan.style.color = 'var(--text-primary)';
+            nameSpan.style.fontSize = '14px';
+            
+            label.appendChild(checkbox);
+            label.appendChild(nameSpan);
+            container.appendChild(label);
+        });
+    };
+
+    window.confirmFolderChatsSelection = function() {
+        const checkboxes = document.querySelectorAll('.folder-room-checkbox-modal');
+        
+        checkboxes.forEach(cb => {
+            const roomId = parseInt(cb.value);
+            if (cb.checked) {
+                window._tempFolderRooms.add(roomId);
+            } else {
+                window._tempFolderRooms.delete(roomId);
+            }
+        });
+        
+        window.renderFolderSelectedChats();
+        document.getElementById('folder-add-chats-modal').style.display = 'none';
     };
 
     window.submitFolderCreate = async function() {
@@ -238,8 +316,7 @@ window.initChatCore = function() {
             return;
         }
         
-        const checkboxes = document.querySelectorAll('.folder-room-checkbox:checked');
-        const roomIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        const roomIds = Array.from(window._tempFolderRooms);
         
         const btn = document.querySelector('#folder-modal .primary-btn');
         if (btn) btn.textContent = 'СОХРАНЕНИЕ...';
