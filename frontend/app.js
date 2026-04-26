@@ -868,6 +868,13 @@ window.previewAvatar = function(input) {
     const file = input.files[0];
     
     // Show modal immediately to provide fast UI feedback
+    const settingsModal = document.getElementById('settings-modal');
+    if (settingsModal && settingsModal.style.display !== 'none') {
+        window._wasSettingsOpen = true;
+        settingsModal.style.display = 'none';
+    } else {
+        window._wasSettingsOpen = false;
+    }
     document.getElementById('avatar-crop-modal').style.display = 'flex';
     
     // Destroy previous cropper if exists
@@ -906,6 +913,10 @@ window.previewAvatar = function(input) {
 
 window.closeCropModal = function() {
     document.getElementById('avatar-crop-modal').style.display = 'none';
+    if (window._wasSettingsOpen) {
+        document.getElementById('settings-modal').style.display = 'flex';
+        window._wasSettingsOpen = false;
+    }
     if (window.cropperInstance) {
         window.cropperInstance.destroy();
         window.cropperInstance = null;

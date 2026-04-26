@@ -23,23 +23,23 @@
 }
 
 [data-theme="telegram"] {
-    --bg-dark: #0f172a; 
-    --bg-panel: color-mix(in srgb, #1e293b 70%, transparent); 
-    --bg-accent: color-mix(in srgb, #334155 80%, transparent); 
-    --bg-message-other: color-mix(in srgb, #334155 70%, transparent);
-    --accent-cyan: #3b82f6; 
+    --bg-dark: #0e1621;
+    --bg-panel: #17212b;
+    --bg-accent: #242f3d;
+    --bg-message-other: #182533;
+    --accent-cyan: #5288c1;
     --accent-amber: #f59e0b;
-    --accent-gradient: linear-gradient(135deg, #3b82f6, #8b5cf6);
-    --text-main: #f8fafc;
-    --text-dim: #94a3b8;
-    --border-metal: color-mix(in srgb, #3b82f6 20%, transparent);
+    --accent-gradient: linear-gradient(135deg, #5288c1, #2b5278);
+    --text-main: #ffffff;
+    --text-dim: #7f91a4;
+    --border-metal: #17212b;
     --glow: none;
-    --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     --transition: all 0.2s ease-in-out;
     --font-main: 'Inter', sans-serif;
     --crt-display: none;
-    --backdrop-blur: blur(16px) saturate(180%);
-    --chat-bubble-radius: 18px;
+    --backdrop-blur: blur(10px);
+    --chat-bubble-radius: 12px;
 }
 
 [data-theme="neon"] {
@@ -3255,4 +3255,25 @@ body.skufenger-fullscreen .mobile-back-btn {
 /* Ensure the image is rendered with a dark background to emphasize the mask */
 .cropper-modal {
     background-color: rgba(0, 0, 0, 0.85);
+}
+
+/* Explicit Cyber Theme Block */
+[data-theme="cyber"] {
+    --bg-dark: #0a0e14;
+    --bg-panel: color-mix(in srgb, #111820 60%, transparent);
+    --bg-accent: color-mix(in srgb, #1c232d 70%, transparent);
+    --bg-message-other: color-mix(in srgb, #222b36 70%, transparent);
+    --accent-cyan: #00f2ff;
+    --accent-amber: #ffb800;
+    --accent-gradient: linear-gradient(135deg, #00f2ff, #7000ff);
+    --text-main: #e0e6ed;
+    --text-dim: #8a94a2;
+    --border-metal: color-mix(in srgb, #00f2ff 15%, transparent);
+    --glow: 0 0 15px rgba(0, 242, 255, 0.4);
+    --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --font-main: 'JetBrains Mono', 'Courier New', monospace;
+    --crt-display: block;
+    --backdrop-blur: blur(12px) saturate(150%);
+    --chat-bubble-radius: 16px;
 }
