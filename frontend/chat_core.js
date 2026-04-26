@@ -513,7 +513,16 @@ window.initChatCore = function() {
         // Text
         const textDiv = document.createElement('div');
         textDiv.className = 'msg-text';
-        textDiv.textContent = msg.text || msg.content || '';
+        let rawText = msg.text || msg.content || '';
+        // Safe escaping then linkify
+        const tempDiv = document.createElement('div');
+        tempDiv.textContent = rawText;
+        let safeText = tempDiv.innerHTML;
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        safeText = safeText.replace(urlRegex, function(url) {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:underline;">${url}</a>`;
+        });
+        textDiv.innerHTML = safeText;
         bubble.appendChild(textDiv);
 
         // File attachment
@@ -558,9 +567,28 @@ window.initChatCore = function() {
             document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
             const menu = document.createElement('div');
             menu.className = 'msg-context-menu';
-            menu.style.left = `${e.pageX}px`;
-            menu.style.top = `${e.pageY}px`;
+            
+            const rect = bubble.getBoundingClientRect();
+            menu.style.top = `${rect.top + window.scrollY}px`;
+            let leftPos = rect.right - 140;
+            if (leftPos < 0) leftPos = rect.right; 
+            menu.style.left = `${Math.min(leftPos, window.innerWidth - 150)}px`;
+
             const cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
+            
+            const forwardDiv = document.createElement('div');
+            forwardDiv.textContent = 'Переслать';
+            forwardDiv.onclick = () => window.showForwardModal(cleanText);
+            menu.appendChild(forwardDiv);
+
+            const copyDiv = document.createElement('div');
+            copyDiv.textContent = 'Копировать';
+            copyDiv.onclick = () => {
+                navigator.clipboard.writeText(cleanText).catch(e => console.error('Copy failed', e));
+                menu.remove();
+            };
+            menu.appendChild(copyDiv);
+
             const replyDiv = document.createElement('div');
             replyDiv.textContent = 'Ответить';
             replyDiv.onclick = () => setReply(msg.id, cleanText);
@@ -1686,6 +1714,48 @@ window.initChatCore = function() {
     }
 
 
+
+    window.showForwardModal = function(text) {
+        const modal = document.createElement('div');
+        modal.className = 'modal auth-modal-custom';
+        modal.style.display = 'flex';
+        modal.style.zIndex = '10001';
+        
+        const content = document.createElement('div');
+        content.className = 'modal-content auth-content';
+        content.innerHTML = `<h3>Выберите чат для пересылки</h3>
+        <div id="forward-rooms-list" style="max-height:300px; overflow-y:auto; margin-top:15px; display:flex; flex-direction:column; gap:10px;"></div>
+        <button class="cyber-btn" style="margin-top:15px; width:100%;" onclick="this.closest('.modal').remove()">Отмена</button>`;
+        
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        const list = modal.querySelector('#forward-rooms-list');
+        const rooms = window.state.chat.rooms || [];
+        if (rooms.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-dim); text-align:center;">Нет доступных чатов</p>';
+        } else {
+            rooms.forEach(room => {
+                const btn = document.createElement('button');
+                btn.className = 'cyber-btn';
+                btn.style.textAlign = 'left';
+                btn.style.padding = '10px';
+                btn.textContent = room.room_name || room.name || 'Чат';
+                btn.onclick = () => {
+                    modal.remove();
+                    window.selectChatRoom(room.id, room.room_name, room.type, room.other_user_id, room.role);
+                    setTimeout(() => {
+                        const input = document.getElementById('chat-input');
+                        if (input) {
+                            input.value = `>>> Пересланное сообщение:\n${text}\n\n`;
+                            input.focus();
+                        }
+                    }, 500);
+                };
+                list.appendChild(btn);
+            });
+        }
+    };
 
     // Expose functions to window
     window.connectWebSocket = connectWebSocket;

@@ -3244,3 +3244,4 @@ body.skufenger-fullscreen .mobile-back-btn {
 .stop-btn { color: #ff3b30; }
 .cancel-btn { color: var(--text-secondary); }
 .mic-btn.recording svg { stroke: #ff3b30; }
+\n\n#forward-rooms-list::-webkit-scrollbar { width: 6px; }\n#forward-rooms-list::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 3px; }\n
