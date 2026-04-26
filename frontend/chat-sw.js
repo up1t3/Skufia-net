@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1.0.4'; // Bumped to fix optimistic UI race condition
+const CACHE_NAME = 'skufia-chat-v1.0.5'; // Bumped to fix fetch abort on mobile keyboard collapse
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

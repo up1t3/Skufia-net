@@ -16,12 +16,18 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
     }
     
     try {
-        const res = await fetch(`${window.API_BASE_URL}${endpoint}`, {
+        const fetchOptions = {
             method,
             headers,
             body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
             cache: 'no-store'
-        });
+        };
+        // Use keepalive for small JSON payloads to prevent mobile browser aborts during keyboard collapse
+        if (!(body instanceof FormData)) {
+            fetchOptions.keepalive = true;
+        }
+
+        const res = await fetch(`${window.API_BASE_URL}${endpoint}`, fetchOptions);
         if (res.status === 401) {
             console.warn('[API] 401 Unauthorized detected. Clearing session.');
             localStorage.removeItem('skuf_token');

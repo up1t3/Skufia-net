@@ -34,7 +34,7 @@ window.initChatCore = function() {
                     // Fallback: If for some reason the optimistic message was removed or failed to render
                     // (e.g. iOS Safari background fetch abort false-positive)
                     if (state.chat.currentRoomId == msg.room_id) {
-                        const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row[id^="msg-"]'));
+                        const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row.msg-optimistic'));
                         const matchedEl = pendingMsgs.find(el => {
                             if (el.id === `msg-${msg.id}`) return false; // Already has real ID
                             const txt = el.querySelector('.msg-text');
@@ -44,6 +44,7 @@ window.initChatCore = function() {
                         if (matchedEl) {
                             // Optimistic message is still in DOM. Confirm it!
                             matchedEl.id = `msg-${msg.id}`;
+                            matchedEl.classList.remove('msg-optimistic');
                         } else if (!document.getElementById(`msg-${msg.id}`)) {
                             console.warn('[WS] Own message missing from DOM (likely transient fetch error), rendering from WS fallback.');
                             renderChatMessage(msg);
@@ -1098,8 +1099,9 @@ window.initChatCore = function() {
                 };
                 console.log('[sendChatMsg] Optimistic render, id:', optimisticId, 'text:', savedContent.substring(0, 30));
                 renderChatMessage(optimisticMsg);
-                // Verify element was added
+                // Verify element was added and tag it
                 const rendered = document.getElementById(`msg-${optimisticId}`);
+                if (rendered) rendered.classList.add('msg-optimistic');
                 console.log('[sendChatMsg] Optimistic element in DOM:', !!rendered);
             }
 
@@ -1116,6 +1118,7 @@ window.initChatCore = function() {
                 const tempMsgEl = document.getElementById(`msg-${optimisticId}`);
                 if (tempMsgEl && response && response.id) {
                     tempMsgEl.id = `msg-${response.id}`;
+                    tempMsgEl.classList.remove('msg-optimistic');
                 }
             }
             
