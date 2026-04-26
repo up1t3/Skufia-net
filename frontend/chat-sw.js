@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v8'; // Force re-cache for mobile keyboard layout fix
+const CACHE_NAME = 'skufia-chat-v1777189957659'; // Force re-cache for mobile keyboard layout fix
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -143,13 +143,13 @@ self.addEventListener('notificationclick', function(event) {
             // If a window is already open, focus it
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if (client.url.includes('/chat.html') && 'focus' in client) {
+                if (client.url.includes('/messenger.html') && 'focus' in client) {
                     return client.focus();
                 }
             }
             // If no window is open, open a new one
             if (clients.openWindow) {
-                return clients.openWindow('/chat.html');
+                return clients.openWindow('/messenger.html');
             }
         })
     );

@@ -325,41 +325,44 @@ window.initChatCore = function() {
                 if (statusDot) statusDot.style.display = 'none';
             }
 
-            let badgeDiv = document.getElementById('chat-encryption-status');
-            if (!badgeDiv) {
-                badgeDiv = document.createElement('div');
-                badgeDiv.className = 'encryption-badge';
-                badgeDiv.id = 'chat-encryption-status';
-                const span = document.createElement('span');
-                badgeDiv.appendChild(span);
-                const profile = header.querySelector('.chat-header-profile');
-                if (profile) profile.appendChild(badgeDiv);
+            const e2eIndicator = document.getElementById('e2ee-indicator');
+            if (e2eIndicator) {
+                e2eIndicator.style.display = 'none';
             }
-            badgeDiv.innerHTML = '<span></span>';
         }
 
         // --- E2EE: INITIALIZATION ---
+        const e2eIndicator = document.getElementById('e2ee-indicator');
         if (type === 'private') {
-            const badge = document.getElementById('chat-encryption-status');
-            if (badge) {
-                badge.style.display = 'flex';
-                badge.innerHTML = '<span style="color:var(--text-dim)">⏳ Установка E2EE...</span>';
+            if (e2eIndicator) {
+                e2eIndicator.style.display = 'inline-flex';
+                e2eIndicator.style.background = 'rgba(255, 193, 7, 0.2)';
+                e2eIndicator.style.color = '#ffc107';
+                e2eIndicator.style.borderColor = '#ffc107';
                 
                 // Trigger Key Exchange!
                 if (typeof getOrEstablishSessionKey === 'function') {
                     try {
                         const key = await getOrEstablishSessionKey(roomId, receiverId);
                         if (key) {
-                            badge.innerHTML = '<span style="color:var(--accent-cyan)">🔒 E2EE Активно</span>';
+                            e2eIndicator.style.background = 'rgba(0, 255, 65, 0.2)';
+                            e2eIndicator.style.color = '#00ff41';
+                            e2eIndicator.style.borderColor = '#00ff41';
                         } else {
-                            badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ Собеседник без E2EE</span>';
+                            e2eIndicator.style.background = 'rgba(255, 51, 51, 0.2)';
+                            e2eIndicator.style.color = '#ff3333';
+                            e2eIndicator.style.borderColor = '#ff3333';
                         }
                     } catch(e) {
                         console.error('E2EE Error:', e);
-                        badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ Ошибка E2EE</span>';
+                        e2eIndicator.style.background = 'rgba(255, 51, 51, 0.2)';
+                        e2eIndicator.style.color = '#ff3333';
+                        e2eIndicator.style.borderColor = '#ff3333';
                     }
                 } else {
-                    badge.innerHTML = '<span style="color:var(--accent-amber)">⚠️ E2EE Недоступно</span>';
+                    e2eIndicator.style.background = 'rgba(255, 51, 51, 0.2)';
+                    e2eIndicator.style.color = '#ff3333';
+                    e2eIndicator.style.borderColor = '#ff3333';
                 }
             }
         }

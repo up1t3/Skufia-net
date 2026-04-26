@@ -64,6 +64,15 @@ class Profile(Base):
     last_seen = Column(DateTime, default=datetime.utcnow)
     user = relationship('User', backref=backref('profile', uselist=False))
 
+class PushSubscription(Base):
+    __tablename__ = 'push_subscriptions'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    endpoint = Column(String, unique=True, nullable=False)
+    p256dh = Column(String, nullable=False)
+    auth = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 class Category(Base):
     __tablename__ = 'categories'
     id = Column(Integer, primary_key=True, index=True)

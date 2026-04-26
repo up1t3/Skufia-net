@@ -44,6 +44,7 @@ class RTCManager {
                 <div class="rtc-video-container" id="rtc-video-container" style="display:none;">
                     <video id="rtc-remote-video" autoplay playsinline></video>
                     <video id="rtc-local-video" autoplay playsinline muted></video>
+                    <audio id="rtc-remote-audio" autoplay></audio>
                 </div>
                 
                 <div class="rtc-modal-content">
@@ -349,7 +350,9 @@ class RTCManager {
             this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
             
             if (this.isVideoCall) {
-                document.getElementById('rtc-local-video').srcObject = this.localStream;
+                const localVid = document.getElementById('rtc-local-video');
+                localVid.srcObject = this.localStream;
+                localVid.play().catch(e => console.error("Local video play error:", e));
                 document.getElementById('rtc-video-container').style.display = 'block';
                 document.getElementById('rtc-profile-info').style.display = 'none';
                 document.getElementById('rtc-modal-bg').style.display = 'none';
@@ -365,12 +368,18 @@ class RTCManager {
                 const hasVideo = event.streams[0].getVideoTracks().length > 0;
                 if (hasVideo || this.isVideoCall) {
                     this.remoteStream = event.streams[0];
-                    document.getElementById('rtc-remote-video').srcObject = event.streams[0];
+                    const remoteVid = document.getElementById('rtc-remote-video');
+                    remoteVid.srcObject = event.streams[0];
+                    remoteVid.play().catch(e => console.error("Remote video play error:", e));
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
                 }
-                document.getElementById('rtc-remote-audio').srcObject = event.streams[0];
+                const remoteAud = document.getElementById('rtc-remote-audio');
+                if (remoteAud) {
+                    remoteAud.srcObject = event.streams[0];
+                    remoteAud.play().catch(e => console.error("Remote audio play error:", e));
+                }
             };
 
             this.peerConnection.onicecandidate = (event) => {
@@ -422,7 +431,9 @@ class RTCManager {
             
             // Get preview stream without sending yet
             this.previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.currentFacingMode } });
-            document.getElementById('rtc-remote-video').srcObject = this.previewStream; // Preview fullscreen
+            const remoteVid = document.getElementById('rtc-remote-video');
+            remoteVid.srcObject = this.previewStream; // Preview fullscreen
+            remoteVid.play().catch(e => console.error("Preview play error:", e));
             document.getElementById('rtc-video-container').style.display = 'block';
             document.getElementById('rtc-profile-info').style.display = 'none';
             document.getElementById('rtc-modal-bg').style.display = 'none';
@@ -449,7 +460,9 @@ class RTCManager {
                 this.currentFacingMode = sourceType;
                 this.previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: sourceType } });
             }
-            document.getElementById('rtc-remote-video').srcObject = this.previewStream;
+            const remoteVid = document.getElementById('rtc-remote-video');
+            remoteVid.srcObject = this.previewStream;
+            remoteVid.play().catch(e => console.error("Preview source play error:", e));
         } catch (e) {
             console.error("Switch source error", e);
         }
@@ -468,9 +481,16 @@ class RTCManager {
         this.isVideoCall = true;
         
         // Move preview to local mini video
-        document.getElementById('rtc-local-video').srcObject = this.previewStream;
+        const localVid = document.getElementById('rtc-local-video');
+        localVid.srcObject = this.previewStream;
+        localVid.play().catch(e => console.error("Local play error:", e));
+        
         // The remote video will be set when we receive the remote track, currently keep it empty or show what we have
-        document.getElementById('rtc-remote-video').srcObject = this.remoteStream || null;
+        const remoteVid = document.getElementById('rtc-remote-video');
+        remoteVid.srcObject = this.remoteStream || null;
+        if (this.remoteStream) {
+            remoteVid.play().catch(e => console.error("Remote play error:", e));
+        }
         
         // Send renegotiation offer
         try {

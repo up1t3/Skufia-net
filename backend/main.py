@@ -204,6 +204,22 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 "payload": data.get('payload')
                             }
                             await manager.send_personal_message(relay_msg, target_id)
+                            
+                            if data.get('signal_type') == 'offer':
+                                # Trigger Web Push if target is not connected
+                                if target_id not in manager.active_connections:
+                                    from ws_manager import trigger_web_push
+                                    db = SessionLocal()
+                                    from database import User
+                                    sender_user = db.query(User).filter(User.id == user_id).first()
+                                    sender_name = sender_user.profile.nickname if sender_user and sender_user.profile else "Пользователь"
+                                    db.close()
+                                    push_payload = {
+                                        "title": f"Входящий видеозвонок",
+                                        "body": f"Вам звонит {sender_name}. Нажмите, чтобы ответить.",
+                                        "data": {"action": "call", "sender_id": user_id}
+                                    }
+                                    asyncio.create_task(trigger_web_push(target_id, push_payload))
                     elif data.get('type') == 'typing_indicator':
                         target_id = data.get('target')
                         if target_id:

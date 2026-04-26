@@ -22,7 +22,11 @@ class ConnectionManager:
         if profile:
             profile.is_online = True
             db.commit()
+            
         db.close()
+        # Broadcast status asynchronously
+        if profile:
+            await notify_profile_update(user_id, {"is_online": True})
 
     async def disconnect(self, user_id: int):
         if user_id in self.active_connections:
@@ -34,7 +38,11 @@ class ConnectionManager:
         if profile:
             profile.is_online = False
             db.commit()
+            
         db.close()
+        # Broadcast status asynchronously
+        if profile:
+            await notify_profile_update(user_id, {"is_online": False})
 
     async def send_personal_message(self, message: dict, user_id: int):
         try:
@@ -74,5 +82,33 @@ async def notify_profile_update(user_id: int, user_data: dict):
             await manager.broadcast_msg(relay_msg, user_ids=uids)
     except Exception as e:
         print(f"Failed to broadcast profile update: {e}")
+    finally:
+        db.close()
+
+async def trigger_web_push(user_id: int, payload: dict):
+    from database import SessionLocal, PushSubscription
+    import json
+    from webpush_utils import send_web_push
+    
+    db = SessionLocal()
+    try:
+        subs = db.query(PushSubscription).filter(PushSubscription.user_id == user_id).all()
+        for sub in subs:
+            sub_info = {
+                "endpoint": sub.endpoint,
+                "keys": {
+                    "p256dh": sub.p256dh,
+                    "auth": sub.auth
+                }
+            }
+            try:
+                success = send_web_push(sub_info, json.dumps(payload))
+                if not success:
+                    db.delete(sub)
+            except Exception as e:
+                print(f"Web push error to user {user_id}: {e}")
+        db.commit()
+    except Exception as e:
+        print(f"Failed to fetch push subscriptions: {e}")
     finally:
         db.close()

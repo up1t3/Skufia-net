@@ -341,8 +341,10 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
                 if other_u:
                     room_data["name"] = get_display_name(other_u)
                     room_data["other_user_id"] = other_u.id
-                    if other_u.profile and other_u.profile.avatar_url:
-                        room_data["avatar_url"] = other_u.profile.avatar_url
+                    if other_u.profile:
+                        if other_u.profile.avatar_url:
+                            room_data["avatar_url"] = other_u.profile.avatar_url
+                        room_data["is_online"] = other_u.profile.is_online
                         
         rooms_data.append(room_data)
         
@@ -1089,6 +1091,7 @@ def validate_magic_bytes(contents: bytes, expected_type: str = "all") -> bool:
             b'\x89PNG\r\n\x1a\n',# PNG
             b'GIF8',             # GIF
             b'RIFF',             # WEBP (requires checking bytes 8-11 for WEBP)
+            b'ftyp',             # HEIC/HEIF
         ],
         "document": [
             b'%PDF-',            # PDF
@@ -1286,9 +1289,25 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     }
     
     if room_id:
+        from ws_manager import trigger_web_push
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
         uids = [m.user_id for m in members]
         await manager.broadcast_msg(payload, user_ids=uids)
+        
+        # Trigger push notifications for offline members
+        for m in members:
+            if m.user_id != current_user.id:
+                profile = m.user.profile if m.user else None
+                # Check if offline OR not in active_connections
+                is_connected = m.user_id in manager.active_connections
+                if not is_connected:
+                    push_payload = {
+                        "title": f"Новое сообщение от {get_display_name(current_user)}",
+                        "body": "Зашифрованное сообщение" if msg.encryption_iv else msg.content[:50] + ("..." if len(msg.content) > 50 else ""),
+                        "data": {"roomId": room_id}
+                    }
+                    import asyncio
+                    asyncio.create_task(trigger_web_push(m.user_id, push_payload))
         
     # --- Скуф-GPT (Бот "База") Заглушка ---
     if msg.content and msg.content.strip().startswith('@baza '):
@@ -1602,11 +1621,11 @@ def leave_or_delete_room(room_id: int, current_user: User = Depends(get_current_
 
 @router.post('/me/avatar/upload')
 async def upload_avatar_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Upload a profile avatar image file (max 3 MB)"""
-    MAX_AVATAR_SIZE = 3 * 1024 * 1024
+    """Upload a profile avatar image file (max 10 MB)"""
+    MAX_AVATAR_SIZE = 10 * 1024 * 1024
     contents = await file.read()
     if len(contents) > MAX_AVATAR_SIZE:
-        raise HTTPException(status_code=413, detail="Аватарка не должна превышать 3 МБ")
+        raise HTTPException(status_code=413, detail="Аватарка не должна превышать 10 МБ")
 
     if not validate_magic_bytes(contents, expected_type="image"):
         raise HTTPException(status_code=415, detail="Недопустимый формат изображения")
@@ -1638,6 +1657,43 @@ async def upload_avatar_file(file: UploadFile = FastAPIFile(...), current_user: 
 
 from pydantic import BaseModel
 from typing import List, Optional
+
+# --- PUSH NOTIFICATIONS ---
+
+class PushSubscriptionInput(BaseModel):
+    endpoint: str
+    keys: dict
+
+@router.get('/notifications/vapidPublicKey')
+def get_vapid_public_key():
+    from webpush_utils import get_vapid_public_key
+    return {"publicKey": get_vapid_public_key()}
+
+@router.post('/notifications/subscribe')
+def subscribe_push(data: PushSubscriptionInput, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from database import PushSubscription
+    sub = db.query(PushSubscription).filter(PushSubscription.endpoint == data.endpoint).first()
+    if sub:
+        sub.user_id = current_user.id
+        sub.p256dh = data.keys.get("p256dh", "")
+        sub.auth = data.keys.get("auth", "")
+    else:
+        sub = PushSubscription(
+            user_id=current_user.id,
+            endpoint=data.endpoint,
+            p256dh=data.keys.get("p256dh", ""),
+            auth=data.keys.get("auth", "")
+        )
+        db.add(sub)
+    db.commit()
+    return {"status": "subscribed"}
+
+@router.delete('/notifications/unsubscribe')
+def unsubscribe_push(endpoint: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from database import PushSubscription
+    db.query(PushSubscription).filter(PushSubscription.endpoint == endpoint, PushSubscription.user_id == current_user.id).delete()
+    db.commit()
+    return {"status": "unsubscribed"}
 
 class ContactItem(BaseModel):
     name: str

@@ -158,6 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         reg.update();
                     }
                 });
+
+                // Request push permissions if granted/prompt
+                if (Notification.permission === 'granted') {
+                    window.subscribeToPushNotifications(reg);
+                }
             }).catch(err => {
                 console.error('SW registration failed:', err);
             });
@@ -174,6 +179,72 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
+
+    // Push Notifications Logic
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
+
+    window.subscribeToPushNotifications = async function(reg = null) {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        try {
+            if (!reg) reg = await navigator.serviceWorker.ready;
+            
+            // Get public key from server
+            const keyRes = await apiRequest('/notifications/vapidPublicKey');
+            if (!keyRes || !keyRes.publicKey) return;
+            
+            const applicationServerKey = urlBase64ToUint8Array(keyRes.publicKey);
+            
+            const subscription = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: applicationServerKey
+            });
+
+            // Send subscription to server
+            await apiRequest('/notifications/subscribe', 'POST', subscription.toJSON());
+            addLog('Push-уведомления успешно активированы', 'success');
+        } catch (err) {
+            console.error('Failed to subscribe to push notifications', err);
+            addLog('Ошибка активации уведомлений', 'warning');
+        }
+    };
+    
+    window.unsubscribeFromPushNotifications = async function() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const subscription = await reg.pushManager.getSubscription();
+            if (subscription) {
+                await subscription.unsubscribe();
+                await apiRequest(`/notifications/unsubscribe?endpoint=${encodeURIComponent(subscription.endpoint)}`, 'DELETE');
+                addLog('Push-уведомления отключены', 'info');
+            }
+        } catch (err) {
+            console.error('Failed to unsubscribe', err);
+        }
+    };
+
+    window.togglePushNotifications = async function(checkbox) {
+        if (checkbox.checked) {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                await window.subscribeToPushNotifications();
+            } else {
+                checkbox.checked = false;
+                if (window.showToast) window.showToast('⚠️ Разрешение на уведомления отклонено в браузере');
+            }
+        } else {
+            await window.unsubscribeFromPushNotifications();
+        }
+    };
 
     // Phase 5: Install Prompt Logic
     let deferredPrompt;
@@ -380,6 +451,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (err) {
                 console.error('Failed to load profile details', err);
+            }
+            
+            // Set push notifications toggle state
+            const pushToggle = document.getElementById('push-notifications-toggle');
+            if (pushToggle) {
+                pushToggle.checked = ('Notification' in window && Notification.permission === 'granted');
             }
         });
     }

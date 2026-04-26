@@ -18,3 +18,4 @@ aioboto3
 psycopg2-binary
 broadcaster
 aioredis
+pywebpush
