@@ -76,7 +76,10 @@ function setupPinchToZoom(imgElement) {
             const scaleChange = currentDistance / initialDistance;
             currentScale = Math.min(Math.max(1, currentScale * scaleChange), 5); // limit scale 1x - 5x
             
-            imgElement.style.transform = \`scale(\${currentScale})\`;
+            if (imgElement) {
+                imgElement.style.transform = `scale(${currentScale})`;
+                imgElement.style.cursor = currentScale > 1 ? 'grab' : 'auto';
+            }
             initialDistance = currentDistance; // reset for continuous smooth scaling
         }
     });

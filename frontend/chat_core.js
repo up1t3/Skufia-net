@@ -972,7 +972,7 @@ window.initChatCore = function() {
         history.scrollTop = history.scrollHeight;
     }
 
-    async function sendChatMsg(directCaption = null) {
+    window.sendChatMsg = async function(directCaption = null) {
         console.log('[sendChatMsg] >>> ENTER, directCaption type:', typeof directCaption, 'val:', typeof directCaption === 'string' ? directCaption.substring(0,20) : String(directCaption).substring(0,20));
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
         
@@ -989,6 +989,9 @@ window.initChatCore = function() {
         if (input && input.dataset.sending === 'true' && typeof directCaption !== 'string') {
             console.warn('[sendChatMsg] SKIP: double-send guard. sending=', input.dataset.sending);
             return;
+        }
+        if (typeof directCaption === 'object' && directCaption instanceof Event) {
+             directCaption = null; // ignore event objects passed via inline onclick
         }
         if (input) {
             input.dataset.sending = 'true';
@@ -1880,7 +1883,7 @@ window.initChatCore = function() {
             }
         });
         chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMsg(); }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendChatMsg(); }
         });
     }
     if (sendChatBtn) {
@@ -2199,7 +2202,7 @@ window.initChatCore = function() {
                 // [FIX] Save caption, send voice, then clear - do NOT restore old value
                 const captionToSend = msgInput ? msgInput.value.trim() : '';
                 state.pendingFile = { url: data.audio_url, name: 'Voice Message' };
-                await sendChatMsg(captionToSend || null);
+                await window.sendChatMsg(captionToSend || null);
                 // input is already cleared by sendChatMsg - do not restore
             } catch(e) {
                 addLog('Ошибка отправки голосового сообщения', 'error');

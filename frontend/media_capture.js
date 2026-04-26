@@ -31,7 +31,7 @@ async function startAudioRecording() {
             stopWaveform();
             
             // Convert blob to File and push to pendingFiles
-            const file = new File([blob], \`voice_message_\${Date.now()}.webm\`, { type: 'audio/webm' });
+            const file = new File([blob], `voice_message_${Date.now()}.webm`, { type: 'audio/webm' });
             
             // Add a visual preview immediately for the user
             if (!window.state.pendingFiles) window.state.pendingFiles = [];
@@ -40,7 +40,7 @@ async function startAudioRecording() {
             const preview = document.getElementById('chat-file-preview');
             const nameEl = document.getElementById('chat-file-name');
             if (preview) preview.style.display = 'flex';
-            if (nameEl) nameEl.textContent = \`🎤 Голосовое сообщение (\${(file.size / 1024).toFixed(1)} KB) - Готово к отправке\`;
+            if (nameEl) nameEl.textContent = `🎤 Голосовое сообщение (${(file.size / 1024).toFixed(1)} KB) - Готово к отправке`;
             
             // Fake upload directly into state since voice is singular in intent
             // In a real app we'd upload directly or pass to uploadChatFile.
@@ -55,35 +55,49 @@ async function startAudioRecording() {
         if (recordBtn) recordBtn.classList.add('recording');
         
         // Show waveform canvas and timer
-        let waveformContainer = document.getElementById('audio-waveform-container');
-        if (!waveformContainer) {
-            const chatInputRow = document.querySelector('.chat-input-row');
-            waveformContainer = document.createElement('div');
-            waveformContainer.id = 'audio-waveform-container';
-            waveformContainer.className = 'waveform-container';
-            waveformContainer.innerHTML = \`
-                <div class="recording-indicator"></div>
-                <span id="recording-timer">0:00</span>
-                <canvas id="waveform-canvas" width="100" height="30"></canvas>
-                <button class="capsule-btn stop-btn" onclick="stopAudioRecording()" title="Остановить">⏹</button>
-                <button class="capsule-btn cancel-btn" onclick="cancelAudioRecording()" title="Отменить">✖</button>
-            \`;
-            chatInputRow.parentNode.insertBefore(waveformContainer, chatInputRow);
+        let waveformContainer = document.getElementById('recording-overlay');
+        let canvasId = 'recording-visualizer';
+        if (waveformContainer) {
+            waveformContainer.style.display = 'flex';
+            const cancelBtn = document.getElementById('cancel-record-btn');
+            const stopBtn = document.getElementById('send-record-btn');
+            if (cancelBtn) cancelBtn.onclick = cancelAudioRecording;
+            if (stopBtn) stopBtn.onclick = stopAudioRecording;
+        } else {
+            waveformContainer = document.getElementById('audio-waveform-container');
+            if (!waveformContainer) {
+                const chatInputRow = document.querySelector('.chat-input-row');
+                if (chatInputRow) {
+                    waveformContainer = document.createElement('div');
+                    waveformContainer.id = 'audio-waveform-container';
+                    waveformContainer.className = 'waveform-container';
+                    waveformContainer.style.cssText = 'position:absolute; left:0; top:0; width:100%; height:100%; background:var(--bg-dark); border-radius:30px; align-items:center; z-index:10; padding:0 5px 0 15px; gap:10px; display:flex;';
+                    waveformContainer.innerHTML = `
+                        <div class="recording-indicator" style="width:10px; height:10px; border-radius:50%; background:var(--accent-red,#ff4444); animation:blink 1s infinite;"></div>
+                        <span id="recording-timer" style="color:var(--accent-red,#ff4444); font-weight:600;">0:00</span>
+                        <canvas id="waveform-canvas" style="flex:1; height:24px;"></canvas>
+                        <button class="capsule-btn stop-btn" onclick="stopAudioRecording()" title="Остановить">⏹</button>
+                        <button class="capsule-btn cancel-btn" onclick="cancelAudioRecording()" title="Отменить">✖</button>
+                    `;
+                    chatInputRow.parentNode.insertBefore(waveformContainer, chatInputRow);
+                }
+            }
+            if (waveformContainer) waveformContainer.style.display = 'flex';
+            canvasId = 'waveform-canvas';
         }
-        waveformContainer.style.display = 'flex';
-        document.querySelector('.chat-input-row').style.display = 'none';
+
 
         // Timer
         recordingStartTime = Date.now();
         const timerEl = document.getElementById('recording-timer');
         recordingTimerInterval = setInterval(() => {
-            const diff = Math.floor((Date.now() - recordingStartTime) / 1000);
-            const mins = Math.floor(diff / 60);
-            const secs = (diff % 60).toString().padStart(2, '0');
-            if (timerEl) timerEl.textContent = \`\${mins}:\${secs}\`;
+            const seconds = Math.floor((Date.now() - recordingStartTime) / 1000);
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            if (timerEl) timerEl.textContent = `${mins}:${secs}`;
         }, 1000);
 
-        setupWaveform();
+        setupWaveform(canvasId);
         mediaRecorder.start(200); // chunk every 200ms
         
     } catch (e) {
@@ -92,7 +106,7 @@ async function startAudioRecording() {
     }
 }
 
-function setupWaveform() {
+function setupWaveform(canvasId = 'waveform-canvas') {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioContext.createAnalyser();
     source = audioContext.createMediaStreamSource(audioStream);
@@ -102,7 +116,7 @@ function setupWaveform() {
     const bufferLength = analyser.frequencyBinCount;
     dataArray = new Uint8Array(bufferLength);
     
-    const canvas = document.getElementById('waveform-canvas');
+    const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const canvasCtx = canvas.getContext('2d');
     
@@ -133,8 +147,12 @@ function stopWaveform() {
     if (audioContext) audioContext.close();
     clearInterval(recordingTimerInterval);
     
+    const overlay = document.getElementById('recording-overlay');
+    if (overlay) overlay.style.display = 'none';
+    
     const waveformContainer = document.getElementById('audio-waveform-container');
     if (waveformContainer) waveformContainer.style.display = 'none';
+    
     const chatInputRow = document.querySelector('.chat-input-row');
     if (chatInputRow) chatInputRow.style.display = 'flex';
     
