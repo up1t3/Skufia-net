@@ -172,8 +172,29 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'SW_UPDATED') {
                     console.log('[PWA] New SW activated (' + event.data.version + '), update available.');
-                    if (window.showToast) {
-                        window.showToast('✅ Доступно обновление. Перезагрузите для применения.', 10000);
+                    if (!document.getElementById('pwa-update-banner')) {
+                        const updateBanner = document.createElement('div');
+                        updateBanner.id = 'pwa-update-banner';
+                        updateBanner.innerHTML = `
+                            <div style="background: rgba(10, 15, 25, 0.95); border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2); border-radius: 12px; padding: 15px 20px; display: flex; align-items: center; gap: 15px; color: #fff; backdrop-filter: blur(10px);">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+                                        <span style="color: var(--accent-cyan);">🚀</span> Доступно обновление!
+                                    </div>
+                                    <div style="font-size: 13px; color: var(--text-dim);">Установлена новая версия Skufia.</div>
+                                </div>
+                                <button onclick="window.location.reload(true)" class="cyber-btn primary-btn" style="padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                    ПЕРЕЗАГРУЗИТЬ
+                                </button>
+                                <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 5px; margin-left: -5px;" title="Закрыть">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        `;
+                        updateBanner.style.cssText = 'position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); z-index: 999999; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: max-content; max-width: 95vw;';
+                        document.body.appendChild(updateBanner);
+                        setTimeout(() => { updateBanner.style.bottom = '30px'; }, 100);
                     }
                 }
             });
