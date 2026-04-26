@@ -4,7 +4,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setAppHeight() {
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const offset = window.visualViewport ? window.visualViewport.offsetTop : 0;
         document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        document.documentElement.style.setProperty('--app-offset', `${offset}px`);
         
         // Scroll adjustment for chat history so messages stick to the bottom when keyboard appears
         const historyEl = document.getElementById('chat-history');

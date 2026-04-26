@@ -57,10 +57,23 @@ window.initChatCore = function() {
                             );
                             msg.text = msg.content;
                             msg.is_secure = true;
-                        } catch (e) {
-                            // Key mismatch — show as encrypted, don't crash
-                            msg.content = '🔒 Зашифрованное сообщение';
-                            msg.text = msg.content;
+                        } catch(e) {
+                            try {
+                                const newKey = await getOrEstablishSessionKey(msg.room_id, msg.sender_id, true);
+                                msg.content = await window.CryptoManager.decryptWithKeyHistory(
+                                    newKey,
+                                    msg.content,
+                                    msg.iv,
+                                    msg.key_version
+                                );
+                                msg.text = msg.content;
+                                msg.is_secure = true;
+                            } catch (e2) {
+                                console.error("Decryption failed for incoming msg even after key refresh:", e2);
+                                msg.content = '🔒 [Не удалось расшифровать сообщение]';
+                                msg.text = msg.content;
+                                msg.is_secure = false;
+                            }
                         }
                     } else {
                         // No session key at all — show as encrypted
@@ -87,8 +100,17 @@ window.initChatCore = function() {
                     if (txtEl) {
                         let decryptedContent = data.content;
                         if (data.iv && state.chat.sessionKeys[data.room_id]) {
-                            try { decryptedContent = await window.CryptoManager.decryptWithKeyHistory(state.chat.sessionKeys[data.room_id], data.content, data.iv, data.key_version); } 
-                            catch(e) {}
+                            try { 
+                                decryptedContent = await window.CryptoManager.decryptWithKeyHistory(state.chat.sessionKeys[data.room_id], data.content, data.iv, data.key_version); 
+                            } 
+                            catch(e) {
+                                try {
+                                    const newKey = await getOrEstablishSessionKey(data.room_id, data.sender_id, true);
+                                    decryptedContent = await window.CryptoManager.decryptWithKeyHistory(newKey, data.content, data.iv, data.key_version);
+                                } catch (e2) {
+                                    // Leave as is if we still can't decrypt
+                                }
+                            }
                         }
                         txtEl.innerText = decryptedContent; 
                     }
@@ -217,21 +239,40 @@ window.initChatCore = function() {
 
             const chip = document.createElement('div');
             chip.className = 'folder-selected-chip';
+            chip.style.cssText = 'display:flex;align-items:center;padding:6px 12px;background:rgba(0,242,255,0.05);border:1px solid rgba(0,242,255,0.2);border-radius:20px;gap:10px;justify-content:space-between;';
             
+            const leftDiv = document.createElement('div');
+            leftDiv.style.cssText = 'display:flex;align-items:center;gap:10px;';
+            
+            // Avatar
+            const avatarDiv = document.createElement('div');
+            const initial = (room.name || room.room_name || '?').charAt(0).toUpperCase();
+            avatarDiv.style.cssText = 'width:24px;height:24px;border-radius:50%;background:var(--accent-cyan);color:#000;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;';
+            avatarDiv.textContent = initial;
+
             const nameSpan = document.createElement('span');
-            nameSpan.textContent = room.name || 'Chat';
+            nameSpan.textContent = room.name || room.room_name || 'Chat';
             nameSpan.style.color = 'var(--text-main)';
             nameSpan.style.fontWeight = '500';
+            nameSpan.style.fontSize = '13px';
+            nameSpan.style.whiteSpace = 'nowrap';
+            nameSpan.style.overflow = 'hidden';
+            nameSpan.style.textOverflow = 'ellipsis';
+            nameSpan.style.maxWidth = '250px';
+            
+            leftDiv.appendChild(avatarDiv);
+            leftDiv.appendChild(nameSpan);
             
             const removeBtn = document.createElement('div');
             removeBtn.className = 'folder-selected-chip-remove';
-            removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="var(--text-dim)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            removeBtn.style.cursor = 'pointer';
             removeBtn.onclick = () => {
                 window._tempFolderRooms.delete(roomId);
                 window.renderFolderSelectedChats();
             };
 
-            chip.appendChild(nameSpan);
+            chip.appendChild(leftDiv);
             chip.appendChild(removeBtn);
             container.appendChild(chip);
         });
@@ -260,7 +301,7 @@ window.initChatCore = function() {
         
         let availableRooms = state.chat.rooms || [];
         if (query) {
-            availableRooms = availableRooms.filter(r => (r.name || '').toLowerCase().includes(query));
+            availableRooms = availableRooms.filter(r => (r.name || r.room_name || '').toLowerCase().includes(query));
         }
 
         if (availableRooms.length === 0) {
@@ -269,8 +310,47 @@ window.initChatCore = function() {
         }
 
         availableRooms.forEach(room => {
-            const label = document.createElement('label');
-            label.className = 'cyber-checkbox-wrapper';
+            const row = document.createElement('div');
+            row.className = 'folder-chat-select-row';
+            row.style.cssText = 'display:flex;align-items:center;padding:10px 20px;gap:15px;cursor:pointer;transition:background 0.2s;';
+            row.onmouseover = () => row.style.background = 'rgba(255,255,255,0.03)';
+            row.onmouseout = () => row.style.background = 'transparent';
+            
+            // Toggle logic when clicking the row
+            row.onclick = (e) => {
+                if (e.target.tagName === 'INPUT') return; // let checkbox handle itself
+                const cb = row.querySelector('.folder-room-checkbox-modal');
+                cb.checked = !cb.checked;
+            };
+
+            const avatarDiv = document.createElement('div');
+            const initial = (room.name || room.room_name || '?').charAt(0).toUpperCase();
+            avatarDiv.style.cssText = 'width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg, var(--accent-cyan), #00a2ff);color:#000;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;flex-shrink:0;';
+            avatarDiv.textContent = initial;
+            
+            const infoDiv = document.createElement('div');
+            infoDiv.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;';
+            
+            const nameSpan = document.createElement('div');
+            nameSpan.textContent = room.name || room.room_name || 'Chat';
+            nameSpan.style.color = 'var(--text-main)';
+            nameSpan.style.fontSize = '15px';
+            nameSpan.style.fontWeight = '500';
+            nameSpan.style.whiteSpace = 'nowrap';
+            nameSpan.style.overflow = 'hidden';
+            nameSpan.style.textOverflow = 'ellipsis';
+            
+            const subSpan = document.createElement('div');
+            subSpan.textContent = room.type === 'private' ? 'Личный чат' : 'Группа';
+            subSpan.style.color = 'var(--text-dim)';
+            subSpan.style.fontSize = '13px';
+            
+            infoDiv.appendChild(nameSpan);
+            infoDiv.appendChild(subSpan);
+            
+            const checkWrapper = document.createElement('div');
+            checkWrapper.className = 'cyber-checkbox-wrapper';
+            checkWrapper.style.margin = '0';
             
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -281,14 +361,12 @@ window.initChatCore = function() {
                 checkbox.checked = true;
             }
             
-            const nameSpan = document.createElement('span');
-            nameSpan.textContent = room.name || 'Chat';
-            nameSpan.style.color = 'var(--text-primary)';
-            nameSpan.style.fontSize = '14px';
+            checkWrapper.appendChild(checkbox);
             
-            label.appendChild(checkbox);
-            label.appendChild(nameSpan);
-            container.appendChild(label);
+            row.appendChild(avatarDiv);
+            row.appendChild(infoDiv);
+            row.appendChild(checkWrapper);
+            container.appendChild(row);
         });
     };
 
@@ -479,9 +557,24 @@ window.initChatCore = function() {
     }
 
     async function selectChatRoom(roomId, roomName, type, receiverId, myRole) {
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput && state.chat.currentRoomId && state.chat.currentRoomId !== roomId) {
+            const currentVal = chatInput.value;
+            if (currentVal.trim()) {
+                localStorage.setItem(`skuf_draft_${state.chat.currentRoomId}`, currentVal);
+            } else {
+                localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
+            }
+        }
+        
         state.chat.currentRoomId = roomId;
         state.chat.currentRoomType = type;
         state.chat.receiverId = receiverId;
+
+        if (chatInput) {
+            const draft = localStorage.getItem(`skuf_draft_${roomId}`);
+            chatInput.value = draft || '';
+        }
 
         const chatHistoryEl = document.getElementById('chat-history');
         const header = document.getElementById('chat-header');
@@ -604,7 +697,19 @@ window.initChatCore = function() {
                                 );
                                 m.is_secure = true;
                             } catch(e) {
-                                m.text = '🔒 Зашифрованное сообщение';
+                                try {
+                                    const newKey = await getOrEstablishSessionKey(roomId, m.sender_id, true);
+                                    m.text = await window.CryptoManager.decryptWithKeyHistory(
+                                        newKey,
+                                        m.text,
+                                        m.iv,
+                                        m.key_version
+                                    );
+                                    m.is_secure = true;
+                                } catch(e2) {
+                                    m.text = '🔒 [Не удалось расшифровать сообщение]';
+                                    m.is_secure = false;
+                                }
                             }
                         } else {
                             // No key — show friendly placeholder
@@ -632,6 +737,30 @@ window.initChatCore = function() {
         const currentUsername = state.user ? state.user.username : null;
         const isMe = (msg.sender_id && msg.sender_id === currentUserId) || (msg.sender && msg.sender === currentUsername);
 
+        if (msg.message_type === 'missed_call') {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = `msg-row`;
+            rowDiv.id = `msg-${msg.id}`;
+            rowDiv.style.justifyContent = 'center';
+
+            const bubble = document.createElement('div');
+            bubble.className = `msg-bubble`;
+            bubble.style.cssText = 'background:rgba(239, 68, 68, 0.1); border:1px solid rgba(239, 68, 68, 0.2); color:var(--text-main); font-size:13px; font-weight:500; display:flex; align-items:center; gap:8px; padding:6px 12px; border-radius:12px; margin: 5px auto;';
+
+            // Phone down / missed call icon
+            const svgIcon = `<svg viewBox="0 0 24 24" width="16" height="16" stroke="#ef4444" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 13.5l-2.6-2.6a1.5 1.5 0 0 1 0-2.1l2.8-2.8a1.5 1.5 0 0 1 2.1 0l2.3 2.3c.4.4 1 .5 1.5.3A12.9 12.9 0 0 0 20 5.4a1.5 1.5 0 0 1 .3-1.5l-2.3-2.3a1.5 1.5 0 0 1 0-2.1L20.8 -3.3a1.5 1.5 0 0 1 2.1 0l2.6 2.6c1 1 1 2.6.2 3.8A17.9 17.9 0 0 1 14.4 14.2c-1.2.8-2.8.8-3.8-.2z"></path><line x1="23" y1="1" x2="1" y2="23"></line></svg>`;
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = isMe ? 'Исходящий вызов (нет ответа)' : 'Пропущенный вызов';
+            
+            bubble.innerHTML = svgIcon;
+            bubble.appendChild(textSpan);
+            rowDiv.appendChild(bubble);
+            history.appendChild(rowDiv);
+            history.scrollTop = history.scrollHeight;
+            return;
+        }
+
         const dateObj = new Date(msg.timestamp);
         let timeStr = msg.timestamp || '00:00';
         if (!isNaN(dateObj.getTime())) {
@@ -641,8 +770,9 @@ window.initChatCore = function() {
         const fileUrl = msg.file_url || null;
         let fileHtml = '';
         if (fileUrl) {
+            const BASE_URL = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : '';
             const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
-            const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|opus)$/i.test(fileUrl);
+            const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|mp4|opus)(\?.*)?$/i.test(fileUrl);
             if (isImage) {
                 fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
             } else if (isAudio) {
@@ -693,12 +823,24 @@ window.initChatCore = function() {
             rowDiv.appendChild(avatarDiv);
         }
 
+        // Check for missed call system message
+        let rawText = msg.text || msg.content || '';
+        const isMissedCall = rawText.includes('Пропущенный') && (rawText.includes('аудиозвонок') || rawText.includes('видеозвонок'));
+
         // Bubble
         const bubble = document.createElement('div');
-        bubble.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+        if (isMissedCall) {
+            bubble.className = 'msg-bubble system-msg missed-call-msg';
+            // Hide avatar for system messages
+            if (rowDiv.querySelector('.msg-avatar')) {
+                rowDiv.querySelector('.msg-avatar').style.display = 'none';
+            }
+        } else {
+            bubble.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
+        }
 
         // Sender name (for received only)
-        if (!isMe) {
+        if (!isMe && !isMissedCall) {
             const senderNameDiv = document.createElement('div');
             senderNameDiv.className = 'msg-sender-name';
             senderNameDiv.textContent = msg.sender || '';
@@ -717,16 +859,26 @@ window.initChatCore = function() {
         // Text
         const textDiv = document.createElement('div');
         textDiv.className = 'msg-text';
-        let rawText = msg.text || msg.content || '';
-        // Safe escaping then linkify
-        const tempDiv = document.createElement('div');
-        tempDiv.textContent = rawText;
-        let safeText = tempDiv.innerHTML;
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        safeText = safeText.replace(urlRegex, function(url) {
-            return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:underline;">${url}</a>`;
-        });
-        textDiv.innerHTML = safeText;
+        
+        if (isMissedCall) {
+            const icon = rawText.includes('📹') ? '📹' : '📞';
+            const callType = rawText.includes('видеозвонок') ? 'видеозвонок' : 'аудиозвонок';
+            const name = isMe ? 'вас' : (msg.sender || 'пользователя');
+            textDiv.innerHTML = `
+                <span class="missed-call-icon">${icon}</span>
+                <span class="missed-call-text">Пропущенный ${callType} от <b>${name}</b></span>
+            `;
+        } else {
+            // Safe escaping then linkify
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = rawText;
+            let safeText = tempDiv.innerHTML;
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            safeText = safeText.replace(urlRegex, function(url) {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:underline;">${url}</a>`;
+            });
+            textDiv.innerHTML = safeText;
+        }
         bubble.appendChild(textDiv);
 
         // File attachment
@@ -843,6 +995,7 @@ window.initChatCore = function() {
         let savedContent = content;
         let savedFile = state.pendingFile ? { ...state.pendingFile } : null;
         let savedReplyId = state.chat.replyToId;
+        let optimisticId = Date.now();
 
         let payload = {
             content,
@@ -893,7 +1046,7 @@ window.initChatCore = function() {
             if (window.cancelReply) window.cancelReply();
             clearChatFile();
 
-            let optimisticId = Date.now();
+            optimisticId = Date.now();
             if (!state.chat.editingId) {
                 const optimisticMsg = {
                     id: optimisticId,
@@ -950,7 +1103,10 @@ window.initChatCore = function() {
                 input.dataset.sending = 'false';
                 // On success input was already cleared optimistically above.
                 // On failure catch block restored savedContent. Do NOT clear again here.
-                if (sendSucceeded) input.value = '';
+                if (sendSucceeded) {
+                    input.value = '';
+                    localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
+                }
                 input.focus();
             }
         }

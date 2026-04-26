@@ -473,16 +473,18 @@
         addLog('✅ Личность создана и сохранена в облаке', 'success');
     }
 
-    async function getOrEstablishSessionKey(roomId, receiverId) {
-        if (state.chat.sessionKeys[roomId]) return state.chat.sessionKeys[roomId];
-        try {
-            const cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
-            if (cached) {
-                state.chat.sessionKeys[roomId] = cached;
-                return cached;
+    async function getOrEstablishSessionKey(roomId, receiverId, force = false) {
+        if (!force && state.chat.sessionKeys[roomId]) return state.chat.sessionKeys[roomId];
+        if (!force) {
+            try {
+                const cached = await vaultGet(IDB_STORE_SESSION, `room_${roomId}`);
+                if (cached) {
+                    state.chat.sessionKeys[roomId] = cached;
+                    return cached;
+                }
+            } catch(e) {
+                console.warn('IDB session read error:', e);
             }
-        } catch(e) {
-            console.warn('IDB session read error:', e);
         }
 
         try {

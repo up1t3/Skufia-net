@@ -1188,7 +1188,7 @@ async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: U
     ext = os.path.splitext(safe_filename)[1] or '.webm'
     
     # Enforce safe audio extensions
-    if ext.lower() not in ['.webm', '.ogg', '.mp3', '.wav', '.flac']:
+    if ext.lower() not in ['.webm', '.ogg', '.mp3', '.wav', '.flac', '.m4a', '.mp4', '.aac']:
         ext = '.webm'
         
     unique_name = f"{uuid.uuid4().hex}{ext}"

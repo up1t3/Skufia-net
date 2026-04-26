@@ -17,6 +17,10 @@ import json
 import asyncio
 from broadcaster import Broadcast
 import os
+import datetime
+from sqlalchemy import func
+
+pending_rtc_calls = {}
 from auth import decode_token, router as auth_router
 from rate_limit import check_rate_limit
 try:
@@ -206,6 +210,36 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                             await manager.send_personal_message(relay_msg, target_id)
                             
                             if data.get('signal_type') == 'offer':
+                                # Start 45s timeout for missed calls
+                                call_key = f"{user_id}_{target_id}"
+                                async def missed_call_timeout(u_id, t_id):
+                                    await asyncio.sleep(45)
+                                    if pending_rtc_calls.get(f"{u_id}_{t_id}"):
+                                        del pending_rtc_calls[f"{u_id}_{t_id}"]
+                                        cancel_msg = {"type": "rtc_signal", "sender_id": t_id, "signal_type": "end", "payload": None}
+                                        await manager.send_personal_message(cancel_msg, u_id)
+                                        await manager.send_personal_message(cancel_msg, t_id)
+                                        db = SessionLocal()
+                                        try:
+                                            from database import Message, Room, RoomMember
+                                            rooms_query = db.query(Room.id).filter(Room.type == 'private').join(RoomMember).filter(RoomMember.user_id.in_([u_id, t_id])).group_by(Room.id).having(func.count(Room.id) == 2).all()
+                                            if rooms_query:
+                                                r_id = rooms_query[0][0]
+                                                msg = Message(room_id=r_id, sender_id=u_id, message_type='missed_call', content="Пропущенный вызов", created_at=datetime.datetime.utcnow())
+                                                db.add(msg)
+                                                db.commit()
+                                                db.refresh(msg)
+                                                from routers.chat import format_message
+                                                msg_data = format_message(msg)
+                                                await manager.send_personal_message({"type": "new_message", "message": msg_data}, u_id)
+                                                await manager.send_personal_message({"type": "new_message", "message": msg_data}, t_id)
+                                        except Exception as e:
+                                            print(f"Missed call timeout error: {e}")
+                                        finally:
+                                            db.close()
+                                
+                                pending_rtc_calls[call_key] = asyncio.create_task(missed_call_timeout(user_id, target_id))
+
                                 # Trigger Web Push if target is not connected
                                 if target_id not in manager.active_connections:
                                     from ws_manager import trigger_web_push
@@ -220,6 +254,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                         "data": {"action": "call", "sender_id": user_id}
                                     }
                                     asyncio.create_task(trigger_web_push(target_id, push_payload))
+                                    
+                            if data.get('signal_type') in ['answer', 'end', 'reject']:
+                                call_key = f"{target_id}_{user_id}"
+                                if call_key in pending_rtc_calls:
+                                    pending_rtc_calls[call_key].cancel()
+                                    del pending_rtc_calls[call_key]
+                                call_key_self = f"{user_id}_{target_id}"
+                                if call_key_self in pending_rtc_calls:
+                                    pending_rtc_calls[call_key_self].cancel()
+                                    del pending_rtc_calls[call_key_self]
                     elif data.get('type') == 'typing_indicator':
                         target_id = data.get('target')
                         if target_id:

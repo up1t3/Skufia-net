@@ -114,8 +114,9 @@ body {
     font-family: var(--font-main);
     overflow: hidden;
     /* Use --app-height so JS can keep it in sync with visualViewport */
-    height: var(--app-height);
-    max-height: var(--app-height);
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
+    transform: translateY(var(--app-offset, 0px));
     margin: 0;
     padding: 0;
     background-image: 
@@ -157,7 +158,7 @@ body::after {
 .app-container {
     display: flex;
     flex-direction: column;
-    height: var(--app-height);
+    height: var(--app-height, 100dvh);
     width: 100%;
     overflow: hidden;
     padding: 20px;
@@ -1332,6 +1333,11 @@ body.super-user .nav-btn.active {
     cursor: pointer;
 }
 
+.chat-messages::before {
+    content: '';
+    margin-top: auto;
+}
+
 .chat-messages {
     flex-grow: 1;
     min-height: 0;
@@ -1469,6 +1475,7 @@ body.super-user .nav-btn.active {
 
 /* Audio player inside messages */
 .msg-audio-player {
+    min-width: 240px;
     margin-top: 4px;
     margin-bottom: 2px;
 }
@@ -2443,7 +2450,7 @@ body.super-user .nav-btn.active {
 
 .msg-context-menu {
     position: absolute;
-    background: var(--bg-panel);
+    background: var(--bg-dark);
     border: 1px solid var(--border-metal);
     border-radius: 4px;
     padding: 5px 0;
@@ -2838,8 +2845,9 @@ body.skufenger-fullscreen::after {
 body.skufenger-fullscreen .app-container {
     padding: 0 !important;
     margin: 0 !important;
-    height: 100vh;
-    height: 100dvh;
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
+    transform: translateY(var(--app-offset, 0px));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -3147,7 +3155,7 @@ body.skufenger-fullscreen .chat-layout {
     /* FIX: chat-main also needs translateX so closing chat (removing chat-open) slides it away */
     body.skufenger-fullscreen .chat-main {
         position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
+        top: 0; left: 0; right: 0; bottom: 0;
         z-index: 50;
         transform: translateX(100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);

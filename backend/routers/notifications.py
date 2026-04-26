@@ -21,7 +21,7 @@ async def validate_idempotency(x_idempotency_key: str = Header(..., alias="X-Ide
         )
     idempotency_cache[x_idempotency_key] = True
     return x_idempotency_key
-from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Message, GlobalNotification, PostLike, WikiLike, ChatRoom, ChatRoomMember, RoomKeyBundle, RoomInvite
+from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Message, GlobalNotification, PostLike, WikiLike, ChatRoom, ChatRoomMember, RoomKeyBundle, RoomInvite, PushSubscription
 from auth import get_current_user, oauth2_scheme
 from typing import List, Optional
 from pydantic import BaseModel
@@ -105,6 +105,14 @@ class ProfileUpdate(BaseModel):
 class PublicKeyUpdate(BaseModel):
     public_key: str
 
+class PushKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+class PushSubscribe(BaseModel):
+    endpoint: str
+    keys: PushKeys
+
 # --- Dependency ---
 def get_db():
     db = SessionLocal()
@@ -168,3 +176,32 @@ def broadcast_notification(notif: NotificationCreate, current_user: User = Depen
     return {"status": "Global alert broadcasted across the network"}
 
 
+@router.post('/notifications/subscribe')
+def subscribe_push(sub: PushSubscribe, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Subscribes the user to VAPID push notifications."""
+    existing = db.query(PushSubscription).filter_by(endpoint=sub.endpoint).first()
+    if existing:
+        if existing.user_id != current_user.id:
+            existing.user_id = current_user.id
+            db.commit()
+        return {"status": "updated_existing_subscription"}
+    
+    new_sub = PushSubscription(
+        user_id=current_user.id,
+        endpoint=sub.endpoint,
+        p256dh=sub.keys.p256dh,
+        auth=sub.keys.auth
+    )
+    db.add(new_sub)
+    db.commit()
+    return {"status": "subscribed"}
+
+@router.delete('/notifications/unsubscribe')
+def unsubscribe_push(endpoint: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Unsubscribes the user from VAPID push notifications."""
+    sub = db.query(PushSubscription).filter_by(endpoint=endpoint, user_id=current_user.id).first()
+    if sub:
+        db.delete(sub)
+        db.commit()
+        return {"status": "unsubscribed"}
+    return {"status": "not_found"}
