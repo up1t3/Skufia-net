@@ -91,6 +91,14 @@ class MemberRoleUpdate(BaseModel):
 class RoomMembersAdd(BaseModel):
     user_ids: List[int]
 
+class FolderCreate(BaseModel):
+    name: str
+    icon: Optional[str] = None
+    room_ids: List[int] = []
+
+class FolderAddMembers(BaseModel):
+    room_ids: List[int]
+
 class NotificationCreate(BaseModel):
     message: str
     level: str = 'info'
@@ -395,6 +403,34 @@ def delete_folder(folder_id: int, current_user: User = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Folder not found")
     db.delete(folder)
     db.commit()
+    return {"status": "success"}
+
+@router.post('/chat/folders/{folder_id}/members')
+def add_folder_members(folder_id: int, req: FolderAddMembers, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from database import ChatFolder, ChatFolderMember
+    folder = db.query(ChatFolder).filter(ChatFolder.id == folder_id, ChatFolder.user_id == current_user.id).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+        
+    for rid in req.room_ids:
+        # Check if already exists
+        exists = db.query(ChatFolderMember).filter(ChatFolderMember.folder_id == folder_id, ChatFolderMember.room_id == rid).first()
+        if not exists:
+            db.add(ChatFolderMember(folder_id=folder.id, room_id=rid))
+    db.commit()
+    return {"status": "success"}
+
+@router.delete('/chat/folders/{folder_id}/members/{room_id}')
+def remove_folder_member(folder_id: int, room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from database import ChatFolder, ChatFolderMember
+    folder = db.query(ChatFolder).filter(ChatFolder.id == folder_id, ChatFolder.user_id == current_user.id).first()
+    if not folder:
+        raise HTTPException(status_code=404, detail="Folder not found")
+        
+    mem = db.query(ChatFolderMember).filter(ChatFolderMember.folder_id == folder_id, ChatFolderMember.room_id == room_id).first()
+    if mem:
+        db.delete(mem)
+        db.commit()
     return {"status": "success"}
 
 @router.post('/chat/rooms')

@@ -142,9 +142,49 @@ window.initChatCore = function() {
         try {
             const rooms = await apiRequest('/chat/rooms');
             state.chat.rooms = rooms;
+            
+            // Also load folders
+            await loadChatFolders();
+            
             renderChatRooms();
         } catch (e) { addLog('Failed to load chat channels', 'error'); }
     }
+
+    async function loadChatFolders() {
+        try {
+            const folders = await apiRequest('/chat/folders');
+            state.chat.folders = folders || [];
+            renderChatFolders();
+        } catch (e) { console.error('Failed to load folders:', e); }
+    }
+
+    function renderChatFolders() {
+        const tabsContainer = document.getElementById('chat-folders-tabs');
+        if (!tabsContainer) return;
+
+        // Keep the 'All chats' tab and the '+' button
+        tabsContainer.innerHTML = '<div class="folder-tab ' + (state.chat.currentFolderId === 'all' ? 'active' : '') + '" onclick="window.selectFolder(\'all\', this)">Все чаты</div>';
+
+        if (state.chat.folders) {
+            state.chat.folders.forEach(f => {
+                const tab = document.createElement('div');
+                tab.className = 'folder-tab ' + (state.chat.currentFolderId == f.id ? 'active' : '');
+                tab.textContent = f.icon ? `${f.icon} ${f.name}` : f.name;
+                tab.onclick = function() { window.selectFolder(f.id, this); };
+                tabsContainer.appendChild(tab);
+            });
+        }
+
+        tabsContainer.insertAdjacentHTML('beforeend', '<button class="add-folder-btn" onclick="window.openFolderModal()" title="Создать папку">+</button>');
+    }
+
+    window.selectFolder = function(id, el) {
+        state.chat.currentFolderId = id;
+        document.querySelectorAll('.folder-tab').forEach(t => t.classList.remove('active'));
+        if (el) el.classList.add('active');
+        renderChatRooms();
+    };
+
 
     function renderChatRooms() {
         const list = document.getElementById('chat-rooms-list');
