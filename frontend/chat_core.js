@@ -728,7 +728,10 @@ window.initChatCore = function() {
     /** @param {any} msg */
     function renderChatMessage(msg) {
         const history = document.getElementById('chat-history');
-        if (!history) return;
+        if (!history) {
+            console.error('[renderChatMessage] #chat-history NOT FOUND in DOM!');
+            return;
+        }
 
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
@@ -1062,7 +1065,11 @@ window.initChatCore = function() {
                     is_read: false,
                     timestamp: new Date().toISOString()
                 };
+                console.log('[sendChatMsg] Optimistic render, id:', optimisticId, 'text:', savedContent.substring(0, 30));
                 renderChatMessage(optimisticMsg);
+                // Verify element was added
+                const rendered = document.getElementById(`msg-${optimisticId}`);
+                console.log('[sendChatMsg] Optimistic element in DOM:', !!rendered);
             }
 
             // --- API REQUEST ---
@@ -1868,7 +1875,8 @@ window.initChatCore = function() {
         });
     }
     if (sendChatBtn) {
-        sendChatBtn.addEventListener('click', sendChatMsg);
+        // NOTE: send-chat-btn already has onclick in index.html — do NOT add duplicate listener.
+        // addEventListener('click', sendChatMsg) passes MouseEvent as directCaption → breaks.
     }
     const chatFileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
     if (chatFileInput) {

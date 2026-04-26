@@ -424,20 +424,31 @@ class RTCManager {
             });
 
             this.peerConnection.ontrack = (event) => {
-                const hasVideo = event.streams[0].getVideoTracks().length > 0;
+                console.log('[RTC] ontrack fired, track kind:', event.track.kind, 'streams:', event.streams.length);
+                const stream = event.streams[0];
+                if (!stream) return;
+
+                // Always keep remoteStream reference up to date
+                this.remoteStream = stream;
+
+                // Always pipe remote audio
+                const remoteAud = document.getElementById('rtc-remote-audio');
+                if (remoteAud && remoteAud.srcObject !== stream) {
+                    remoteAud.srcObject = stream;
+                    remoteAud.play().catch(e => console.error('[RTC] Remote audio play error:', e));
+                }
+
+                // When a video track arrives, show the video container
+                const hasVideo = stream.getVideoTracks().length > 0;
                 if (hasVideo || this.isVideoCall) {
-                    this.remoteStream = event.streams[0];
                     const remoteVid = document.getElementById('rtc-remote-video');
-                    remoteVid.srcObject = event.streams[0];
-                    remoteVid.play().catch(e => console.error("Remote video play error:", e));
+                    if (remoteVid.srcObject !== stream) {
+                        remoteVid.srcObject = stream;
+                    }
+                    remoteVid.play().catch(e => console.error('[RTC] Remote video play error:', e));
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
-                }
-                const remoteAud = document.getElementById('rtc-remote-audio');
-                if (remoteAud) {
-                    remoteAud.srcObject = event.streams[0];
-                    remoteAud.play().catch(e => console.error("Remote audio play error:", e));
                 }
             };
 
@@ -488,11 +499,11 @@ class RTCManager {
             document.getElementById('rtc-actions-audio').style.display = 'none';
             document.getElementById('rtc-video-options').style.display = 'flex';
             
-            // Get preview stream without sending yet
+            // Get preview stream without sending yet — show on LOCAL video (not remote!)
             this.previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.currentFacingMode } });
-            const remoteVid = document.getElementById('rtc-remote-video');
-            remoteVid.srcObject = this.previewStream; // Preview fullscreen
-            remoteVid.play().catch(e => console.error("Preview play error:", e));
+            const localVid = document.getElementById('rtc-local-video');
+            localVid.srcObject = this.previewStream;
+            localVid.play().catch(e => console.error('[RTC] Preview play error:', e));
             document.getElementById('rtc-video-container').style.display = 'block';
             document.getElementById('rtc-profile-info').style.display = 'none';
             document.getElementById('rtc-modal-bg').style.display = 'none';
@@ -519,11 +530,12 @@ class RTCManager {
                 this.currentFacingMode = sourceType;
                 this.previewStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: sourceType } });
             }
-            const remoteVid = document.getElementById('rtc-remote-video');
-            remoteVid.srcObject = this.previewStream;
-            remoteVid.play().catch(e => console.error("Preview source play error:", e));
+            // Show on local video (preview is YOUR camera, not remote!)
+            const localVid = document.getElementById('rtc-local-video');
+            localVid.srcObject = this.previewStream;
+            localVid.play().catch(e => console.error('[RTC] Preview source play error:', e));
         } catch (e) {
-            console.error("Switch source error", e);
+            console.error('[RTC] Switch source error', e);
         }
     }
 
