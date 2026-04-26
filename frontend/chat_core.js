@@ -972,7 +972,7 @@ window.initChatCore = function() {
     async function sendChatMsg(directCaption = null) {
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
         
-        let content = directCaption !== null ? directCaption : (input ? input.value.trim() : '');
+        let content = (typeof directCaption === 'string') ? directCaption : (input ? input.value.trim() : '');
         const hasContent = !!content.trim();
         const hasFile = !!state.pendingFile;
         
@@ -982,7 +982,7 @@ window.initChatCore = function() {
         }
 
         // Prevent double sending
-        if (input && input.dataset.sending === 'true' && directCaption === null) return;
+        if (input && input.dataset.sending === 'true' && typeof directCaption !== 'string') return;
         if (input) {
             input.dataset.sending = 'true';
             // Do not disable input to prevent keyboard from closing on mobile!

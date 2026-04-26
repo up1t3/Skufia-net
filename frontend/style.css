@@ -1591,6 +1591,14 @@ body.super-user .nav-btn.active {
     cursor: pointer;
     transition: var(--transition);
     box-shadow: var(--panel-shadow);
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+.send-circle-btn:focus,
+.send-circle-btn:active {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
 }
 
 .send-circle-btn:hover {
