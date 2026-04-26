@@ -973,6 +973,7 @@ window.initChatCore = function() {
     }
 
     async function sendChatMsg(directCaption = null) {
+        console.log('[sendChatMsg] >>> ENTER, directCaption type:', typeof directCaption, 'val:', typeof directCaption === 'string' ? directCaption.substring(0,20) : String(directCaption).substring(0,20));
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
         
         let content = (typeof directCaption === 'string') ? directCaption : (input ? input.value.trim() : '');
@@ -980,16 +981,21 @@ window.initChatCore = function() {
         const hasFile = !!state.pendingFile;
         
         if (state.chat.currentRoomId == null || (!hasContent && !hasFile)) {
-            console.warn('[sendChatMsg] Skipped: roomId=', state.chat.currentRoomId, 'hasContent=', !!hasContent, 'hasFile=', hasFile);
+            console.warn('[sendChatMsg] SKIP: no content. roomId=', state.chat.currentRoomId, 'content="'+content+'"', 'hasFile=', hasFile);
             return;
         }
 
         // Prevent double sending
-        if (input && input.dataset.sending === 'true' && typeof directCaption !== 'string') return;
+        if (input && input.dataset.sending === 'true' && typeof directCaption !== 'string') {
+            console.warn('[sendChatMsg] SKIP: double-send guard. sending=', input.dataset.sending);
+            return;
+        }
         if (input) {
             input.dataset.sending = 'true';
-            // Do not disable input to prevent keyboard from closing on mobile!
+            // Safety: force-reset sending after 15s in case of stuck state
+            setTimeout(() => { if (input.dataset.sending === 'true') { input.dataset.sending = 'false'; console.warn('[sendChatMsg] Safety reset of sending flag after 15s'); } }, 15000);
         }
+        console.log('[sendChatMsg] Proceeding: roomId=', state.chat.currentRoomId, 'content=', content.substring(0,30));
 
         const roomId = state.chat.currentRoomId;
         const receiverId = state.chat.receiverId;
@@ -1073,12 +1079,14 @@ window.initChatCore = function() {
             }
 
             // --- API REQUEST ---
+            console.log('[sendChatMsg] Calling API, roomId:', roomId, 'encrypted:', !!payload.encryption_iv);
             let response;
             if (state.chat.editingId) {
                 response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
                 state.chat.editingId = null;
             } else {
                 response = await apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
+                console.log('[sendChatMsg] API response:', response ? 'ok, id='+response.id : 'null/empty');
                 // Update the optimistic element ID to the real DB ID
                 const tempMsgEl = document.getElementById(`msg-${optimisticId}`);
                 if (tempMsgEl && response && response.id) {
@@ -1087,11 +1095,12 @@ window.initChatCore = function() {
             }
             
             sendSucceeded = true;
+            console.log('[sendChatMsg] ✅ SUCCESS');
             const editBanner = document.getElementById('edit-banner');
             if (editBanner) editBanner.style.display = 'none';
             try { playSound('click'); } catch(e) {}
         } catch (e) {
-            console.error('sendChatMsg error:', e);
+            console.error('[sendChatMsg] ❌ ERROR:', e.message, e);
             if (window.addLog) addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
             
             // Restore input value on error so user can retry
