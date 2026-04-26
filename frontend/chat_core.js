@@ -721,23 +721,23 @@ window.initChatCore = function() {
             }
 
             // At this point encryption succeeded or we fell back intentionally.
-            // Clear input AFTER successful encryption, BEFORE network
             savedContent = content;
             savedFile = state.pendingFile ? { ...state.pendingFile } : null;
             savedReplyId = state.chat.replyToId;
             
-            if (input) input.value = '';
-            localStorage.removeItem(`skuf_draft_${roomId}`);
-            // @ts-ignore
-            if (window.cancelReply) window.cancelReply();
-            clearChatFile();
-
             let response;
             if (state.chat.editingId) {
                 response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
             } else {
                 response = await apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
             }
+
+            // [FIX] Clear input ONLY after successful API request
+            if (input) input.value = '';
+            localStorage.removeItem(`skuf_draft_${roomId}`);
+            // @ts-ignore
+            if (window.cancelReply) window.cancelReply();
+            clearChatFile();
 
             // Optimistic render — show message immediately, don't wait for WS echo
             if (!state.chat.editingId) {
@@ -760,12 +760,11 @@ window.initChatCore = function() {
             state.chat.editingId = null;
             const editBanner = document.getElementById('edit-banner');
             if (editBanner) editBanner.style.display = 'none';
-            playSound('click');
+            try { playSound('click'); } catch(e) {}
         } catch (e) {
             console.error('sendChatMsg error:', e);
-            addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
-            // Restore input on failure so user can retry
-            if (input) input.value = content;
+            if (window.addLog) addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
+            // Input value remains unchanged on error so user can retry
             if (savedFile) {
                 state.pendingFile = savedFile;
             }
@@ -1513,7 +1512,7 @@ window.initChatCore = function() {
                     type: 'typing_status',
                     status: true,
                     room_id: state.chat.currentRoomId,
-                    sender: state.user.username,
+                    sender: state.user.display_name || state.user.username || 'Пользователь',
                     sender_id: state.user.id
                 }));
                 clearTimeout(typingTimer);
@@ -1522,7 +1521,7 @@ window.initChatCore = function() {
                         type: 'typing_status',
                         status: false,
                         room_id: state.chat.currentRoomId,
-                        sender: state.user.username,
+                        sender: state.user.display_name || state.user.username || 'Пользователь',
                         sender_id: state.user.id
                     }));
                 }, 2000);
