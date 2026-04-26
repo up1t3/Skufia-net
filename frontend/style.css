@@ -1164,6 +1164,7 @@ body.super-user .nav-btn.active {
     border-radius: 50%;
     background: #555;
     display: inline-block;
+    flex-shrink: 0;
 }
 
 .status-dot.online {

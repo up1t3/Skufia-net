@@ -1636,13 +1636,43 @@ window.initChatCore = function() {
             this.mediaRecorder = null;
             this.audioChunks = [];
             this.isRecording = false;
+            
+            this.audioContext = null;
+            this.analyser = null;
+            this.animationId = null;
+            this.timerInterval = null;
+            this.startTime = null;
+            this.isCancelled = false;
+            
             if(this.btn) {
-                this.btn.addEventListener('mousedown', () => this.start());
-                this.btn.addEventListener('mouseup', () => this.stop());
-                this.btn.addEventListener('touchstart', (e) => { e.preventDefault(); this.start(); }, {passive: false});
-                this.btn.addEventListener('touchend', (e) => { e.preventDefault(); this.stop(); });
-                this.btn.addEventListener('mouseleave', () => { if(this.isRecording) this.stop(); });
+                // Remove old event listeners by replacing the button with its clone
+                const newBtn = this.btn.cloneNode(true);
+                this.btn.parentNode.replaceChild(newBtn, this.btn);
+                this.btn = newBtn;
+                
+                this.btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if(this.isRecording) {
+                        this.stopAndSend();
+                    } else {
+                        this.start();
+                    }
+                });
             }
+            
+            // Dynamic event delegation for the cancel and send buttons in the overlay
+            document.addEventListener('click', (e) => {
+                const cancelBtn = e.target.closest('#cancel-record-btn');
+                const sendBtn = e.target.closest('#send-record-btn');
+                if (cancelBtn && this.isRecording) {
+                    e.preventDefault();
+                    this.cancel();
+                }
+                if (sendBtn && this.isRecording) {
+                    e.preventDefault();
+                    this.stopAndSend();
+                }
+            });
         }
         
         async start() {
@@ -1650,33 +1680,141 @@ window.initChatCore = function() {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
                 this.audioChunks = [];
+                this.isCancelled = false;
+                
                 this.mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) this.audioChunks.push(event.data);
                 };
+                
                 this.mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm;codecs=opus' });
                     this.audioChunks = [];
                     stream.getTracks().forEach(t => t.stop());
-                    this.btn.style.color = '';
-                    this.btn.classList.remove('recording');
-                    if (audioBlob.size > 1000) { // check minimum size
+                    
+                    this.cleanupUI();
+                    
+                    if (!this.isCancelled && audioBlob.size > 1000) { 
                         this.uploadAudio(audioBlob);
                     }
                 };
+                
                 this.mediaRecorder.start();
                 this.isRecording = true;
-                this.btn.classList.add('recording');
-                this.btn.style.color = 'var(--accent-color)';
+                
+                this.setupUIAndVisualizer(stream);
+                
                 addLog('Запись голосового сообщения...', 'info');
             } catch(e) {
                 addLog('Микрофон недоступен: ' + e.message, 'error');
             }
         }
         
-        stop() {
+        stopAndSend() {
             if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                this.isCancelled = false;
                 this.mediaRecorder.stop();
                 this.isRecording = false;
+            }
+        }
+        
+        cancel() {
+            if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                this.isCancelled = true;
+                this.mediaRecorder.stop();
+                this.isRecording = false;
+                addLog('Запись отменена', 'info');
+            }
+        }
+        
+        setupUIAndVisualizer(stream) {
+            const overlay = document.getElementById('recording-overlay');
+            if(overlay) overlay.style.display = 'flex';
+            
+            if(this.btn) {
+                this.btn.classList.add('recording');
+                this.btn.style.color = 'var(--accent-cyan, #00f2ff)';
+            }
+            
+            this.startTime = Date.now();
+            const timerEl = document.getElementById('recording-timer');
+            if(timerEl) timerEl.textContent = '0:00';
+            
+            this.timerInterval = setInterval(() => {
+                if(!timerEl) return;
+                const diff = Math.floor((Date.now() - this.startTime) / 1000);
+                const m = Math.floor(diff / 60);
+                const s = diff % 60;
+                timerEl.textContent = `${m}:${s < 10 ? '0' + s : s}`;
+            }, 1000);
+            
+            // Audio Visualizer
+            const canvas = document.getElementById('recording-visualizer');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            try {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = this.audioContext.createMediaStreamSource(stream);
+                this.analyser = this.audioContext.createAnalyser();
+                this.analyser.fftSize = 64;
+                source.connect(this.analyser);
+                
+                const bufferLength = this.analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                
+                const draw = () => {
+                    if(!this.isRecording) return;
+                    this.animationId = requestAnimationFrame(draw);
+                    
+                    this.analyser.getByteFrequencyData(dataArray);
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width;
+                    canvas.height = rect.height;
+                    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    const barWidth = 3;
+                    const gap = 2;
+                    const bars = Math.floor(canvas.width / (barWidth + gap));
+                    const step = Math.max(1, Math.floor(bufferLength / bars));
+                    
+                    let x = 0;
+                    for(let i = 0; i < bars; i++) {
+                        const value = dataArray[i * step] || 0;
+                        const percent = value / 255;
+                        const minHeight = 2;
+                        const barHeight = Math.max(minHeight, canvas.height * percent);
+                        
+                        ctx.fillStyle = '#00f2ff';
+                        const y = (canvas.height - barHeight) / 2;
+                        ctx.beginPath();
+                        ctx.roundRect(x, y, barWidth, barHeight, 2);
+                        ctx.fill();
+                        
+                        x += barWidth + gap;
+                    }
+                };
+                draw();
+            } catch(e) {
+                console.error("Audio visualizer error", e);
+            }
+        }
+        
+        cleanupUI() {
+            if(this.timerInterval) clearInterval(this.timerInterval);
+            if(this.animationId) cancelAnimationFrame(this.animationId);
+            if(this.audioContext) {
+                this.audioContext.close().catch(e => console.error(e));
+                this.audioContext = null;
+            }
+            
+            const overlay = document.getElementById('recording-overlay');
+            if(overlay) overlay.style.display = 'none';
+            
+            if(this.btn) {
+                this.btn.classList.remove('recording');
+                this.btn.style.color = '';
             }
         }
         
