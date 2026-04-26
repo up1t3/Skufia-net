@@ -127,8 +127,8 @@
                 <img id="crop-image-target" style="display: block; max-width: 100%;">
             </div>
             <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px;">
-                <button class="cyber-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;" onclick="window.closeCropModal()">ОТМЕНА</button>
-                <button class="cyber-btn primary-btn" onclick="window.uploadCroppedAvatar()">СОХРАНИТЬ</button>
+                <button class="cyber-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; padding: 10px 20px;" onclick="window.closeCropModal()">ОТМЕНА</button>
+                <button class="cyber-btn primary-btn" style="border-radius: 8px; padding: 10px 20px;" onclick="window.uploadCroppedAvatar()">СОХРАНИТЬ</button>
             </div>
         </div>
     </div>
@@ -161,11 +161,12 @@
 
                 <div class="form-group" style="margin-bottom: 15px;">
                     <label for="settings-handle" style="font-size: 14px; margin-bottom: 5px; display: block; color: var(--text-dim);">Короткое имя (Handle)</label>
-                    <div style="display: flex; gap: 10px;">
+                    <div style="display: flex; gap: 10px; align-items: stretch;">
                         <span style="display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border-metal); border-radius: 8px; padding: 0 12px; color: var(--text-dim);">@</span>
-                        <input type="text" id="settings-handle" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="username">
+                        <input type="text" id="settings-handle" class="cyber-input" style="width: 100%; border-radius: 8px; margin-bottom: 0;" placeholder="username">
                     </div>
                     <small style="color: var(--text-dim); font-size: 11px; margin-top: 4px; display: block;">По этой ссылке вас смогут найти другие.</small>
+                    <button id="btn-save-profile" class="cyber-btn primary-btn" style="width: 100%; margin-top: 10px; border-radius: 8px; padding: 12px;" onclick="window.saveProfileHandle()">СОХРАНИТЬ ИМЯ</button>
                 </div>
 
                 <!-- Toggles Section -->

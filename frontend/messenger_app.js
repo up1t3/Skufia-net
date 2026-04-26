@@ -642,19 +642,26 @@ window.cropperInstance = null;
 window.previewAvatar = function(input) {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
+    
+    // Show modal immediately to provide fast UI feedback
+    document.getElementById('avatar-crop-modal').style.display = 'flex';
+    
+    // Destroy previous cropper if exists
+    if (window.cropperInstance) {
+        window.cropperInstance.destroy();
+        window.cropperInstance = null;
+    }
+    
+    // Clear image target while loading
+    const image = document.getElementById('crop-image-target');
+    if (image) image.src = '';
+    
     const reader = new FileReader();
     reader.onload = function(e) {
-        const image = document.getElementById('crop-image-target');
         if (!image) return;
         image.src = e.target.result;
         
-        document.getElementById('avatar-crop-modal').style.display = 'flex';
-        
-        if (window.cropperInstance) {
-            window.cropperInstance.destroy();
-        }
-        
-        // Initialize Cropper.js
+        // Initialize Cropper.js after image src is set
         window.cropperInstance = new Cropper(image, {
             aspectRatio: 1,
             viewMode: 1,
