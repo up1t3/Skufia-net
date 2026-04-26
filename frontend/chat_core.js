@@ -851,6 +851,7 @@ window.initChatCore = function() {
             reply_to_id: state.chat.replyToId
         };
 
+        let sendSucceeded = false;
         try {
             // --- E2EE: ENCRYPTION ---
             let isEncrypted = false;
@@ -886,7 +887,7 @@ window.initChatCore = function() {
             savedFile = state.pendingFile ? { ...state.pendingFile } : null;
             savedReplyId = state.chat.replyToId;
             // --- OPTIMISTIC RENDER ---
-            // Clear input and show message immediately to prevent frozen UI on slow networks
+            // Clear input immediately (optimistic) before API call
             if (input) input.value = '';
             localStorage.removeItem(`skuf_draft_${roomId}`);
             if (window.cancelReply) window.cancelReply();
@@ -896,7 +897,7 @@ window.initChatCore = function() {
             if (!state.chat.editingId) {
                 const optimisticMsg = {
                     id: optimisticId,
-                    sender: state.user?.username || state.user?.display_name || '\u042f',
+                    sender: state.user?.username || state.user?.display_name || 'Я',
                     sender_id: state.user?.id,
                     text: savedContent,
                     content: savedContent,
@@ -925,6 +926,7 @@ window.initChatCore = function() {
                 }
             }
             
+            sendSucceeded = true;
             const editBanner = document.getElementById('edit-banner');
             if (editBanner) editBanner.style.display = 'none';
             try { playSound('click'); } catch(e) {}
@@ -933,9 +935,7 @@ window.initChatCore = function() {
             if (window.addLog) addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
             
             // Restore input value on error so user can retry
-            if (input && input.value === '') {
-                input.value = savedContent;
-            }
+            if (input) input.value = savedContent;
             if (savedFile) {
                 state.pendingFile = savedFile;
             }
@@ -948,6 +948,9 @@ window.initChatCore = function() {
         } finally {
             if (input) {
                 input.dataset.sending = 'false';
+                // On success input was already cleared optimistically above.
+                // On failure catch block restored savedContent. Do NOT clear again here.
+                if (sendSucceeded) input.value = '';
                 input.focus();
             }
         }

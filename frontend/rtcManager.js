@@ -13,6 +13,8 @@ class RTCManager {
         this.isVideoCall = false;
         this.previewStream = null;
         this.currentFacingMode = 'user';
+        this._missedCallTimeout = null;  // 45-sec no-answer timer
+        this._callWasAnswered = false;   // flag to detect missed vs ended
         
         // Ice Servers - Google STUN as fallback and local Coturn server
         this.iceServers = {
@@ -252,10 +254,61 @@ class RTCManager {
     startCall(targetUserId, targetName, targetAvatarHtml, isVideo = false) {
         if(this.isCalling) return;
         this.currentCallTarget = targetUserId;
+        this._callCallerName = targetName;
+        this._callWasAnswered = false;
         this.isCalling = true;
         this.isVideoCall = isVideo;
         this.showModal('Ожидание...', targetName, targetAvatarHtml, false);
         this.initiatePeerConnection(targetUserId, true);
+
+        // 45-second no-answer timeout
+        this._missedCallTimeout = setTimeout(() => {
+            if (!this._callWasAnswered && this.isCalling) {
+                console.log('[RTC] No answer after 45s — ending call');
+                this._sendMissedCallMessage(targetUserId, targetName, isVideo);
+                this.endCall(true);
+                if (window.showToast) window.showToast('📵 Нет ответа');
+            }
+        }, 45000);
+    }
+
+    /** Posts a missed call system message into the current chat */
+    _sendMissedCallMessage(targetUserId, name, isVideo) {
+        try {
+            const callType = isVideo ? 'Видеозвонок' : 'Аудиозвонок';
+            const icon = isVideo ? '📹' : '📞';
+            // Find room id for this target
+            const roomId = window.state?.chat?.currentRoomId;
+            if (!roomId) return;
+
+            // Optimistic UI — render system message immediately
+            const chatMessages = document.getElementById('chat-messages');
+            if (chatMessages) {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+                const el = document.createElement('div');
+                el.className = 'msg-bubble system-msg missed-call-msg';
+                el.innerHTML = `
+                    <span class="missed-call-icon">${icon}</span>
+                    <span class="missed-call-text">Пропущенный ${callType.toLowerCase()} от <b>${name || 'вас'}</b></span>
+                    <span class="missed-call-time">${timeStr}</span>
+                `;
+                chatMessages.appendChild(el);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Send to backend as a system message so the other side sees it too
+            if (window.apiRequest) {
+                window.apiRequest(`/chat/rooms/${roomId}/send`, 'POST', {
+                    content: `${icon} Пропущенный ${callType.toLowerCase()}`,
+                    encryption_iv: '',
+                    file_url: null,
+                    reply_to_id: null
+                }).catch(() => {});
+            }
+        } catch(e) {
+            console.error('[RTC] Failed to send missed call message:', e);
+        }
     }
 
     handleIncomingSignal(type, payload, senderId) {
@@ -328,6 +381,12 @@ class RTCManager {
     async acceptCall() {
         if(!this.incomingOffer) return;
         if(window.stopSound) window.stopSound('alert');
+        this._callWasAnswered = true;
+        // Clear any missed-call timeout (we are answering!)
+        if (this._missedCallTimeout) {
+            clearTimeout(this._missedCallTimeout);
+            this._missedCallTimeout = null;
+        }
         this.statusText.textContent = 'Соединение...';
         document.getElementById('rtc-actions-incoming').style.display = 'none';
         document.getElementById('rtc-actions-audio').style.display = 'flex';
@@ -542,6 +601,11 @@ class RTCManager {
 
     endCall(emit = true) {
         if(window.stopSound) window.stopSound('alert');
+        // Clear the no-answer timeout if still pending
+        if (this._missedCallTimeout) {
+            clearTimeout(this._missedCallTimeout);
+            this._missedCallTimeout = null;
+        }
         if(this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
         }

@@ -391,6 +391,123 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── Push Notifications ──────────────────────────────────────────────────
+    /**
+     * Convert a base64 URL-safe string to a Uint8Array (required for VAPID key).
+     */
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+    }
+
+    async function registerPushSubscription() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.warn('[Push] Browser does not support push notifications.');
+            return;
+        }
+        try {
+            // 1. Ask permission
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                console.warn('[Push] Permission denied by user.');
+                if (pushToggle) pushToggle.checked = false;
+                localStorage.setItem('skufia_push', 'false');
+                return;
+            }
+
+            // 2. Get VAPID public key from server
+            const vapidData = await apiRequest('/notifications/vapidPublicKey').catch(() => null);
+            if (!vapidData || !vapidData.publicKey) {
+                console.error('[Push] Could not get VAPID public key from server.');
+                return;
+            }
+            const applicationServerKey = urlBase64ToUint8Array(vapidData.publicKey);
+
+            // 3. Subscribe via pushManager
+            const reg = await navigator.serviceWorker.ready;
+            const subscription = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey
+            });
+
+            // 4. Send subscription to backend
+            const subJson = subscription.toJSON();
+            await apiRequest('/notifications/subscribe', 'POST', {
+                endpoint: subJson.endpoint,
+                keys: subJson.keys
+            });
+
+            localStorage.setItem('skufia_push', 'true');
+            if (pushToggle) pushToggle.checked = true;
+            console.log('[Push] ✅ Subscribed successfully.');
+            if (window.showToast) window.showToast('🔔 Уведомления включены');
+        } catch (e) {
+            console.error('[Push] Subscription failed:', e);
+            if (pushToggle) pushToggle.checked = false;
+            localStorage.setItem('skufia_push', 'false');
+        }
+    }
+
+    async function unregisterPushSubscription() {
+        try {
+            const reg = await navigator.serviceWorker.ready;
+            const sub = await reg.pushManager.getSubscription();
+            if (sub) {
+                await apiRequest('/notifications/unsubscribe?endpoint=' + encodeURIComponent(sub.endpoint), 'DELETE').catch(() => {});
+                await sub.unsubscribe();
+            }
+            localStorage.setItem('skufia_push', 'false');
+            if (window.showToast) window.showToast('🔕 Уведомления отключены');
+            console.log('[Push] Unsubscribed.');
+        } catch (e) {
+            console.error('[Push] Unsubscribe error:', e);
+        }
+    }
+
+    // Auto-subscribe if user previously granted permission and opted in
+    (async () => {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        const savedPref = localStorage.getItem('skufia_push');
+        if (pushToggle) {
+            pushToggle.checked = savedPref === 'true';
+        }
+        // If previously opted in AND browser already has permission, silently re-subscribe
+        if (savedPref === 'true' && Notification.permission === 'granted') {
+            try {
+                const reg = await navigator.serviceWorker.ready;
+                const existing = await reg.pushManager.getSubscription();
+                if (!existing) {
+                    // Subscription expired - re-subscribe silently
+                    await registerPushSubscription();
+                } else {
+                    // Refresh subscription on server in case endpoint changed
+                    const subJson = existing.toJSON();
+                    await apiRequest('/notifications/subscribe', 'POST', {
+                        endpoint: subJson.endpoint,
+                        keys: subJson.keys
+                    }).catch(() => {});
+                }
+            } catch(e) { console.warn('[Push] Auto-subscribe check failed:', e); }
+        }
+    })();
+
+    if (pushToggle) {
+        pushToggle.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                await registerPushSubscription();
+            } else {
+                await unregisterPushSubscription();
+            }
+        });
+    }
+
+    // Expose globally for settings page access
+    window.registerPushSubscription = registerPushSubscription;
+    window.unregisterPushSubscription = unregisterPushSubscription;
+    // ── End Push Notifications ───────────────────────────────────────────────
+
     if (syncBtn) {
         syncBtn.addEventListener('click', async () => {
             if (window.showToast) window.showToast('⏳ Синхронизация...');

@@ -102,19 +102,17 @@ self.addEventListener('fetch', (event) => {
     }
 });
 
-// Second activate handler — deduplicated into the one above (no-op keep for safety)
-// self.addEventListener('activate', ...) → merged above
-// --- Push Notification Listeners ---
-
 self.addEventListener('push', function(event) {
     console.log('[Service Worker] Push Received.');
-    console.log(`[Service Worker] Push had this data: "${event.data.text()}"`);
 
-    let title = 'Skufia Notification';
+    let title = 'SKUFenger';
     let options = {
-        body: 'New message',
-        icon: '/favicon.png', // Assuming favicon.png exists as seen in ls -la
-        badge: '/favicon.png'
+        body: 'Новое сообщение',
+        icon: '/favicon.png',
+        badge: '/favicon.png',
+        vibrate: [200, 100, 200],
+        tag: 'skufia-msg',
+        renotify: true
     };
 
     if (event.data) {
@@ -124,9 +122,22 @@ self.addEventListener('push', function(event) {
             options.body = data.body || options.body;
             if (data.icon) options.icon = data.icon;
             if (data.badge) options.badge = data.badge;
-            if (data.data) options.data = data.data; // Custom payload data
+            if (data.data) {
+                options.data = data.data;
+                // For calls - use different tag and vibration
+                if (data.data.action === 'call') {
+                    options.tag = 'skufia-call';
+                    options.vibrate = [500, 100, 500, 100, 500];
+                    options.requireInteraction = true; // Keep visible until user acts
+                    options.actions = [
+                        { action: 'accept', title: '✅ Ответить' },
+                        { action: 'decline', title: '❌ Отклонить' }
+                    ];
+                } else {
+                    options.tag = `skufia-room-${data.data.roomId || 'msg'}`;
+                }
+            }
         } catch (e) {
-            // If not JSON, use the text as body
             options.body = event.data.text();
         }
     }
@@ -138,36 +149,59 @@ self.addEventListener('notificationclick', function(event) {
     console.log('[Service Worker] Notification click Received.');
     event.notification.close();
 
+    const notifData = event.notification.data || {};
+
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-            // If a window is already open, focus it
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
                 if (client.url.includes('/messenger.html') && 'focus' in client) {
+                    // Notify the app about the notification click
+                    client.postMessage({ type: 'NOTIFICATION_CLICK', data: notifData, action: event.action });
                     return client.focus();
                 }
             }
-            // If no window is open, open a new one
+            // No window open - open messenger
             if (clients.openWindow) {
-                return clients.openWindow('/messenger.html');
+                const url = notifData.roomId ? `/messenger.html#room=${notifData.roomId}` : '/messenger.html';
+                return clients.openWindow(url);
             }
         })
     );
 });
 
 self.addEventListener('pushsubscriptionchange', function(event) {
-    console.log('[Service Worker]: \'pushsubscriptionchange\' event fired.');
-    // Logic to re-subscribe and send the new subscription to the server
-    const applicationServerKey = 'YOUR_PUBLIC_VAPID_KEY_HERE'; // Ideally fetched or injected
+    console.log('[Service Worker]: pushsubscriptionchange event fired.');
     event.waitUntil(
-        self.registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: applicationServerKey
-        })
-        .then(function(newSubscription) {
-            console.log('[Service Worker] New subscription: ', newSubscription);
-            // Send the new subscription details to the server using fetch()
-            // e.g., fetch('/api/subscribe', { method: 'POST', body: JSON.stringify(newSubscription) })
-        })
+        // Fetch VAPID key dynamically from server
+        fetch('/api/notifications/vapidPublicKey')
+            .then(r => r.json())
+            .then(data => {
+                const padding = '='.repeat((4 - data.publicKey.length % 4) % 4);
+                const base64 = (data.publicKey + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = atob(base64);
+                const applicationServerKey = Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+
+                return self.registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey
+                });
+            })
+            .then(newSubscription => {
+                console.log('[Service Worker] Re-subscribed:', newSubscription);
+                // Send updated subscription to server
+                return fetch('/api/notifications/subscribe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        endpoint: newSubscription.endpoint,
+                        keys: {
+                            p256dh: btoa(String.fromCharCode(...new Uint8Array(newSubscription.getKey('p256dh')))),
+                            auth: btoa(String.fromCharCode(...new Uint8Array(newSubscription.getKey('auth'))))
+                        }
+                    })
+                });
+            })
+            .catch(err => console.error('[SW] pushsubscriptionchange error:', err))
     );
 });
