@@ -32,8 +32,23 @@ window.initChatCore = function() {
                 // Skip WS echo for own messages (already rendered optimistically)
                 // Use == for type coercion (backend sends int, frontend may store string)
                 if (msg.sender_id == state.user.id) {
-                    // Just update sidebar snippet for own messages
                     loadChatRooms();
+                    // Fallback: If for some reason the optimistic message was removed or failed to render
+                    // (e.g. iOS Safari background fetch abort false-positive)
+                    if (state.chat.currentRoomId === msg.room_id && !document.getElementById(`msg-${msg.id}`)) {
+                        // Check if there is an optimistic pending message that matches the text content to avoid dupes during inflight
+                        const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row[id^="msg-"]'));
+                        const hasOptimisticMatch = pendingMsgs.some(el => {
+                            const txt = el.querySelector('.msg-text');
+                            // If it's a recent message and text matches, it's likely our optimistic one
+                            return txt && txt.textContent.trim() === (msg.text || msg.content || '').trim();
+                        });
+                        
+                        if (!hasOptimisticMatch) {
+                            console.warn('[WS] Own message missing from DOM (likely transient fetch error), rendering from WS fallback.');
+                            renderChatMessage(msg);
+                        }
+                    }
                     return;
                 }
                 

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1.0.2'; // Bumped for critical stability update
+const CACHE_NAME = 'skufia-chat-v1.0.3'; // Bumped for critical stability update
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
