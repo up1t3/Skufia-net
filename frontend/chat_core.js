@@ -185,6 +185,79 @@ window.initChatCore = function() {
         renderChatRooms();
     };
 
+    window.openFolderModal = function() {
+        const modal = document.getElementById('folder-modal');
+        if (!modal) return;
+        
+        const nameInput = document.getElementById('folder-name-input');
+        if (nameInput) nameInput.value = '';
+        
+        const roomsContainer = document.getElementById('folder-rooms-selection');
+        if (roomsContainer) {
+            roomsContainer.innerHTML = '';
+            if (state.chat.rooms && state.chat.rooms.length > 0) {
+                state.chat.rooms.forEach(room => {
+                    const label = document.createElement('label');
+                    label.style.display = 'flex';
+                    label.style.alignItems = 'center';
+                    label.style.padding = '8px';
+                    label.style.cursor = 'pointer';
+                    label.style.borderBottom = '1px solid var(--border-metal)';
+                    label.style.transition = 'background-color 0.2s';
+                    label.onmouseover = () => label.style.backgroundColor = 'var(--bg-glass)';
+                    label.onmouseout = () => label.style.backgroundColor = 'transparent';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.value = room.id;
+                    checkbox.className = 'folder-room-checkbox';
+                    checkbox.style.marginRight = '10px';
+                    checkbox.style.accentColor = 'var(--accent-cyan)';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = room.name || 'Chat';
+                    nameSpan.style.color = 'var(--text-primary)';
+                    
+                    label.appendChild(checkbox);
+                    label.appendChild(nameSpan);
+                    roomsContainer.appendChild(label);
+                });
+            } else {
+                roomsContainer.innerHTML = '<div style="padding:10px;color:var(--text-dim);font-size:12px;">Нет доступных чатов</div>';
+            }
+        }
+        
+        modal.style.display = 'flex';
+    };
+
+    window.submitFolderCreate = async function() {
+        const nameInput = document.getElementById('folder-name-input');
+        const name = nameInput ? nameInput.value.trim() : '';
+        if (!name) {
+            if (window.addLog) window.addLog('Введите название папки', 'error');
+            return;
+        }
+        
+        const checkboxes = document.querySelectorAll('.folder-room-checkbox:checked');
+        const roomIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+        
+        const btn = document.querySelector('#folder-modal .primary-btn');
+        if (btn) btn.textContent = 'СОХРАНЕНИЕ...';
+        
+        try {
+            const resp = await apiRequest('/chat/folders', 'POST', { name: name, icon: '📁', rooms: roomIds });
+            if (window.addLog) window.addLog('Папка создана', 'success');
+            document.getElementById('folder-modal').style.display = 'none';
+            await loadChatFolders();
+            if (window.selectFolder && resp.id) window.selectFolder(resp.id);
+        } catch (e) {
+            if (window.addLog) window.addLog('Ошибка при создании папки: ' + (e.message || ''), 'error');
+        } finally {
+            if (btn) btn.textContent = 'СОХРАНИТЬ ПАПКУ';
+        }
+    };
+
+
 
     function renderChatRooms() {
         const list = document.getElementById('chat-rooms-list');
@@ -724,25 +797,17 @@ window.initChatCore = function() {
             savedContent = content;
             savedFile = state.pendingFile ? { ...state.pendingFile } : null;
             savedReplyId = state.chat.replyToId;
-            
-            let response;
-            if (state.chat.editingId) {
-                response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
-            } else {
-                response = await apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
-            }
-
-            // [FIX] Clear input ONLY after successful API request
+            // --- OPTIMISTIC RENDER ---
+            // Clear input and show message immediately to prevent frozen UI on slow networks
             if (input) input.value = '';
             localStorage.removeItem(`skuf_draft_${roomId}`);
-            // @ts-ignore
             if (window.cancelReply) window.cancelReply();
             clearChatFile();
 
-            // Optimistic render — show message immediately, don't wait for WS echo
+            let optimisticId = Date.now();
             if (!state.chat.editingId) {
                 const optimisticMsg = {
-                    id: response?.id || Date.now(),
+                    id: optimisticId,
                     sender: state.user?.username || state.user?.display_name || '\u042f',
                     sender_id: state.user?.id,
                     text: savedContent,
@@ -757,16 +822,40 @@ window.initChatCore = function() {
                 };
                 renderChatMessage(optimisticMsg);
             }
-            state.chat.editingId = null;
+
+            // --- API REQUEST ---
+            let response;
+            if (state.chat.editingId) {
+                response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
+                state.chat.editingId = null;
+            } else {
+                response = await apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
+                // Update the optimistic element ID to the real DB ID
+                const tempMsgEl = document.getElementById(`msg-${optimisticId}`);
+                if (tempMsgEl && response && response.id) {
+                    tempMsgEl.id = `msg-${response.id}`;
+                }
+            }
+            
             const editBanner = document.getElementById('edit-banner');
             if (editBanner) editBanner.style.display = 'none';
             try { playSound('click'); } catch(e) {}
         } catch (e) {
             console.error('sendChatMsg error:', e);
             if (window.addLog) addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
-            // Input value remains unchanged on error so user can retry
+            
+            // Restore input value on error so user can retry
+            if (input && input.value === '') {
+                input.value = savedContent;
+            }
             if (savedFile) {
                 state.pendingFile = savedFile;
+            }
+            
+            // Remove the optimistic message if it failed
+            if (!state.chat.editingId) {
+                const tempMsgEl = document.getElementById(`msg-${optimisticId}`);
+                if (tempMsgEl) tempMsgEl.remove();
             }
         } finally {
             if (input) {

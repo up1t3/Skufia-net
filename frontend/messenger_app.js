@@ -657,22 +657,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-// Settings Avatar Preview + Upload (Cropper)
 window.cropperInstance = null;
 
 window.previewAvatar = function(input) {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
-    
-    // Show modal immediately to provide fast UI feedback
-    const settingsModal = document.getElementById('settings-modal');
-    if (settingsModal && settingsModal.style.display !== 'none') {
-        window._wasSettingsOpen = true;
-        settingsModal.style.display = 'none';
-    } else {
-        window._wasSettingsOpen = false;
-    }
-    document.getElementById('avatar-crop-modal').style.display = 'flex';
     
     // Destroy previous cropper if exists
     if (window.cropperInstance) {
@@ -680,9 +669,11 @@ window.previewAvatar = function(input) {
         window.cropperInstance = null;
     }
     
-    // Clear image target while loading
     const image = document.getElementById('crop-image-target');
     if (image) image.src = '';
+    
+    // Do NOT show the modal immediately to avoid the lag/flash.
+    // Instead, wait for Cropper to be fully ready.
     
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -702,6 +693,20 @@ window.previewAvatar = function(input) {
             cropBoxMovable: true,
             cropBoxResizable: true,
             toggleDragModeOnDblclick: false,
+            ready: function() {
+                // Show modal ONLY when Cropper is ready and image is loaded
+                const settingsModal = document.getElementById('settings-modal');
+                if (settingsModal && settingsModal.style.display !== 'none') {
+                    window._wasSettingsOpen = true;
+                    settingsModal.style.display = 'none';
+                } else {
+                    window._wasSettingsOpen = false;
+                }
+                const cropModal = document.getElementById('avatar-crop-modal');
+                if (cropModal) {
+                    cropModal.style.display = 'flex';
+                }
+            }
         });
     };
     reader.readAsDataURL(file);
