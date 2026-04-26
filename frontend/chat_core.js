@@ -29,24 +29,31 @@ window.initChatCore = function() {
             } else if (data.type === 'new_message') {
                 const msg = data;
 
-                // Skip WS echo for own messages (already rendered optimistically)
-                // Use == for type coercion (backend sends int, frontend may store string)
                 if (msg.sender_id == state.user.id) {
                     loadChatRooms();
                     // Fallback: If for some reason the optimistic message was removed or failed to render
                     // (e.g. iOS Safari background fetch abort false-positive)
-                    if (state.chat.currentRoomId === msg.room_id && !document.getElementById(`msg-${msg.id}`)) {
-                        // Check if there is an optimistic pending message that matches the text content to avoid dupes during inflight
+                    if (state.chat.currentRoomId == msg.room_id) {
                         const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row[id^="msg-"]'));
-                        const hasOptimisticMatch = pendingMsgs.some(el => {
+                        const matchedEl = pendingMsgs.find(el => {
+                            if (el.id === `msg-${msg.id}`) return false; // Already has real ID
                             const txt = el.querySelector('.msg-text');
-                            // If it's a recent message and text matches, it's likely our optimistic one
                             return txt && txt.textContent.trim() === (msg.text || msg.content || '').trim();
                         });
                         
-                        if (!hasOptimisticMatch) {
+                        if (matchedEl) {
+                            // Optimistic message is still in DOM. Confirm it!
+                            matchedEl.id = `msg-${msg.id}`;
+                        } else if (!document.getElementById(`msg-${msg.id}`)) {
                             console.warn('[WS] Own message missing from DOM (likely transient fetch error), rendering from WS fallback.');
                             renderChatMessage(msg);
+                            
+                            // Clear the input field since the message actually reached the server
+                            const input = document.getElementById('chat-input');
+                            if (input && input.value.trim() === (msg.text || msg.content || '').trim()) {
+                                input.value = '';
+                                localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
+                            }
                         }
                     }
                     return;
@@ -1121,22 +1128,33 @@ window.initChatCore = function() {
             console.error('[sendChatMsg] ❌ ERROR:', e.message, e);
             if (window.addLog) addLog(`⚠️ Ошибка отправки: ${e.message}`, 'error');
             
-            // Restore input value on error so user can retry
-            if (input) input.value = savedContent;
-            if (savedFile) {
-                state.pendingFile = savedFile;
-            }
-            
+            let wasConfirmed = false;
             // Remove the optimistic message if it failed
             if (!state.chat.editingId) {
                 const tempMsgEl = document.getElementById(`msg-${optimisticId}`);
-                if (tempMsgEl) tempMsgEl.remove();
+                if (!tempMsgEl) {
+                    // Message element is gone, which means WS handler renamed its ID to the real DB ID!
+                    wasConfirmed = true;
+                } else {
+                    tempMsgEl.remove();
+                }
+            }
+            
+            if (!wasConfirmed) {
+                // Restore input value on error so user can retry
+                if (input) input.value = savedContent;
+                if (savedFile) {
+                    state.pendingFile = savedFile;
+                }
+            } else {
+                // The WS handler confirmed the message, so it actually succeeded despite the fetch error
+                sendSucceeded = true;
             }
         } finally {
             if (input) {
                 input.dataset.sending = 'false';
                 // On success input was already cleared optimistically above.
-                // On failure catch block restored savedContent. Do NOT clear again here.
+                // On failure catch block restored savedContent (if not confirmed).
                 if (sendSucceeded) {
                     input.value = '';
                     localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
