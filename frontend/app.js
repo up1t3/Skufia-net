@@ -849,44 +849,81 @@ window.previewAvatar = async function(input) {
     reader.onload = function(e) {
         const preview = document.getElementById('settings-avatar-preview');
         if (preview) preview.src = e.target.result;
+        
+        // Compress image client-side
+        const img = new Image();
+        img.onload = async function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 800;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+            } else {
+                if (height > MAX_HEIGHT) {
+                    width *= MAX_HEIGHT / height;
+                    height = MAX_HEIGHT;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(async (blob) => {
+                const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
+                
+                // Upload compressed file to server
+                try {
+                    const formData = new FormData();
+                    formData.append('file', compressedFile);
+                    
+                    if (window.showToast) window.showToast('⏳ Загрузка фото...');
+                    
+                    const resp = await fetch(`${API_BASE_URL}/me/avatar/upload`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${state.user.token}` },
+                        body: formData
+                    });
+                    
+                    if (!resp.ok) {
+                        const err = await resp.json().catch(() => ({}));
+                        let errMsg = err.detail || 'Upload failed (возможно, файл слишком большой)';
+                        if (Array.isArray(errMsg)) {
+                            errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
+                        } else if (typeof errMsg === 'object') {
+                            errMsg = JSON.stringify(errMsg);
+                        }
+                        throw new Error(errMsg);
+                    }
+                    
+                    const data = await resp.json();
+                    const avatarUrl = data.avatar_url;
+
+                    // Update sidebar and dashboard avatars
+                    const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
+                    if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
+                    const dashAvatar = document.getElementById('dash-avatar');
+                    if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
+                    
+                    if (window.showToast) window.showToast('✅ Фото профиля обновлено!');
+                } catch (e) {
+                    console.error('Avatar upload error:', e);
+                    if (window.showToast) window.showToast('❌ Ошибка загрузки: ' + e.message);
+                }
+            }, 'image/jpeg', 0.85); // 85% quality JPEG
+        };
+        img.src = e.target.result;
     };
     reader.readAsDataURL(file);
-
-    // Upload to server
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        const resp = await fetch(`${API_BASE_URL}/me/avatar/upload`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${state.user.token}` },
-            body: formData
-        });
-        if (!resp.ok) {
-            const err = await resp.json().catch(() => ({}));
-            let errMsg = err.detail || 'Upload failed';
-            if (Array.isArray(errMsg)) {
-                errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
-            } else if (typeof errMsg === 'object') {
-                errMsg = JSON.stringify(errMsg);
-            }
-            throw new Error(errMsg);
-        }
-        const data = await resp.json();
-        const avatarUrl = data.avatar_url;
-
-        // Update sidebar and dashboard avatars
-        const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
-        if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
-        const dashAvatar = document.getElementById('dash-avatar');
-        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
-        addLog('Фотография загружена. Не забудьте сохранить настройки.', 'success');
-
-        addLog('✅ Аватарка загружена и сохранена!', 'success');
-    } catch (e) {
-        console.error('Avatar upload error:', e);
-        addLog(`❌ Ошибка загрузки аватарки: ${e.message}`, 'error');
-    }
 };
+
 
 
 
