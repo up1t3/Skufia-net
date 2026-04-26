@@ -7,6 +7,8 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="style.css?v=55">
     <link rel="stylesheet" href="style-modal.css?v=52">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest-skufenger.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -104,6 +106,25 @@
         </div>
     </div>
     
+    <!-- Avatar Crop Modal -->
+    <div id="avatar-crop-modal" class="modal" style="display: none; z-index: 10000;">
+        <div class="modal-content" style="max-width: 500px; padding: 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px;">
+            <div class="modal-header">
+                <h2>Кадрирование фото</h2>
+                <button class="close-btn-svg" onclick="window.closeCropModal()">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="crop-container" style="width: 100%; height: 350px; background: #000; border-radius: 12px; overflow: hidden; position: relative;">
+                <img id="crop-image-target" style="display: block; max-width: 100%;">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px;">
+                <button class="cyber-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff;" onclick="window.closeCropModal()">ОТМЕНА</button>
+                <button class="cyber-btn primary-btn" onclick="window.uploadCroppedAvatar()">СОХРАНИТЬ</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 16px;">

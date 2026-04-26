@@ -3244,4 +3244,16 @@ body.skufenger-fullscreen .mobile-back-btn {
 .stop-btn { color: #ff3b30; }
 .cancel-btn { color: var(--text-secondary); }
 .mic-btn.recording svg { stroke: #ff3b30; }
-\n\n#forward-rooms-list::-webkit-scrollbar { width: 6px; }\n#forward-rooms-list::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 3px; }\n
+
+#forward-rooms-list::-webkit-scrollbar { width: 6px; }
+#forward-rooms-list::-webkit-scrollbar-thumb { background: var(--accent-cyan); border-radius: 3px; }
+
+/* Cropper.js Avatar Circular Masking */
+.cropper-view-box,
+.cropper-face {
+    border-radius: 50%;
+}
+/* Ensure the image is rendered with a dark background to emphasize the mask */
+.cropper-modal {
+    background-color: rgba(0, 0, 0, 0.85);
+}

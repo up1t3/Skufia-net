@@ -636,102 +636,130 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.previewAvatar = async function(input) {
-        if (!input.files || !input.files[0]) return;
-        const file = input.files[0];
+// Settings Avatar Preview + Upload (Cropper)
+window.cropperInstance = null;
 
-        // Immediate local preview and compression
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const preview = document.getElementById('settings-avatar-preview');
-            if (preview) preview.src = e.target.result;
-            
-            // Compress image client-side
-            const img = new Image();
-            img.onload = async function() {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 800;
-                const MAX_HEIGHT = 800;
-                let width = img.width;
-                let height = img.height;
-
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height *= MAX_WIDTH / width;
-                        width = MAX_WIDTH;
-                    }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width *= MAX_HEIGHT / height;
-                        height = MAX_HEIGHT;
-                    }
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                canvas.toBlob(async (blob) => {
-                    const compressedFile = new File([blob], file.name, { type: 'image/jpeg', lastModified: Date.now() });
-                    
-                    // Upload compressed file to server
-                    try {
-                        const token = (window.state && window.state.user) ? window.state.user.token : localStorage.getItem('skuf_token');
-                        if (!token) throw new Error('Токен авторизации не найден');
-
-                        const formData = new FormData();
-                        formData.append('file', compressedFile);
-                        
-                        if (typeof showToast === 'function') showToast('⏳ Загрузка фото...');
-                        
-                        const resp = await fetch(`${window.API_BASE_URL || '/api'}/me/avatar/upload`, {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${token}` },
-                            body: formData
-                        });
-                        
-                        if (!resp.ok) {
-                            const err = await resp.json().catch(() => ({}));
-                            let errMsg = err.detail || 'Ошибка загрузки (возможно, файл слишком большой)';
-                            if (Array.isArray(errMsg)) {
-                                errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
-                            } else if (typeof errMsg === 'object') {
-                                errMsg = JSON.stringify(errMsg);
-                            }
-                            throw new Error(errMsg);
-                        }
-                        
-                        const data = await resp.json();
-                        const avatarUrl = data.avatar_url;
-
-                        // Update sidebar and dashboard avatars
-                        const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
-                        if (sidebarAvatar) applyAvatarDisplay(sidebarAvatar, avatarUrl);
-                        const dashAvatar = document.getElementById('dash-avatar');
-                        if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
-                        const headerAvatar = document.getElementById('header-avatar');
-                        if (headerAvatar) {
-                            if (typeof applyAvatarDisplay === 'function') {
-                                applyAvatarDisplay(headerAvatar, avatarUrl);
-                            } else {
-                                headerAvatar.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-                            }
-                        }
-                        
-                        if (typeof addLog === 'function') addLog('Аватарка успешно обновлена', 'success');
-                        if (typeof showToast === 'function') showToast('✅ Фото профиля обновлено!');
-                    } catch (e) {
-                        console.error('Avatar upload error:', e);
-                        if (typeof addLog === 'function') addLog(`❌ Ошибка загрузки: ${e.message}`, 'error');
-                        if (typeof showToast === 'function') showToast('❌ Не удалось загрузить фото');
-                    }
-                }, 'image/jpeg', 0.85); // 85% quality JPEG
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+window.previewAvatar = function(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const image = document.getElementById('crop-image-target');
+        if (!image) return;
+        image.src = e.target.result;
+        
+        document.getElementById('avatar-crop-modal').style.display = 'flex';
+        
+        if (window.cropperInstance) {
+            window.cropperInstance.destroy();
+        }
+        
+        // Initialize Cropper.js
+        window.cropperInstance = new Cropper(image, {
+            aspectRatio: 1,
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 1,
+            restore: false,
+            guides: true,
+            center: true,
+            highlight: false,
+            cropBoxMovable: true,
+            cropBoxResizable: true,
+            toggleDragModeOnDblclick: false,
+        });
     };
+    reader.readAsDataURL(file);
+    input.value = ''; // Reset input
+};
+
+window.closeCropModal = function() {
+    document.getElementById('avatar-crop-modal').style.display = 'none';
+    if (window.cropperInstance) {
+        window.cropperInstance.destroy();
+        window.cropperInstance = null;
+    }
+};
+
+window.uploadCroppedAvatar = async function() {
+    if (!window.cropperInstance) return;
+    
+    const saveBtn = document.querySelector('#avatar-crop-modal .primary-btn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerText = 'ЗАГРУЗКА...';
+    }
+    
+    const canvas = window.cropperInstance.getCroppedCanvas({
+        width: 800,
+        height: 800,
+        imageSmoothingEnabled: true,
+        imageSmoothingQuality: 'high',
+    });
+    
+    canvas.toBlob(async (blob) => {
+        const compressedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+        
+        try {
+            const formData = new FormData();
+            formData.append('file', compressedFile);
+            
+            if (typeof showToast === 'function') showToast('⏳ Загрузка фото...');
+            
+            const token = (window.state && window.state.user) ? window.state.user.token : localStorage.getItem('skuf_token');
+            if (!token) throw new Error('Токен авторизации не найден');
+
+            const resp = await fetch(`${window.API_BASE_URL || '/api'}/me/avatar/upload`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                let errMsg = err.detail || 'Ошибка загрузки';
+                if (Array.isArray(errMsg)) errMsg = errMsg.map(e => e.msg || JSON.stringify(e)).join(', ');
+                else if (typeof errMsg === 'object') errMsg = JSON.stringify(errMsg);
+                throw new Error(errMsg);
+            }
+            
+            const data = await resp.json();
+            const avatarUrl = data.avatar_url;
+
+            const preview = document.getElementById('settings-avatar-preview');
+            if (preview) preview.src = avatarUrl + "?v=" + Date.now();
+            
+            const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
+            if (sidebarAvatar && typeof applyAvatarDisplay === 'function') applyAvatarDisplay(sidebarAvatar, avatarUrl);
+            
+            const dashAvatar = document.getElementById('dash-avatar');
+            if (dashAvatar && typeof applyAvatarDisplay === 'function') applyAvatarDisplay(dashAvatar, avatarUrl);
+            
+            const headerAvatar = document.getElementById('header-avatar');
+            if (headerAvatar) {
+                if (typeof applyAvatarDisplay === 'function') {
+                    applyAvatarDisplay(headerAvatar, avatarUrl);
+                } else {
+                    headerAvatar.innerHTML = `<img src="${avatarUrl}?v=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
+                }
+            }
+            
+            if (typeof addLog === 'function') addLog('Аватарка успешно обновлена', 'success');
+            if (typeof showToast === 'function') showToast('✅ Фото профиля обновлено!');
+            
+        } catch (e) {
+            console.error('Avatar upload error:', e);
+            if (typeof addLog === 'function') addLog(`❌ Ошибка загрузки: ${e.message}`, 'error');
+            if (typeof showToast === 'function') showToast('❌ Ошибка загрузки: ' + e.message);
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'СОХРАНИТЬ';
+            }
+            window.closeCropModal();
+        }
+    }, 'image/jpeg', 0.85);
+};
 
 
 
