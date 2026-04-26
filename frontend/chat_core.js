@@ -642,8 +642,19 @@ window.initChatCore = function() {
         let fileHtml = '';
         if (fileUrl) {
             const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
+            const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|opus)$/i.test(fileUrl);
             if (isImage) {
                 fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
+            } else if (isAudio) {
+                const audioId = `audio-${msg.id || Date.now()}`;
+                fileHtml = `<div class="msg-audio-player">
+                    <audio id="${audioId}" controls preload="metadata" style="width:100%;max-width:280px;border-radius:8px;outline:none;accent-color:var(--accent-cyan);">
+                        <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
+                        <source src="${BASE_URL}${fileUrl}" type="audio/webm">
+                    </audio>
+                </div>`;
+                // IndexedDB cache: store audio blob locally for offline playback
+                setTimeout(() => window._cacheAudioLocally && window._cacheAudioLocally(fileUrl, BASE_URL + fileUrl), 100);
             } else {
                 const fname = fileUrl.split('/').pop() || 'file';
                 fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
@@ -2009,11 +2020,11 @@ window.initChatCore = function() {
                 const data = await resp.json();
                 
                 const msgInput = document.getElementById('chat-input');
-                const originalVal = msgInput.value;
+                // [FIX] Save caption, send voice, then clear - do NOT restore old value
+                const captionToSend = msgInput ? msgInput.value.trim() : '';
                 state.pendingFile = { url: data.audio_url, name: 'Voice Message' };
-                msgInput.value = '🎤 Голосовое сообщение';
-                await sendChatMsg();
-                msgInput.value = originalVal;
+                await sendChatMsg(captionToSend || null);
+                // input is already cleared by sendChatMsg - do not restore
             } catch(e) {
                 addLog('Ошибка отправки голосового сообщения', 'error');
             }

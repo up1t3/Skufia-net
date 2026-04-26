@@ -1467,6 +1467,33 @@ body.super-user .nav-btn.active {
     font-size: 11px;
 }
 
+/* Audio player inside messages */
+.msg-audio-player {
+    margin-top: 4px;
+    margin-bottom: 2px;
+}
+
+.msg-audio-player audio {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    height: 36px;
+    border-radius: 18px;
+    outline: none;
+    background: transparent;
+    filter: invert(0);
+}
+
+/* Chromium custom audio controls tint */
+.msg-sent .msg-audio-player audio {
+    accent-color: #7fffff;
+    filter: brightness(1.1);
+}
+
+.msg-received .msg-audio-player audio {
+    accent-color: var(--accent-cyan, #00d4ff);
+}
+
 .premium-input-wrapper {
     padding: 12px 20px;
     /* safe-area: сдвигаем вверх на высоту адресной строки/Home Bar */

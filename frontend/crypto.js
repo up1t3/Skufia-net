@@ -512,16 +512,22 @@
                     await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKeysMap).catch(() => {});
                     return sessionKeysMap;
                 }
+                // All key versions failed to unwrap — our key changed. Fall through to re-establish.
+                console.warn('[E2EE] All key versions failed to unwrap for room', roomId, '— re-establishing session key.');
             } else if (keyBundle && keyBundle.wrapped_key) {
                 // Legacy fallback
-                const sessionKey = await CryptoManager.unwrapKey(
-                    state.chat.keys.privateKey,
-                    keyBundle.wrapped_key
-                );
-                const sessionKeysMap = { keys: { 1: sessionKey }, active_version: 1 };
-                state.chat.sessionKeys[roomId] = sessionKeysMap;
-                await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKeysMap).catch(() => {});
-                return sessionKeysMap;
+                try {
+                    const sessionKey = await CryptoManager.unwrapKey(
+                        state.chat.keys.privateKey,
+                        keyBundle.wrapped_key
+                    );
+                    const sessionKeysMap = { keys: { 1: sessionKey }, active_version: 1 };
+                    state.chat.sessionKeys[roomId] = sessionKeysMap;
+                    await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKeysMap).catch(() => {});
+                    return sessionKeysMap;
+                } catch(e) {
+                    console.warn('[E2EE] Legacy key unwrap failed, re-establishing:', e);
+                }
             }
         } catch (e) {
             console.warn('Failed to fetch existing session key bundle:', e);

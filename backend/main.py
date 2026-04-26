@@ -315,7 +315,40 @@ async def startup_event():
     if run_bot:
         print("Starting Telegram Support Bot...")
         asyncio.create_task(run_bot())
+
+    # Start audio file cleanup task (5-day TTL)
+    asyncio.create_task(cleanup_audio_files_task())
+
 # [FIX-04] Removed duplicate include_router (already included at line 142 with prefix='/api')
+
+async def cleanup_audio_files_task():
+    """Background task: delete voice files older than 5 days every 6 hours."""
+    import time
+    AUDIO_TTL_SECONDS = 5 * 24 * 60 * 60  # 5 days
+    voice_dir = os.path.join("uploads", "voice")
+
+    while True:
+        try:
+            if os.path.isdir(voice_dir):
+                now = time.time()
+                deleted = 0
+                for fname in os.listdir(voice_dir):
+                    fpath = os.path.join(voice_dir, fname)
+                    if os.path.isfile(fpath):
+                        age = now - os.path.getmtime(fpath)
+                        if age > AUDIO_TTL_SECONDS:
+                            try:
+                                os.remove(fpath)
+                                deleted += 1
+                            except OSError as e:
+                                print(f"[AudioTTL] Failed to delete {fpath}: {e}")
+                if deleted:
+                    print(f"[AudioTTL] Deleted {deleted} expired voice file(s).")
+        except Exception as e:
+            print(f"[AudioTTL] Cleanup error: {e}")
+        # Run every 6 hours
+        await asyncio.sleep(6 * 60 * 60)
+
 
 @app.get("/", tags=["Health"])
 async def root():
