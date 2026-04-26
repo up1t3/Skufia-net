@@ -1151,19 +1151,24 @@ body.super-user .nav-btn.active {
     overflow: hidden;
 }
 
-.status-dot {
+.sidebar-item-avatar-container .status-dot {
     position: absolute;
     bottom: 0;
     right: 0;
+    border: 2px solid var(--bg-panel);
+}
+
+.status-dot {
     width: 12px;
     height: 12px;
     border-radius: 50%;
     background: #555;
-    border: 2px solid var(--bg-panel);
+    display: inline-block;
 }
 
 .status-dot.online {
     background: #10b981;
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
 }
 
 .sidebar-item-info {
@@ -1309,13 +1314,7 @@ body.super-user .nav-btn.active {
     margin-top: 2px;
 }
 
-.status-dot {
-    width: 8px;
-    height: 8px;
-    background-color: #10b981; /* Green dot for online */
-    border-radius: 50%;
-    box-shadow: 0 0 5px #10b981;
-}
+/* removed global green dot override */
 
 .chat-header-actions {
     display: flex;
