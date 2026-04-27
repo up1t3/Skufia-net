@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1.0.7'; // Bumped for robust cache-busting during install
+const CACHE_NAME = 'skufia-chat-v1.0.8'; // Bumped for robust cache-busting during install
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -17,12 +17,22 @@ const ASSETS_TO_CACHE = [
 
 
 self.addEventListener('install', (event) => {
-    
+    self.skipWaiting(); // Force new service worker to take over immediately
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => {
-                console.log('Opened cache');
-                return cache.addAll(ASSETS_TO_CACHE);
+            .then(async (cache) => {
+                console.log('Opened cache, forcing fresh fetch for assets...');
+                // Manually fetch each asset with cache: 'no-cache' to avoid getting stale versions from HTTP cache
+                for (const asset of ASSETS_TO_CACHE) {
+                    try {
+                        const response = await fetch(new Request(asset, { cache: 'no-cache' }));
+                        if (response.ok) {
+                            await cache.put(asset, response);
+                        }
+                    } catch (err) {
+                        console.warn(`Failed to cache ${asset} during install:`, err);
+                    }
+                }
             })
     );
 });

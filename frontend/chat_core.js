@@ -29,37 +29,6 @@ window.initChatCore = function() {
             } else if (data.type === 'new_message') {
                 const msg = data;
 
-                if (msg.sender_id == state.user.id) {
-                    loadChatRooms();
-                    // Fallback: If for some reason the optimistic message was removed or failed to render
-                    // (e.g. iOS Safari background fetch abort false-positive)
-                    if (state.chat.currentRoomId == msg.room_id) {
-                        const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row.msg-optimistic'));
-                        const matchedEl = pendingMsgs.find(el => {
-                            if (el.id === `msg-${msg.id}`) return false; // Already has real ID
-                            const txt = el.querySelector('.msg-text');
-                            return txt && txt.textContent.trim() === (msg.text || msg.content || '').trim();
-                        });
-                        
-                        if (matchedEl) {
-                            // Optimistic message is still in DOM. Confirm it!
-                            matchedEl.id = `msg-${msg.id}`;
-                            matchedEl.classList.remove('msg-optimistic');
-                        } else if (!document.getElementById(`msg-${msg.id}`)) {
-                            console.warn('[WS] Own message missing from DOM (likely transient fetch error), rendering from WS fallback.');
-                            renderChatMessage(msg);
-                            
-                            // Clear the input field since the message actually reached the server
-                            const input = document.getElementById('chat-input');
-                            if (input && input.value.trim() === (msg.text || msg.content || '').trim()) {
-                                input.value = '';
-                                localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
-                            }
-                        }
-                    }
-                    return;
-                }
-                
                 // --- E2EE DECRYPTION (graceful) ---
                 if (msg.iv && msg.iv.length > 0) {
                     // Try to get or fetch the session key if not cached
@@ -106,6 +75,39 @@ window.initChatCore = function() {
                 }
                 // If msg.iv is empty/null, content is plaintext — show as-is
                 if (!msg.text) msg.text = msg.content;
+
+                if (msg.sender_id == state.user.id) {
+                    loadChatRooms();
+                    // Fallback: If for some reason the optimistic message was removed or failed to render
+                    // (e.g. iOS Safari background fetch abort false-positive)
+                    if (state.chat.currentRoomId == msg.room_id) {
+                        const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row.msg-optimistic'));
+                        const matchedEl = pendingMsgs.find(el => {
+                            if (el.id === `msg-${msg.id}`) return false; // Already has real ID
+                            const txt = el.querySelector('.msg-text');
+                            return txt && txt.textContent.trim() === (msg.text || msg.content || '').trim();
+                        });
+                        
+                        if (matchedEl) {
+                            // Optimistic message is still in DOM. Confirm it!
+                            matchedEl.id = `msg-${msg.id}`;
+                            matchedEl.classList.remove('msg-optimistic');
+                        } else if (!document.getElementById(`msg-${msg.id}`)) {
+                            console.warn('[WS] Own message missing from DOM (likely transient fetch error), rendering from WS fallback.');
+                            renderChatMessage(msg);
+                            
+                            // Clear the input field since the message actually reached the server
+                            const input = document.getElementById('chat-input');
+                            if (input && input.value.trim() === (msg.text || msg.content || '').trim()) {
+                                input.value = '';
+                                localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
+                            }
+                        }
+                    }
+                    return;
+                }
+                
+
 
                 if (state.chat.currentRoomId === msg.room_id) {
                     renderChatMessage(msg);

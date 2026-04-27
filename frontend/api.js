@@ -22,10 +22,8 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
             body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
             cache: 'no-store'
         };
-        // Use keepalive for small JSON payloads to prevent mobile browser aborts during keyboard collapse
-        if (!(body instanceof FormData)) {
-            fetchOptions.keepalive = true;
-        }
+        // Removed keepalive: true as it causes fetch promises to hang indefinitely on certain mobile browsers
+
 
         const res = await fetch(`${window.API_BASE_URL}${endpoint}`, fetchOptions);
         if (res.status === 401) {
