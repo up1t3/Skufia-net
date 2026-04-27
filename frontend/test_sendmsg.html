@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>sendChatMsg Unit Tests</title>
+    <style>
+        body { font-family: monospace; background: #111; color: #0f0; padding: 20px; }
+        .pass { color: #0f0; }
+        .fail { color: #f00; font-weight: bold; }
+        .info { color: #0af; }
+        hr { border-color: #333; }
+    </style>
+</head>
+<body>
+<h2>🧪 sendChatMsg Pipeline Tests</h2>
+<div id="results"></div>
+
+<script>
+// ========================================
+// MOCK ENVIRONMENT — simulate what the real app provides
+// ========================================
+
+const results = document.getElementById('results');
+let passed = 0, failed = 0;
+
+function log(msg, cls = 'info') {
+    results.innerHTML += `<div class="${cls}">${msg}</div>`;
+}
+function assert(condition, name) {
+    if (condition) {
+        passed++;
+        log(`✅ PASS: ${name}`, 'pass');
+    } else {
+        failed++;
+        log(`❌ FAIL: ${name}`, 'fail');
+    }
+}
+
+// --- Mock DOM elements ---
+const chatHistory = document.createElement('div');
+chatHistory.id = 'chat-history';
+document.body.appendChild(chatHistory);
+
+const chatInput = document.createElement('input');
+chatInput.id = 'chat-input';
+chatInput.type = 'text';
+document.body.appendChild(chatInput);
+
+// Mock state
+const state = {
+    user: { id: 1, username: 'testuser', display_name: 'Test User', token: 'fake-token' },
+    chat: {
+        currentRoomId: 42,
+        currentRoomType: 'group', // not private = no E2EE
+        receiverId: 2,
+        replyToId: null,
+        editingId: null,
+        sessionKeys: {},
+        socket: null
+    },
+    pendingFile: null,
+    modalFile: null
+};
+window.state = state;
+
+// Mock API
+let lastApiCall = null;
+window.apiRequest = async function(endpoint, method, body) {
+    lastApiCall = { endpoint, method, body };
+    return { id: 9999, ok: true };
+};
+window.API_BASE_URL = '/api';
+
+// Mock functions
+window.addLog = function(msg, level) { console.log(`[${level}] ${msg}`); };
+window.cancelReply = function() {};
+window.playSound = function() {};
+
+function clearChatFile() {
+    state.pendingFile = null;
+}
+
+// =============================================
+// EXTRACT sendChatMsg logic for testing
+// =============================================
+
+function renderChatMessage(msg) {
+    const history = document.getElementById('chat-history');
+    if (!history) {
+        console.error('[renderChatMessage] #chat-history NOT FOUND');
+        return;
+    }
+    const el = document.createElement('div');
+    el.id = `msg-${msg.id}`;
+    el.className = 'msg-bubble sent';
+    el.textContent = msg.text || msg.content || '';
+    history.appendChild(el);
+}
+
+async function sendChatMsg(directCaption = null) {
+    const input = document.getElementById('chat-input');
+    
+    let content = (typeof directCaption === 'string') ? directCaption : (input ? input.value.trim() : '');
+    const hasContent = !!content.trim();
+    const hasFile = !!state.pendingFile;
+    
+    if (state.chat.currentRoomId == null || (!hasContent && !hasFile)) {
+        console.warn('[sendChatMsg] Skipped: roomId=', state.chat.currentRoomId, 'hasContent=', hasContent, 'hasFile=', hasFile);
+        return 'SKIPPED_NO_CONTENT';
+    }
+
+    // Prevent double sending
+    if (input && input.dataset.sending === 'true' && typeof directCaption !== 'string') return 'SKIPPED_DOUBLE_SEND';
+    if (input) {
+        input.dataset.sending = 'true';
+    }
+
+    const roomId = state.chat.currentRoomId;
+    let savedContent = content;
+    let savedFile = state.pendingFile ? { ...state.pendingFile } : null;
+    let savedReplyId = state.chat.replyToId;
+    let optimisticId = Date.now();
+
+    let payload = {
+        content,
+        encryption_iv: '',
+        file_url: state.pendingFile ? state.pendingFile.url : null,
+        reply_to_id: state.chat.replyToId
+    };
+
+    let sendSucceeded = false;
+    try {
+        // Skip E2EE for group chats (currentRoomType !== 'private')
+        let isEncrypted = false;
+
+        // OPTIMISTIC RENDER
+        if (input) input.value = '';
+        if (window.cancelReply) window.cancelReply();
+        clearChatFile();
+
+        optimisticId = Date.now();
+        if (!state.chat.editingId) {
+            const optimisticMsg = {
+                id: optimisticId,
+                sender: state.user?.username || 'Я',
+                sender_id: state.user?.id,
+                text: savedContent,
+                content: savedContent,
+                iv: null,
+                is_secure: false,
+                file_url: savedFile ? savedFile.url : null,
+                reply_to_id: savedReplyId,
+                is_edited: false,
+                is_read: false,
+                timestamp: new Date().toISOString()
+            };
+            renderChatMessage(optimisticMsg);
+        }
+
+        // API REQUEST
+        let response;
+        if (state.chat.editingId) {
+            response = await window.apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
+            state.chat.editingId = null;
+        } else {
+            response = await window.apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
+            const tempMsgEl = document.getElementById(`msg-${optimisticId}`);
+            if (tempMsgEl && response && response.id) {
+                tempMsgEl.id = `msg-${response.id}`;
+            }
+        }
+        
+        sendSucceeded = true;
+    } catch (e) {
+        console.error('sendChatMsg error:', e);
+        if (input) input.value = savedContent;
+        if (!state.chat.editingId) {
+            const tempMsgEl = document.getElementById(`msg-${optimisticId}`);
+            if (tempMsgEl) tempMsgEl.remove();
+        }
+    } finally {
+        if (input) {
+            input.dataset.sending = 'false';
+            if (sendSucceeded) {
+                input.value = '';
+            }
+            input.focus();
+        }
+    }
+    return sendSucceeded ? 'SUCCESS' : 'FAILED';
+}
+
+// ========================================
+// TEST SUITE
+// ========================================
+async function runTests() {
+    log('--- Test Suite: sendChatMsg Pipeline ---', 'info');
+    log('');
+
+    // Reset state before each test
+    function resetState() {
+        chatInput.value = '';
+        chatInput.dataset.sending = 'false';
+        chatHistory.innerHTML = '';
+        lastApiCall = null;
+        state.chat.currentRoomId = 42;
+        state.chat.currentRoomType = 'group';
+        state.chat.editingId = null;
+        state.chat.replyToId = null;
+        state.pendingFile = null;
+    }
+
+    // ---- TEST 1: Basic message send ----
+    resetState();
+    chatInput.value = 'Привет мир';
+    const r1 = await sendChatMsg();
+    assert(r1 === 'SUCCESS', 'T1: Basic send returns SUCCESS');
+    assert(lastApiCall !== null, 'T1: API was called');
+    assert(lastApiCall.endpoint === '/chat/rooms/42/send', 'T1: Correct endpoint');
+    assert(lastApiCall.body.content === 'Привет мир', 'T1: Correct content in payload');
+    assert(chatInput.value === '', 'T1: Input cleared after send');
+    assert(chatInput.dataset.sending === 'false', 'T1: sending flag reset');
+    assert(chatHistory.children.length === 1, 'T1: Optimistic message rendered');
+
+    log('<hr>');
+
+    // ---- TEST 2: Empty message blocked ----
+    resetState();
+    chatInput.value = '';
+    const r2 = await sendChatMsg();
+    assert(r2 === 'SKIPPED_NO_CONTENT', 'T2: Empty message skipped');
+    assert(lastApiCall === null, 'T2: No API call made');
+    assert(chatHistory.children.length === 0, 'T2: No optimistic message');
+
+    log('<hr>');
+
+    // ---- TEST 3: No room selected ----
+    resetState();
+    chatInput.value = 'Тест';
+    state.chat.currentRoomId = null;
+    const r3 = await sendChatMsg();
+    assert(r3 === 'SKIPPED_NO_CONTENT', 'T3: No room → message skipped');
+    assert(lastApiCall === null, 'T3: No API call');
+
+    log('<hr>');
+
+    // ---- TEST 4: Double send prevention ----
+    resetState();
+    chatInput.value = 'Первое';
+    chatInput.dataset.sending = 'true';
+    const r4 = await sendChatMsg();
+    assert(r4 === 'SKIPPED_DOUBLE_SEND', 'T4: Double send blocked');
+    assert(lastApiCall === null, 'T4: No API call on double send');
+
+    log('<hr>');
+
+    // ---- TEST 5: directCaption as string ----
+    resetState();
+    const r5 = await sendChatMsg('Прямой текст');
+    assert(r5 === 'SUCCESS', 'T5: directCaption string works');
+    assert(lastApiCall.body.content === 'Прямой текст', 'T5: Correct content from directCaption');
+
+    log('<hr>');
+
+    // ---- TEST 6: directCaption bypasses double-send guard ----
+    resetState();
+    chatInput.dataset.sending = 'true';
+    const r6 = await sendChatMsg('Голосовое');
+    assert(r6 === 'SUCCESS', 'T6: directCaption bypasses sending guard');
+
+    log('<hr>');
+
+    // ---- TEST 7: MouseEvent as directCaption (simulating addEventListener bug) ----
+    resetState();
+    chatInput.value = 'Тест';
+    const fakeMouseEvent = new MouseEvent('click');
+    const r7 = await sendChatMsg(fakeMouseEvent);
+    assert(r7 === 'SUCCESS', 'T7: MouseEvent as arg → falls back to input.value');
+    assert(lastApiCall.body.content === 'Тест', 'T7: Content from input, not from event');
+
+    log('<hr>');
+
+    // ---- TEST 8: Optimistic render creates element with correct ID ----
+    resetState();
+    chatInput.value = 'ID тест';
+    await sendChatMsg();
+    assert(chatHistory.children.length === 1, 'T8: One optimistic message');
+    const msgEl = chatHistory.children[0];
+    assert(msgEl.id === 'msg-9999', 'T8: Optimistic ID updated to server ID (9999)');
+    assert(msgEl.textContent === 'ID тест', 'T8: Message text correct');
+
+    log('<hr>');
+
+    // ---- TEST 9: API failure restores input ----
+    resetState();
+    chatInput.value = 'Ошибка';
+    window.apiRequest = async function() { throw new Error('Network error'); };
+    const r9 = await sendChatMsg();
+    assert(r9 === 'FAILED', 'T9: API error returns FAILED');
+    assert(chatInput.value === 'Ошибка', 'T9: Input value restored on error');
+    assert(chatHistory.children.length === 0, 'T9: Optimistic message removed on error');
+    assert(chatInput.dataset.sending === 'false', 'T9: sending flag reset after error');
+    // Restore mock
+    window.apiRequest = async function(ep, m, b) { lastApiCall = {endpoint:ep,method:m,body:b}; return {id:9999}; };
+
+    log('<hr>');
+
+    // ---- TEST 10: File attachment sends ----
+    resetState();
+    chatInput.value = '';
+    state.pendingFile = { url: '/uploads/photo.jpg', name: 'photo.jpg' };
+    const r10 = await sendChatMsg();
+    assert(r10 === 'SUCCESS', 'T10: File-only message sends');
+    assert(lastApiCall.body.file_url === '/uploads/photo.jpg', 'T10: File URL in payload');
+
+    log('<hr>');
+
+    // ---- TEST 11: sending flag prevents second click but resets after completion ----
+    resetState();
+    chatInput.value = 'Параллельный';
+    // First send
+    const p1 = sendChatMsg();
+    // Immediately try second
+    const r11 = await sendChatMsg();
+    await p1;
+    assert(r11 === 'SKIPPED_DOUBLE_SEND', 'T11: Second concurrent send blocked');
+    assert(chatInput.dataset.sending === 'false', 'T11: Flag reset after first completes');
+
+    log('<hr>');
+
+    // ---- SUMMARY ----
+    log('');
+    log(`========================================`);
+    log(`TOTAL: ${passed + failed} | ✅ PASSED: ${passed} | ❌ FAILED: ${failed}`, failed > 0 ? 'fail' : 'pass');
+    log(`========================================`);
+}
+
+runTests();
+</script>
+</body>
+</html>

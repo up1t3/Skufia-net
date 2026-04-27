@@ -1,4 +1,4 @@
-Ôªødocument.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     // --- Utility: Apply Avatar Sprite ---
     function applyAvatarDisplay(element, url, index = null) {
         if (!element) return;
@@ -76,7 +76,7 @@
     window.marketState = {
         page: 1,
         layout: 'grid',
-        filters: { q: '', cat: '‚ï®–¢‚ï§–ë‚ï®‚ï°', loc: '‚ï®–¢‚ï®‚ï°‚ï®‚ïñ‚ï®‚î§‚ï®‚ï°', sort: 'newest', min: null, max: null }
+        filters: { q: '', cat: '¶“T¡¶¶', loc: '¶“¶¶¶¨¶+¶¶', sort: 'newest', min: null, max: null }
     };
     window.updatePriceFilter = debounce(function(e, type) { 
         window.marketState.filters[type] = e.target.value; 
@@ -117,15 +117,15 @@
     };
 
     // =========================================================================
-    // SECURE CRYPTO ENGINE v2 —Ç–ê–§ Signal-inspired E2EE
+    // SECURE CRYPTO ENGINE v2 Ú¿‘ Signal-inspired E2EE
     // =========================================================================
     // Security properties:
-    // —Ç–¨–ï RSA private key: non-extractable, persisted in IndexedDB only
-    // —Ç–¨–ï AES session keys: non-extractable, cached per-room in IndexedDB
-    // —Ç–¨–ï Key fingerprint: SHA-256 of public key bytes, displayed to user
-    // —Ç–¨–ï Per-room AES-256-GCM keys —Ç–ê–§ no universal key
-    // —Ç–¨–ï Private key NEVER sent to server
-    // —Ç–¨–ï Server stores only: public keys + RSA-wrapped AES bundles
+    // Ú‹≈ RSA private key: non-extractable, persisted in IndexedDB only
+    // Ú‹≈ AES session keys: non-extractable, cached per-room in IndexedDB
+    // Ú‹≈ Key fingerprint: SHA-256 of public key bytes, displayed to user
+    // Ú‹≈ Per-room AES-256-GCM keys Ú¿‘ no universal key
+    // Ú‹≈ Private key NEVER sent to server
+    // Ú‹≈ Server stores only: public keys + RSA-wrapped AES bundles
     // =========================================================================
 
     const IDB_NAME = 'skufia_vault';
@@ -186,11 +186,11 @@
 
     class CryptoManager {
 
-        // —Ç–§–ê—Ç–§–ê RSA Key Pair —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ RSA Key Pair Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Generate RSA-OAEP 4096-bit key pair.
-         * Private key is NON-EXTRACTABLE —Ç–ê–§ cannot be exported by any JS code.
+         * Private key is NON-EXTRACTABLE Ú¿‘ cannot be exported by any JS code.
          * @returns {Promise<CryptoKeyPair>}
          */
         static async generateKeyPair() {
@@ -201,7 +201,7 @@
                     publicExponent: new Uint8Array([1, 0, 1]),
                     hash: 'SHA-256',
                 },
-                false,                            // —Ç–ñ–† extractable: FALSE (private key protected!)
+                false,                            // Ú∆– extractable: FALSE (private key protected!)
                 ['encrypt', 'decrypt']
             );
         }
@@ -245,22 +245,22 @@
                 .join(':');
         }
 
-        // —Ç–§–ê—Ç–§–ê AES Session Key —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ AES Session Key Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Generate a fresh AES-256-GCM key for a chat session.
-         * NON-EXTRACTABLE —Ç–ê–§ key bytes never leave the browser's crypto engine.
+         * NON-EXTRACTABLE Ú¿‘ key bytes never leave the browser's crypto engine.
          * @returns {Promise<CryptoKey>}
          */
         static async generateSessionKey() {
             return await window.crypto.subtle.generateKey(
                 { name: 'AES-GCM', length: 256 },
-                false,              // —Ç–ñ–† non-extractable!
+                false,              // Ú∆– non-extractable!
                 ['encrypt', 'decrypt']
             );
         }
 
-        // —Ç–§–ê—Ç–§–ê Key Wrapping (RSA-OAEP wraps AES) —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ Key Wrapping (RSA-OAEP wraps AES) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Wrap (encrypt) an AES session key with an RSA public key.
@@ -296,12 +296,12 @@
                 rsaPrivateKey,
                 { name: 'RSA-OAEP' },
                 { name: 'AES-GCM', length: 256 },
-                false,              // —Ç–ñ–† result is also non-extractable
+                false,              // Ú∆– result is also non-extractable
                 ['encrypt', 'decrypt']
             );
         }
 
-        // —Ç–§–ê—Ç–§–ê Message Encryption / Decryption —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ Message Encryption / Decryption Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Encrypt plaintext with AES-256-GCM.
@@ -342,7 +342,7 @@
         }
     }
 
-    // —Ç–§–ê—Ç–§–ê Key Vault: persist identity + session keys in IndexedDB —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+    // Ú‘¿Ú‘¿ Key Vault: persist identity + session keys in IndexedDB Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
     /**
      * Get or generate the user's RSA identity key pair.
@@ -361,27 +361,27 @@
 
             if (storedPub && storedPriv) {
                 // storedPriv is the non-extractable CryptoKey object saved in IDB
-                addLog('–Å–Ø–§–† ‚ï®–ß‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ï°‚ï®‚ï£ ‚ï®‚ïï‚ï®‚ïñ ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï§–°‚ï®‚ïú‚ï®‚ïú‚ï®‚ïõ‚ï®‚îÇ‚ï®‚ïõ ‚ï§–ï‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ïó‚ï®‚ïï‚ï§–ô‚ï®‚ñë...', 'info');
+                addLog('®ﬂ‘– ¶◊¶-¶¶T¿T√¶¨¶¶¶- ¶¶¶¨TŒT«¶¶¶¶ ¶¨¶¨ ¶¨¶-T…¶¨T…T—¶-¶-¶-¶¶¶- T≈T¿¶-¶-¶¨¶¨¶¨T…¶-...', 'info');
                 state.chat.keys.publicKey = await CryptoManager.importPublicKey(storedPub);
                 state.chat.keys.privateKey = storedPriv; // already a CryptoKey
                 // Always re-register pubKey in case server restarted
                 await apiRequest('/me/key', 'POST', { public_key: storedPub }).catch(() => {});
                 const fp = await CryptoManager.keyFingerprint(storedPub);
                 state.chat.keyFingerprint = fp;
-                addLog(`–Å–Ø–§–° ‚ï®–™‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï ‚ï®‚ñì‚ï®‚ïõ‚ï§–ë‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï§–õ | ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${fp.slice(0, 23)}...`, 'success');
+                addLog(`®ﬂ‘— ¶⁄¶¨TŒT«¶¨ ¶-¶-T¡T¡T¬¶-¶-¶-¶-¶¨¶¶¶-TÀ | ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶: ${fp.slice(0, 23)}...`, 'success');
                 // Clear old insecure localStorage keys if present
                 localStorage.removeItem('skufia_pub_spki');
                 localStorage.removeItem('skufia_priv_pkcs8');
                 return;
             }
         } catch (e) {
-            addLog('—Ç–™–∞—è‚ïï–ü ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ó‚ï§–í‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï§–ï‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ïó‚ï®‚ïï‚ï§–ô‚ï®‚ñë, ‚ï®‚îÇ‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–ê‚ï§–ì‚ï®‚ï°‚ï®‚ïù ‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï§–õ‚ï®‚ï° ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï...', 'info');
+            addLog('Ú⁄‡ˇ¨œ ¶ﬁT»¶¨¶-¶¶¶- T«T¬¶¶¶-¶¨Tœ T≈T¿¶-¶-¶¨¶¨¶¨T…¶-, ¶¶¶¶¶-¶¶T¿¶¨T¿T√¶¶¶- ¶-¶-¶-TÀ¶¶ ¶¶¶¨TŒT«¶¨...', 'info');
             await vaultDelete(IDB_STORE_KEYS, 'pub_base64');
             await vaultDelete(IDB_STORE_KEYS, 'priv_cryptokey');
         }
 
         // Generate fresh RSA-4096 identity key pair
-        addLog('—Ç–™–©—è‚ïï–ü ‚ï®–£‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï§–ê‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–ü RSA-4096 ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ï°‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚îê‚ï®‚ñë‚ï§–ê‚ï§–õ...', 'info');
+        addLog('Ú⁄Ÿˇ¨œ ¶”¶¶¶-¶¶T¿¶-T∆¶¨Tœ RSA-4096 ¶¶¶¨TŒT«¶¶¶-¶-¶¶ ¶¨¶-T¿TÀ...', 'info');
         const pair = await CryptoManager.generateKeyPair();
         state.chat.keys.publicKey = pair.publicKey;
         state.chat.keys.privateKey = pair.privateKey;
@@ -400,7 +400,7 @@
 
         const fp = await CryptoManager.keyFingerprint(pubBase64);
         state.chat.keyFingerprint = fp;
-        addLog(`—Ç–¨–ï E2EE ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï§–õ ‚ï®‚ïï ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï§–õ | ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${fp.slice(0, 23)}...`, 'success');
+        addLog(`Ú‹≈ E2EE ¶¶¶¨TŒT«¶¨ T¡¶-¶¨¶+¶-¶-TÀ ¶¨ ¶¨¶-T…¶¨T…¶¶¶-TÀ | ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶: ${fp.slice(0, 23)}...`, 'success');
     }
 
     /**
@@ -439,28 +439,28 @@
                 // Cache in memory and IndexedDB
                 state.chat.sessionKeys[roomId] = sessionKey;
                 await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
-                addLog(`–Å–Ø–§–£ ‚ï®–±‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ïï‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó ‚ï®‚ñì‚ï®‚ïõ‚ï§–ë‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú ‚ï®‚î§‚ï®‚ïó‚ï§–ü ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïù‚ï®‚ïú‚ï®‚ñë‚ï§–í‚ï§–õ #${roomId}`, 'success');
+                addLog(`®ﬂ‘” ¶·¶¶T¡T¡¶¨¶-¶-¶-TÀ¶¶ ¶¶¶¨TŒT« ¶-¶-T¡T¡T¬¶-¶-¶-¶-¶¨¶¶¶- ¶+¶¨Tœ ¶¶¶-¶-¶-¶-T¬TÀ #${roomId}`, 'success');
                 return sessionKey;
             }
         } catch (e) {
-            // 404 = no key yet —Ç–ê–§ we are the initiator
+            // 404 = no key yet Ú¿‘ we are the initiator
         }
 
         // 4. Generate new session key and distribute to both parties
         if (!receiverId) return null;
 
-        addLog(`–Å–Ø–§–° ‚ï®–≥‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïë‚ï®‚ñë E2EE ‚ï§–ë‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ïï‚ï®‚ïï ‚ï§–ë ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïó‚ï§–ú‚ï®‚ïñ‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ï°‚ï®‚ïó‚ï®‚ï°‚ï®‚ïù #${receiverId}...`, 'info');
+        addLog(`®ﬂ‘— ¶„T¡T¬¶-¶-¶-¶-¶¶¶- E2EE T¡¶¶T¡T¡¶¨¶¨ T¡ ¶¨¶-¶¨TÃ¶¨¶-¶-¶-T¬¶¶¶¨¶¶¶- #${receiverId}...`, 'info');
 
         // Fetch recipient's public key
         const targetKeyData = await apiRequest(`/users/${receiverId}/key`).catch(() => null);
         if (!targetKeyData || !targetKeyData.public_key) {
-            addLog('—Ç–™–∞—è‚ïï–ü ‚ï®–Ø‚ï®‚ïõ‚ï®‚ïó‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ï°‚ï®‚ïó‚ï§–ú ‚ï®‚ï°‚ï§–ô‚ï§–° ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ïñ‚ï®‚ñë‚ï§–ê‚ï®‚ï°‚ï®‚îÇ‚ï®‚ïï‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïó ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï E2EE', 'error');
+            addLog('Ú⁄‡ˇ¨œ ¶ﬂ¶-¶¨T√T«¶-T¬¶¶¶¨TÃ ¶¶T…T— ¶-¶¶ ¶¨¶-T¿¶¶¶¶¶¨T¡T¬T¿¶¨T¿¶-¶-¶-¶¨ ¶¶¶¨TŒT«¶¨ E2EE', 'error');
             return null;
         }
 
         // Show fingerprint of recipient's key for MITM detection
         const recipientFp = await CryptoManager.keyFingerprint(targetKeyData.public_key);
-        addLog(`–Å–Ø–§–ù ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ñë ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïó‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ï°‚ï®‚ïó‚ï§–ü: ${recipientFp.slice(0, 23)}...`, 'info');
+        addLog(`®ﬂ‘Õ ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶ ¶¶¶¨TŒT«¶- ¶¨¶-¶¨T√T«¶-T¬¶¶¶¨Tœ: ${recipientFp.slice(0, 23)}...`, 'info');
 
         // Generate fresh AES-256-GCM session key
         const sessionKey = await CryptoManager.generateSessionKey();
@@ -475,7 +475,7 @@
         const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
         const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
 
-        // Store both bundles on server (server cannot decrypt —Ç–ê–§ only wrapped blobs)
+        // Store both bundles on server (server cannot decrypt Ú¿‘ only wrapped blobs)
         const keysPayload = {};
         keysPayload[String(receiverId)] = wrappedForRecipient;
         keysPayload[String(state.user.id)] = wrappedForSelf;
@@ -484,7 +484,7 @@
         // Cache in IndexedDB
         await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
 
-        addLog(`—Ç–¨–ï E2EE ‚ï§–ë‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ïï‚ï§–ü ‚ï§–ì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë | ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${recipientFp.slice(0, 11)}...`, 'success');
+        addLog(`Ú‹≈ E2EE T¡¶¶T¡T¡¶¨Tœ T√T¡T¬¶-¶-¶-¶-¶¨¶¶¶-¶- | ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶: ${recipientFp.slice(0, 11)}...`, 'success');
         return sessionKey;
     }
 
@@ -639,7 +639,7 @@
             h4.textContent = title;
             const backLink = document.createElement('div');
             backLink.className = 'back-link';
-            backLink.textContent = '<< ‚ï®–¢‚ï®‚ï°‚ï§–ê‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú‚ï§–ë‚ï§–ü ‚ï®‚ïë ‚ï§–ë‚ï®‚îê‚ï®‚ïï‚ï§–ë‚ï®‚ïë‚ï§–ì';
+            backLink.textContent = '<< ¶“¶¶T¿¶-T√T¬TÃT¡Tœ ¶¶ T¡¶¨¶¨T¡¶¶T√';
             backLink.onclick = loadForum;
             container.appendChild(h4);
             container.appendChild(backLink);
@@ -652,7 +652,7 @@
 
                 const metaDiv = document.createElement('div');
                 metaDiv.className = 'msg-meta';
-                metaDiv.textContent = `by ${post.author} | –Å–Ø–°–ù `;
+                metaDiv.textContent = `by ${post.author} | ®ﬂ—Õ `;
 
                 const likesSpan = document.createElement('span');
                 likesSpan.id = `likes-${post.id}`;
@@ -660,7 +660,7 @@
 
                 const btn = document.createElement('button');
                 btn.className = 'small-btn';
-                btn.textContent = '‚ï®–Ø‚ï®‚ïõ‚ï®‚î§‚ï®‚î§‚ï®‚ï°‚ï§–ê‚ï®‚ï¢‚ï®‚ñë‚ï§–í‚ï§–ú';
+                btn.textContent = '¶ﬂ¶-¶+¶+¶¶T¿¶¶¶-T¬TÃ';
                 btn.onclick = () => likePost(post.id);
 
                 metaDiv.appendChild(likesSpan);
@@ -720,7 +720,7 @@
             const articles = await apiRequest('/wiki');
             container.innerHTML = '';
             if (articles.length === 0) {
-                container.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: ‚ï®–Ø‚ï®‚ïõ‚ï®‚ïï‚ï§–ë‚ï®‚ïë ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï®‚ïú‚ï®‚ï° ‚ï®‚î§‚ï®‚ñë‚ï®‚ïó ‚ï§–ê‚ï®‚ï°‚ï®‚ïñ‚ï§–ì‚ï®‚ïó‚ï§–ú‚ï§–í‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ñì.</div>';
+                container.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: ¶ﬂ¶-¶¨T¡¶¶ ¶+¶-¶-¶-TÀT≈ ¶-¶¶ ¶+¶-¶¨ T¿¶¶¶¨T√¶¨TÃT¬¶-T¬¶-¶-.</div>';
                 return;
             }
             articles.forEach(art => {
@@ -731,7 +731,7 @@
 
                 const metaDiv = document.createElement('div');
                 metaDiv.className = 'msg-meta';
-                metaDiv.textContent = '–Å–Ø–°–ù ';
+                metaDiv.textContent = '®ﬂ—Õ ';
 
                 const likesSpan = document.createElement('span');
                 likesSpan.id = `wiki-likes-${art.id}`;
@@ -739,7 +739,7 @@
 
                 const likeBtn = document.createElement('button');
                 likeBtn.className = 'small-btn';
-                likeBtn.textContent = '‚ï®–Æ‚ï®‚î§‚ï®‚ïõ‚ï®‚ñí‚ï§–ê‚ï®‚ïï‚ï§–í‚ï§–ú';
+                likeBtn.textContent = '¶ﬁ¶+¶-¶-T¿¶¨T¬TÃ';
                 likeBtn.onclick = () => likeWiki(art.id);
 
                 metaDiv.appendChild(likesSpan);
@@ -748,11 +748,11 @@
 
                 const p = document.createElement('p');
                 p.className = 'wiki-excerpt';
-                p.textContent = art.content ? art.content.substring(0, 150) + '...' : '‚ï®–™‚ï®‚ïõ‚ï®‚ïú‚ï§–í‚ï®‚ï°‚ï®‚ïú‚ï§–í ‚ï®‚ïñ‚ï®‚ñë‚ï§–ë‚ï®‚ï°‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï§–ó‚ï®‚ï°‚ï®‚ïú';
+                p.textContent = art.content ? art.content.substring(0, 150) + '...' : '¶⁄¶-¶-T¬¶¶¶-T¬ ¶¨¶-T¡¶¶¶¶T¿¶¶T«¶¶¶-';
 
                 const openBtn = document.createElement('button');
                 openBtn.className = 'cyber-btn-small';
-                openBtn.textContent = '‚ï®–Æ‚ï®–≤‚ï®–™‚ï®–∞‚ï®–ª‚ï®–≤‚ï®–º ‚ï®–§‚ï®–†‚ï®–≠‚ï®–≠‚ï®–ª‚ï®–•';
+                openBtn.textContent = '¶ﬁ¶‚¶⁄¶‡¶Î¶‚¶Ï ¶‘¶–¶›¶›¶Î¶’';
                 openBtn.onclick = () => loadWikiArticle(art.id);
 
                 div.appendChild(h3);
@@ -786,10 +786,10 @@
         container.innerHTML = '<div class="system-msg">Scanning trade frequencies...</div>';
         try {
             const params = new URLSearchParams();
-            if (window.marketState.filters.cat && window.marketState.filters.cat !== '‚ï®–¢‚ï§–ë‚ï®‚ï°') {
+            if (window.marketState.filters.cat && window.marketState.filters.cat !== '¶“T¡¶¶') {
                 params.append('category', window.marketState.filters.cat);
             }
-            if (window.marketState.filters.loc && window.marketState.filters.loc !== '‚ï®–¢‚ï®‚ï°‚ï®‚ïñ‚ï®‚î§‚ï®‚ï°') {
+            if (window.marketState.filters.loc && window.marketState.filters.loc !== '¶“¶¶¶¨¶+¶¶') {
                 params.append('location', window.marketState.filters.loc);
             }
             if (window.marketState.filters.q) {
@@ -811,7 +811,7 @@
 
             container.innerHTML = '';
             if (!listings || listings.length === 0) {
-                container.innerHTML = '<div class="system-msg">MARKET_EMPTY: ‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ïõ‚ï®‚ñì ‚ï®‚ïú‚ï®‚ñë ‚ï®‚ñí‚ï®‚ïï‚ï§–ê‚ï®‚ï¢‚ï®‚ï°.</div>';
+                container.innerHTML = '<div class="system-msg">MARKET_EMPTY: ¶›¶¶T¬ ¶-¶¶T¬¶¨¶-¶-TÀT≈ ¶¨¶-T¬¶-¶- ¶-¶- ¶-¶¨T¿¶¶¶¶.</div>';
                 if(window.renderMarketPagination) window.renderMarketPagination(1, 1);
                 return;
             }
@@ -830,20 +830,20 @@
                 // Status Badge
                 let statusBadgeHtml = '';
                 if (item.status === 'sold') {
-                    statusBadgeHtml = `<span class="status-badge sold">‚ï®–Ø‚ï®–∞‚ï®–Æ‚ï®–§‚ï®–†‚ï®–≠‚ï®–Æ</span>`;
+                    statusBadgeHtml = `<span class="status-badge sold">¶ﬂ¶‡¶ﬁ¶‘¶–¶›¶ﬁ</span>`;
                 } else if (item.status === 'reserved') {
-                    statusBadgeHtml = `<span class="status-badge reserved">‚ï®–¢ ‚ï®–∞‚ï®–•‚ï®–ß‚ï®–•‚ï®–∞‚ï®–¢‚ï®–•</span>`;
+                    statusBadgeHtml = `<span class="status-badge reserved">¶“ ¶‡¶’¶◊¶’¶‡¶“¶’</span>`;
                 } else {
-                    statusBadgeHtml = `<span class="status-badge active">‚ï®–†‚ï®–™‚ï®–≤‚ï®–®‚ï®–¢‚ï®–•‚ï®–≠</span>`;
+                    statusBadgeHtml = `<span class="status-badge active">¶–¶⁄¶‚¶ÿ¶“¶’¶›</span>`;
                 }
 
                 // Favorite Heart
                 const isFav = item.is_favorite ? 'favorited' : '';
-                const favHtml = `<span class="favorite-btn ${isFav}" onclick="toggleFavorite(event, ${item.id})">—Ç–≠–¥—è‚ïï–ü</span>`;
+                const favHtml = `<span class="favorite-btn ${isFav}" onclick="toggleFavorite(event, ${item.id})">Ú›‰ˇ¨œ</span>`;
 
                 let deleteButtonHTML = '';
                 if (item.seller_id === state.user.id) {
-                    deleteButtonHTML = `<button class="btn-danger" style="margin-top: 5px; font-size: 10px; width: 100%" onclick="event.stopPropagation(); deleteMarketListing(${item.id})">‚ï®–≥‚ï®–§‚ï®–†‚ï®–´‚ï®–®‚ï®–≤‚ï®–º ‚ï®–´‚ï®–Æ‚ï®–≤</button>`;
+                    deleteButtonHTML = `<button class="btn-danger" style="margin-top: 5px; font-size: 10px; width: 100%" onclick="event.stopPropagation(); deleteMarketListing(${item.id})">¶„¶‘¶–¶€¶ÿ¶‚¶Ï ¶€¶ﬁ¶‚</button>`;
                 }
 
                 const imgContainer = document.createElement('div');
@@ -851,7 +851,7 @@
                 imgContainer.innerHTML = coverImageHtml + statusBadgeHtml + favHtml; // Safe: no user text in these HTML strings
                 const viewsDiv = document.createElement('div');
                 viewsDiv.className = 'views-count';
-                viewsDiv.textContent = `–Å–Ø–°–ë ${item.views_count || 0}`;
+                viewsDiv.textContent = `®ﬂ—¡ ${item.views_count || 0}`;
                 imgContainer.appendChild(viewsDiv);
 
                 const bodyDiv = document.createElement('div');
@@ -909,7 +909,7 @@
                 window.renderMarketPagination(data.page || 1, data.pages || 1);
             }
         } catch (e) {
-            container.innerHTML = '<div class="system-msg">ERROR: ‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï§–ë‚ï®‚ïï‚ï®‚ïú‚ï§–ï‚ï§–ê‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï° ‚ï®‚ñí‚ï®‚ïï‚ï§–ê‚ï®‚ï¢‚ï®‚ïï.</div>';
+            container.innerHTML = '<div class="system-msg">ERROR: ¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ T¡¶¨¶-T≈T¿¶-¶-¶¨¶¨¶¨T¿¶-¶-¶-T¬TÃ ¶+¶-¶-¶-TÀ¶¶ ¶-¶¨T¿¶¶¶¨.</div>';
         }
     }
 
@@ -936,7 +936,7 @@
 
         const prevBtn = document.createElement('button');
         prevBtn.className = 'cyber-btn-small';
-        prevBtn.textContent = '‚ï®–≠‚ï®–†‚ï®–ß‚ï®–†‚ï®–§';
+        prevBtn.textContent = '¶›¶–¶◊¶–¶‘';
         prevBtn.disabled = currentPage <= 1;
         if(currentPage <= 1) prevBtn.style.opacity = '0.5';
         prevBtn.onclick = () => {
@@ -949,11 +949,11 @@
         const pageText = document.createElement('span');
         pageText.style.color = 'var(--text-main)';
         pageText.style.fontFamily = 'var(--font-mono)';
-        pageText.textContent = `‚ï®–±‚ï®–≤‚ï®–∞‚ï®–†‚ï®–≠‚ï®–®‚ï®–∂‚ï®–† ${currentPage} / ${totalPages}`;
+        pageText.textContent = `¶·¶‚¶‡¶–¶›¶ÿ¶Ê¶– ${currentPage} / ${totalPages}`;
 
         const nextBtn = document.createElement('button');
         nextBtn.className = 'cyber-btn-small';
-        nextBtn.textContent = '‚ï®–¢‚ï®–Ø‚ï®–•‚ï®–∞‚ï®–•‚ï®–§';
+        nextBtn.textContent = '¶“¶ﬂ¶’¶‡¶’¶‘';
         nextBtn.disabled = currentPage >= totalPages;
         if(currentPage >= totalPages) nextBtn.style.opacity = '0.5';
         nextBtn.onclick = () => {
@@ -975,10 +975,10 @@
             const target = event.currentTarget;
             if (res.status === 'added') {
                 target.classList.add('favorited');
-                addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï®‚î§‚ï®‚ïõ‚ï®‚ñí‚ï®‚ñë‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú ‚ï®‚ñì ‚ï®‚ïï‚ï®‚ïñ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï°', 'info');
+                addLog('¶€¶-T¬ ¶+¶-¶-¶-¶-¶¨¶¶¶- ¶- ¶¨¶¨¶-T¿¶-¶-¶-¶-¶¶', 'info');
             } else {
                 target.classList.remove('favorited');
-                addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú ‚ï®‚ïï‚ï®‚ïñ ‚ï®‚ïï‚ï®‚ïñ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï®‚ïõ‚ï®‚îÇ‚ï®‚ïõ', 'info');
+                addLog('¶€¶-T¬ T√¶+¶-¶¨¶¶¶- ¶¨¶¨ ¶¨¶¨¶-T¿¶-¶-¶-¶-¶¶¶-', 'info');
             }
         } catch (e) { console.error("Favorite toggle failed", e); }
     }
@@ -989,7 +989,7 @@
 
             document.getElementById('listing-detail-title').textContent = item.title;
             document.getElementById('listing-detail-price').textContent = item.price;
-            document.getElementById('listing-detail-desc').textContent = item.description || '‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚ïõ‚ï®‚îê‚ï®‚ïï‚ï§–ë‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü.';
+            document.getElementById('listing-detail-desc').textContent = item.description || '¶›¶¶T¬ ¶-¶¨¶¨T¡¶-¶-¶¨Tœ.';
 
             const statusContainer = document.getElementById('listing-detail-status');
             if (item.seller_id === state.user.id) {
@@ -1002,15 +1002,15 @@
 
                 const optActive = document.createElement('option');
                 optActive.value = 'active';
-                optActive.textContent = '‚ï®–†‚ï®–™‚ï®–≤‚ï®–®‚ï®–¢‚ï®–•‚ï®–≠';
+                optActive.textContent = '¶–¶⁄¶‚¶ÿ¶“¶’¶›';
 
                 const optReserved = document.createElement('option');
                 optReserved.value = 'reserved';
-                optReserved.textContent = '‚ï®–¢ ‚ï®–∞‚ï®–•‚ï®–ß‚ï®–•‚ï®–∞‚ï®–¢‚ï®–•';
+                optReserved.textContent = '¶“ ¶‡¶’¶◊¶’¶‡¶“¶’';
 
                 const optSold = document.createElement('option');
                 optSold.value = 'sold';
-                optSold.textContent = '‚ï®–Ø‚ï®–∞‚ï®–Æ‚ï®–§‚ï®–†‚ï®–≠‚ï®–Æ';
+                optSold.textContent = '¶ﬂ¶‡¶ﬁ¶‘¶–¶›¶ﬁ';
 
                 select.appendChild(optActive);
                 select.appendChild(optReserved);
@@ -1021,22 +1021,22 @@
                 select.onchange = async (e) => {
                     try {
                         await apiRequest(`/market/${item.id}/status`, 'PATCH', { status: e.target.value });
-                        addLog('‚ï®–±‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú', 'success');
+                        addLog('¶·T¬¶-T¬T√T¡ ¶¨¶-T¬¶- ¶-¶-¶-¶-¶-¶¨¶¶¶-', 'success');
                         loadMarket(); // Refresh list in background
                     } catch (err) {
-                        addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïï ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ïï ‚ï§–ë‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë‚ï®‚ñë', 'error');
+                        addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¿¶¨ ¶-¶-¶-¶-¶-¶¨¶¶¶-¶¨¶¨ T¡T¬¶-T¬T√T¡¶-', 'error');
                         // Revert selection on error
                         select.value = item.status || 'active';
                     }
                 };
 
-                statusContainer.innerHTML = '‚ï®–±‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë: ';
+                statusContainer.innerHTML = '¶·T¬¶-T¬T√T¡: ';
                 statusContainer.appendChild(select);
             } else {
-                let statusText = '‚ï®–†‚ï®–™‚ï®–≤‚ï®–®‚ï®–¢‚ï®–•‚ï®–≠';
-                if (item.status === 'sold') statusText = '‚ï®–Ø‚ï®–∞‚ï®–Æ‚ï®–§‚ï®–†‚ï®–≠‚ï®–Æ';
-                if (item.status === 'reserved') statusText = '‚ï®–¢ ‚ï®–∞‚ï®–•‚ï®–ß‚ï®–•‚ï®–∞‚ï®–¢‚ï®–•';
-                statusContainer.textContent = `‚ï®–±‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë: ${statusText}`;
+                let statusText = '¶–¶⁄¶‚¶ÿ¶“¶’¶›';
+                if (item.status === 'sold') statusText = '¶ﬂ¶‡¶ﬁ¶‘¶–¶›¶ﬁ';
+                if (item.status === 'reserved') statusText = '¶“ ¶‡¶’¶◊¶’¶‡¶“¶’';
+                statusContainer.textContent = `¶·T¬¶-T¬T√T¡: ${statusText}`;
             }
 
             const gallery = document.getElementById('listing-detail-gallery');
@@ -1054,7 +1054,7 @@
                     gallery.appendChild(img);
                 });
             } else {
-                gallery.innerHTML = '<div style="color: var(--text-dim); font-style: italic;">‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï§–î‚ï®‚ïõ‚ï§–í‚ï®‚ïõ‚ï®‚îÇ‚ï§–ê‚ï®‚ñë‚ï§–î‚ï®‚ïï‚ï®‚ï£</div>';
+                gallery.innerHTML = '<div style="color: var(--text-dim); font-style: italic;">¶›¶¶T¬ Tƒ¶-T¬¶-¶¶T¿¶-Tƒ¶¨¶¶</div>';
             }
 
             document.getElementById('listing-detail-message-btn').onclick = () => {
@@ -1063,34 +1063,34 @@
             };
 
             const favBtn = document.getElementById('listing-detail-fav-btn');
-            favBtn.textContent = item.is_favorite ? '‚ï®–≥‚ï®–°‚ï®–∞‚ï®–†‚ï®–≤‚ï®–º ‚ï®–®‚ï®–ß ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–£‚ï®–Æ' : '—Ç–≠–¥—è‚ïï–ü ‚ï®–¢ ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–•';
+            favBtn.textContent = item.is_favorite ? '¶„¶—¶‡¶–¶‚¶Ï ¶ÿ¶◊ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶”¶ﬁ' : 'Ú›‰ˇ¨œ ¶“ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶’';
             favBtn.onclick = async (e) => {
                 await window.toggleFavorite(e, item.id);
-                favBtn.textContent = favBtn.classList.contains('favorited') ? '‚ï®–≥‚ï®–°‚ï®–∞‚ï®–†‚ï®–≤‚ï®–º ‚ï®–®‚ï®–ß ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–£‚ï®–Æ' : '—Ç–≠–¥—è‚ïï–ü ‚ï®–¢ ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–•';
+                favBtn.textContent = favBtn.classList.contains('favorited') ? '¶„¶—¶‡¶–¶‚¶Ï ¶ÿ¶◊ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶”¶ﬁ' : 'Ú›‰ˇ¨œ ¶“ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶’';
             };
 
             document.getElementById('listing-detail-modal').style.display = 'flex';
         } catch(e) {
-            addLog('‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚î§‚ï®‚ï°‚ï§–í‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë', 'error');
+            addLog('¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ ¶¨¶-¶¶T¿T√¶¨¶¨T¬TÃ ¶+¶¶T¬¶-¶¨¶¨ ¶¨¶-T¬¶-', 'error');
         }
     }
 
     // @ts-ignore
     window.deleteMarketListing = async function(itemId) {
-        if (!confirm('‚ï®–Ø‚ï®‚ïõ‚ï®‚î§‚ï§–í‚ï®‚ñì‚ï®‚ï°‚ï§–ê‚ï®‚ï¢‚ï®‚î§‚ï®‚ñë‚ï®‚ï°‚ï§–í‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë?')) return;
+        if (!confirm('¶ﬂ¶-¶+T¬¶-¶¶T¿¶¶¶+¶-¶¶T¬¶¶ T√¶+¶-¶¨¶¶¶-¶¨¶¶ ¶¨¶-T¬¶-?')) return;
         try {
             await apiRequest(`/market/${itemId}`, 'DELETE');
-            addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï§–ë‚ï®‚ïú‚ï§–ü‚ï§–í ‚ï§–ë ‚ï®‚ñí‚ï®‚ïï‚ï§–ê‚ï®‚ï¢‚ï®‚ïï', 'success');
+            addLog('¶€¶-T¬ T¡¶-TœT¬ T¡ ¶-¶¨T¿¶¶¶¨', 'success');
             loadMarket();
         } catch(e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïï ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ïï ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¿¶¨ T√¶+¶-¶¨¶¶¶-¶¨¶¨ ¶¨¶-T¬¶-', 'error');
         }
     }
 
     window.loadWikiArticle = async function(artId) {
         try {
             const art = await apiRequest(`/wiki/${artId}`);
-            alert(`--- ‚ï®–£‚ï®–®‚ï®–Ø‚ï®–•‚ï®–∞‚ï®–≤‚ï®–•‚ï®–™‚ï®–±‚ï®–≤‚ï®–Æ‚ï®–¢‚ï®–†‚ï®–ø ‚ï®–°‚ï®–†‚ï®–ß‚ï®–† --- \n\n${art.title.toUpperCase()}\n\n${art.content}`);
+            alert(`--- ¶”¶ÿ¶ﬂ¶’¶‡¶‚¶’¶⁄¶·¶‚¶ﬁ¶“¶–¶Ô ¶—¶–¶◊¶– --- \n\n${art.title.toUpperCase()}\n\n${art.content}`);
         } catch (e) { addLog('Article data corrupted', 'error'); }
     }
     
@@ -1132,9 +1132,9 @@
 
             uploadedImageUrls.push(...urls);
             renderMarketPhotoPreview();
-            addLog(`‚ï®–ß‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ï¢‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ ${urls.length} ‚ï§–î‚ï®‚ïõ‚ï§–í‚ï®‚ïõ`, 'success');
+            addLog(`¶◊¶-¶¶T¿T√¶¶¶¶¶-¶- ${urls.length} Tƒ¶-T¬¶-`, 'success');
         } catch (e) {
-            addLog(`‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ïï ‚ï§–î‚ï®‚ïõ‚ï§–í‚ï®‚ïõ: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
+            addLog(`¶ﬁT»¶¨¶-¶¶¶- ¶¨¶-¶¶T¿T√¶¨¶¶¶¨ Tƒ¶-T¬¶-: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
         }
     }
 
@@ -1208,11 +1208,11 @@
         // @ts-ignore
         const description = descElem.value;
         // @ts-ignore
-        const category = catElem?.value || '‚ï®–∞‚ï®‚ñë‚ï®‚ïñ‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï°';
+        const category = catElem?.value || '¶‡¶-¶¨¶-¶-¶¶';
         // @ts-ignore
-        const location = locElem?.value || '‚ï®–¢‚ï§–ë‚ï§–ü ‚ï§–ë‚ï®‚ï°‚ï§–í‚ï§–ú';
+        const location = locElem?.value || '¶“T¡Tœ T¡¶¶T¬TÃ';
         
-        if (!title || !price) { addLog('Validation Error: ‚ï®–ß‚ï®‚ñë‚ï®‚îê‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïú‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïú‚ï®‚ñë‚ï®‚ïñ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïï ‚ï§–ñ‚ï®‚ï°‚ï®‚ïú‚ï§–ì', 'error'); return; }
+        if (!title || !price) { addLog('Validation Error: ¶◊¶-¶¨¶-¶¨¶-¶¨T¬¶¶ ¶-¶-¶¨¶-¶-¶-¶¨¶¶ ¶¨ T∆¶¶¶-T√', 'error'); return; }
         
         try {
             await apiRequest('/market', 'POST', {
@@ -1223,7 +1223,7 @@
                 location,
                 images: uploadedImageUrls
             });
-            addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï§–ì‚ï§–ë‚ï®‚îê‚ï®‚ï°‚ï§–ò‚ï®‚ïú‚ï®‚ïõ ‚ï®‚ïõ‚ï®‚îê‚ï§–ì‚ï®‚ñí‚ï®‚ïó‚ï®‚ïï‚ï®‚ïë‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú', 'success');
+            addLog('¶€¶-T¬ T√T¡¶¨¶¶T»¶-¶- ¶-¶¨T√¶-¶¨¶¨¶¶¶-¶-¶-¶-', 'success');
             // @ts-ignore
             titleElem.value = '';
             // @ts-ignore
@@ -1278,7 +1278,7 @@
                 const td6 = document.createElement('td');
                 const chatBtn = document.createElement('button');
                 chatBtn.className = 'cyber-btn-small';
-                chatBtn.textContent = '‚ï®–±‚ï®–•‚ï®–™‚ï®–∞‚ï®–•‚ï®–≤‚ï®–≠‚ï®–ª‚ï®–© ‚ï®–∑‚ï®–†‚ï®–≤';
+                chatBtn.textContent = '¶·¶’¶⁄¶‡¶’¶‚¶›¶Î¶Ÿ ¶Á¶–¶‚';
                 chatBtn.onclick = () => startPrivateChat(u.id);
                 td6.appendChild(chatBtn);
 
@@ -1297,11 +1297,11 @@
     // @ts-ignore
     window.startPrivateChat = async function(targetId) {
         if (targetId === state.user.id) {
-            addLog('‚ï®–≠‚ï®‚ï°‚ï®‚ïó‚ï§–ú‚ï®‚ïñ‚ï§–ü ‚ï®‚ïõ‚ï§–í‚ï®‚ïë‚ï§–ê‚ï§–õ‚ï§–í‚ï§–ú ‚ï§–ó‚ï®‚ñë‚ï§–í ‚ï§–ë ‚ï§–ë‚ï®‚ñë‚ï®‚ïù‚ï®‚ïï‚ï®‚ïù ‚ï§–ë‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïõ‚ï®‚ï£', 'error');
+            addLog('¶›¶¶¶¨TÃ¶¨Tœ ¶-T¬¶¶T¿TÀT¬TÃ T«¶-T¬ T¡ T¡¶-¶-¶¨¶- T¡¶-¶-¶-¶¶', 'error');
             return;
         }
         try {
-            addLog('‚ï®–Æ‚ï§–í‚ï®‚ïë‚ï§–ê‚ï§–õ‚ï®‚ñì‚ï®‚ñë‚ï§–û ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï§–°‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó ‚ï§–ë‚ï®‚ñì‚ï§–ü‚ï®‚ïñ‚ï®‚ïï...', 'info');
+            addLog('¶ﬁT¬¶¶T¿TÀ¶-¶-TŒ ¶¨¶-T…¶¨T…T—¶-¶-TÀ¶¶ ¶¶¶-¶-¶-¶¨ T¡¶-Tœ¶¨¶¨...', 'info');
             // Use the dedicated /chat/private endpoint (get-or-create, no duplicates)
             const room = await apiRequest('/chat/private', 'POST', {
                 target_user_id: targetId
@@ -1310,12 +1310,12 @@
             // Refresh room list and then select the new/existing room
             await loadChatRooms();
             const roomInList = state.chat.rooms.find(r => r.id === room.id);
-            const roomName = roomInList ? roomInList.name : '‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï§–ó‚ï®‚ñë‚ï§–í';
+            const roomName = roomInList ? roomInList.name : '¶ﬂT¿¶¨¶-¶-T¬¶-TÀ¶¶ T«¶-T¬';
             const roomType = roomInList ? roomInList.type : 'private';
             selectChatRoom(room.id, roomName, roomType, targetId);
-            addLog('E2EE-‚ï®–™‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó ‚ï§–ì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú', 'success');
+            addLog('E2EE-¶⁄¶-¶-¶-¶¨ T√T¡T¬¶-¶-¶-¶-¶¨¶¶¶-', 'success');
         } catch (e) {
-            addLog('‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï§–ì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ë‚ï®‚ïõ‚ï®‚ï°‚ï®‚î§‚ï®‚ïï‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°', 'error');
+            addLog('¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ T√T¡T¬¶-¶-¶-¶-¶¨T¬TÃ T¡¶-¶¶¶+¶¨¶-¶¶¶-¶¨¶¶', 'error');
             console.error('startPrivateChat error:', e);
         }
     }
@@ -1329,7 +1329,7 @@
             const events = await apiRequest('/events');
             container.innerHTML = '';
             if (!events || events.length === 0) {
-                container.innerHTML = '<div class="system-msg">‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï§–ë‚ï®‚ïõ‚ï®‚ñí‚ï§–õ‚ï§–í‚ï®‚ïï‚ï®‚ï£.</div>';
+                container.innerHTML = '<div class="system-msg">¶›¶¶T¬ ¶-¶¶T¬¶¨¶-¶-TÀT≈ T¡¶-¶-TÀT¬¶¨¶¶.</div>';
                 return;
             }
             events.forEach(/** @param {any} e */ e => {
@@ -1348,14 +1348,14 @@
                 h4.textContent = e.title;
 
                 const p = document.createElement('p');
-                p.textContent = `–Å–Ø–£–ù ${e.location || '‚ï®–±‚ï®‚ï°‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï§–í‚ï®‚ïú‚ï®‚ñë‚ï§–ü ‚ï®‚ïó‚ï®‚ïõ‚ï®‚ïë‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–ü'}`;
+                p.textContent = `®ﬂ”Õ ${e.location || '¶·¶¶¶¶T¿¶¶T¬¶-¶-Tœ ¶¨¶-¶¶¶-T∆¶¨Tœ'}`;
 
                 contentDiv.appendChild(h4);
                 contentDiv.appendChild(p);
 
                 const actionDiv = document.createElement('div');
                 actionDiv.className = 'event-action';
-                actionDiv.textContent = '> ‚ï®–§‚ï®–•‚ï®–≤‚ï®–†‚ï®–´‚ï®–®';
+                actionDiv.textContent = '> ¶‘¶’¶‚¶–¶€¶ÿ';
 
                 eventCard.appendChild(dateDiv);
                 eventCard.appendChild(contentDiv);
@@ -1389,11 +1389,11 @@
         // @ts-ignore
         const description = descElem.value;
         
-        if (!title) { addLog('Validation Error: ‚ï®–≥‚ï®‚ïë‚ï®‚ñë‚ï®‚ï¢‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïú‚ï®‚ñë‚ï®‚ïñ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°', 'error'); return; }
+        if (!title) { addLog('Validation Error: ¶„¶¶¶-¶¶¶¨T¬¶¶ ¶-¶-¶¨¶-¶-¶-¶¨¶¶', 'error'); return; }
         
         try {
             await apiRequest('/events', 'POST', { title, event_date, location, description });
-            addLog('‚ï®–±‚ï®‚ïõ‚ï®‚ñí‚ï§–õ‚ï§–í‚ï®‚ïï‚ï®‚ï° ‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ïú‚ï§–ë‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ', 'success');
+            addLog('¶·¶-¶-TÀT¬¶¨¶¶ ¶-¶-¶-¶-T¡¶¨T¿¶-¶-¶-¶-¶-', 'success');
             // @ts-ignore
             titleElem.value = '';
             // @ts-ignore
@@ -1411,10 +1411,10 @@
     function showEventDetails(event) {
         addLog(`Accessing mission data: ${event.title}`, 'info');
         const details = `
-            ‚ï®–∂‚ï®–•‚ï®–´‚ï®–º: ${event.title}
-            ‚ï®–§‚ï®–†‚ï®–≤‚ï®–†: ${new Date(event.event_date).toLocaleString()}
-            ‚ï®–´‚ï®–Æ‚ï®–™‚ï®–†‚ï®–∂‚ï®–®‚ï®–ø: ${event.location}
-            ‚ï®–Æ‚ï®–Ø‚ï®–®‚ï®–±‚ï®–†‚ï®–≠‚ï®–®‚ï®–•: ${event.description || '‚ï®–§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï° ‚ï®‚ïñ‚ï®‚ñë‚ï§–ë‚ï®‚ï°‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï§–ó‚ï®‚ï°‚ï®‚ïú‚ï§–õ'}
+            ¶Ê¶’¶€¶Ï: ${event.title}
+            ¶‘¶–¶‚¶–: ${new Date(event.event_date).toLocaleString()}
+            ¶€¶ﬁ¶⁄¶–¶Ê¶ÿ¶Ô: ${event.location}
+            ¶ﬁ¶ﬂ¶ÿ¶·¶–¶›¶ÿ¶’: ${event.description || '¶‘¶-¶-¶-TÀ¶¶ ¶¨¶-T¡¶¶¶¶T¿¶¶T«¶¶¶-TÀ'}
         `;
         alert(details);
     }
@@ -1449,14 +1449,14 @@
         const sidebarRank = document.querySelector('.side-panel .rank');
         const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
         
-        if (sidebarName) sidebarName.textContent = `‚ï®–Æ‚ï®‚îê‚ï®‚ï°‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï§–ê: ${data.display_name || data.username}`;
+        if (sidebarName) sidebarName.textContent = `¶ﬁ¶¨¶¶T¿¶-T¬¶-T¿: ${data.display_name || data.username}`;
         if (sidebarRank) sidebarRank.textContent = data.rank;
         if (sidebarAvatar && data.avatar_url) {
             applyAvatarDisplay(sidebarAvatar, data.avatar_url);
         }
     }
 
-    // --- ‚ï®–§‚ï®–•‚ï®–©‚ï®–±‚ï®–≤‚ï®–¢‚ï®–®‚ï®–ø: ‚ï®–´‚ï®–®‚ï®–∑‚ï®–≠‚ï®–ª‚ï®–© ‚ï®–™‚ï®–†‚ï®–°‚ï®–®‚ï®–≠‚ï®–•‚ï®–≤ ---
+    // --- ¶‘¶’¶Ÿ¶·¶‚¶“¶ÿ¶Ô: ¶€¶ÿ¶Á¶›¶Î¶Ÿ ¶⁄¶–¶—¶ÿ¶›¶’¶‚ ---
     window.saveProfile = async function() {
         const bioEl = document.getElementById('dash-bio');
         const callsignEl = document.getElementById('dash-callsign-input');
@@ -1473,12 +1473,12 @@
                 state.user.username = result.display_name;
                 const display = document.getElementById('dash-username-display');
                 if (display) display.textContent = result.display_name;
-                addLog('‚ï®–´‚ï®‚ïï‚ï§–ó‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï° ‚ï®‚î§‚ï®‚ï°‚ï®‚ïó‚ï®‚ïõ ‚ï§–ì‚ï§–ë‚ï®‚îê‚ï®‚ï°‚ï§–ò‚ï®‚ïú‚ï®‚ïõ ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ —Ç–¨–ï', 'success');
+                addLog('¶€¶¨T«¶-¶-¶¶ ¶+¶¶¶¨¶- T√T¡¶¨¶¶T»¶-¶- ¶-¶-¶-¶-¶-¶¨¶¶¶-¶- Ú‹≈', 'success');
                 loadDashboard(); // Refresh everything
             }
         } catch (e) {
             console.error('Profile update error:', e);
-            addLog('‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚îê‚ï§–ê‚ï®‚ïõ‚ï§–î‚ï®‚ïï‚ï®‚ïó‚ï§–ú (‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïñ‚ï®‚ïù‚ï®‚ïõ‚ï®‚ï¢‚ï®‚ïú‚ï®‚ïõ, ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïñ‚ï§–õ‚ï®‚ñì‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïñ‚ï®‚ñë‚ï®‚ïú‚ï§–ü‚ï§–í)', 'error');
+            addLog('¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ ¶-¶-¶-¶-¶-¶¨T¬TÃ ¶¨T¿¶-Tƒ¶¨¶¨TÃ (¶-¶-¶¨¶-¶-¶¶¶-¶-, ¶¨¶-¶¨TÀ¶-¶-¶-¶¶ ¶¨¶-¶-TœT¬)', 'error');
         }
     }
 
@@ -1524,11 +1524,11 @@
             const dashAvatar = document.getElementById('dash-avatar');
             if (dashAvatar) applyAvatarDisplay(dashAvatar, url);
             
-            addLog('‚ï®–†‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï§–ê ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú: ‚ï®–™‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó ‚ï§–ë‚ï®‚ñì‚ï§–ü‚ï®‚ïñ‚ï®‚ïï ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ï°‚ï®‚ïú —Ç–¨–ï', 'success');
+            addLog('¶–¶-¶-T¬¶-T¿ ¶-¶-¶-¶-¶-¶¨¶¶¶-: ¶⁄¶-¶-¶-¶¨ T¡¶-Tœ¶¨¶¨ ¶-¶¶T¬¶¨¶-¶¶¶- Ú‹≈', 'success');
             window.closeAvatarModal();
             loadDashboard(); // Refresh UI
         } catch (e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïï‚ï®‚ïú‚ï§–ï‚ï§–ê‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïï‚ï®‚ïñ‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï®‚ïï ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó‚ï®‚ñë ‚ï®‚ñë‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï§–ê‚ï®‚ñë', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶¨¶-T≈T¿¶-¶-¶¨¶¨¶-T∆¶¨¶¨ ¶¶¶-¶-¶-¶¨¶- ¶-¶-¶-T¬¶-T¿¶-', 'error');
         }
     }
 
@@ -1581,7 +1581,7 @@
                         );
                         msg.is_secure = true;
                     } catch (e) {
-                        msg.content = "[ ‚ï®–§‚ï®–†‚ï®–≠‚ï®–≠‚ï®–ª‚ï®–• ‚ï®–ß‚ï®–†‚ï®–∏‚ï®–®‚ï®–¥‚ï®–∞‚ï®–Æ‚ï®–¢‚ï®–†‚ï®–≠‚ï®–ª // ‚ï®–™‚ï®–´‚ï®–æ‚ï®–∑ ‚ï®–≠‚ï®–• ‚ï®–≠‚ï®–†‚ï®–©‚ï®–§‚ï®–•‚ï®–≠ ]";
+                        msg.content = "[ ¶‘¶–¶›¶›¶Î¶’ ¶◊¶–¶Ë¶ÿ¶‰¶‡¶ﬁ¶“¶–¶›¶Î // ¶⁄¶€¶Ó¶Á ¶›¶’ ¶›¶–¶Ÿ¶‘¶’¶› ]";
                     }
                 }
 
@@ -1608,7 +1608,7 @@
                     }
                     if (!el.querySelector('.is-edited')) {
                         const mheader = el.querySelector('.msg-header');
-                        if (mheader) mheader.insertAdjacentHTML('beforeend', '<span class="is-edited">(‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ)</span>');
+                        if (mheader) mheader.insertAdjacentHTML('beforeend', '<span class="is-edited">(¶¨¶¨¶-¶¶¶-¶¶¶-¶-)</span>');
                     }
                 }
             } else if (data.type === 'delete_message') {
@@ -1618,7 +1618,7 @@
                 if (state.chat.currentRoomId === data.room_id && data.sender_id !== state.user.id) {
                     const typingEl = document.getElementById('typing-indicator');
                     if (typingEl) {
-                        typingEl.textContent = `${data.sender} ‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï®‚ï°‚ï§–í...`;
+                        typingEl.textContent = `${data.sender} ¶¨¶¶T«¶-T¬¶-¶¶T¬...`;
                         typingEl.style.display = 'block';
                         // @ts-ignore
                         if (window.typingTimeout) clearTimeout(window.typingTimeout);
@@ -1705,7 +1705,7 @@
 
             const lastMsgDiv = document.createElement('div');
             lastMsgDiv.className = 'sidebar-item-last-msg';
-            lastMsgDiv.textContent = room.last_message || '‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï£';
+            lastMsgDiv.textContent = room.last_message || '¶›¶¶T¬ T¡¶-¶-¶-T…¶¶¶-¶¨¶¶';
 
             infoDiv.appendChild(nameDiv);
             infoDiv.appendChild(lastMsgDiv);
@@ -1717,8 +1717,8 @@
             // Delete/Leave button (visible on hover)
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'room-delete-btn';
-            deleteBtn.innerHTML = '—Ç–¨–•';
-            deleteBtn.title = room.type === 'private' ? '‚ï®–≥‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ó‚ï®‚ñë‚ï§–í' : '‚ï®–Ø‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú / ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú';
+            deleteBtn.innerHTML = 'Ú‹’';
+            deleteBtn.title = room.type === 'private' ? '¶„¶+¶-¶¨¶¨T¬TÃ T«¶-T¬' : '¶ﬂ¶-¶¶¶¨¶-T√T¬TÃ / T√¶+¶-¶¨¶¨T¬TÃ';
             deleteBtn.style.cssText = `
                 display: none; position: absolute; right: 6px; top: 50%;
                 transform: translateY(-50%);
@@ -1731,8 +1731,8 @@
             deleteBtn.onmouseleave = () => deleteBtn.style.background = 'rgba(255,50,50,0.15)';
             deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
-                const label = room.type === 'private' ? '‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ù‚ï§–í‚ï®‚ïõ‚ï§–í ‚ï®‚îê‚ï§–ê‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï§–ó‚ï®‚ñë‚ï§–í' : '‚ï®‚îê‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú/‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ù‚ï§–í‚ï§–ì ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïù‚ï®‚ïú‚ï®‚ñë‚ï§–í‚ï§–ì';
-                if (!confirm(`‚ï®–¢‚ï§–õ ‚ï§–ì‚ï®‚ñì‚ï®‚ï°‚ï§–ê‚ï®‚ï°‚ï®‚ïú‚ï§–õ, ‚ï§–ó‚ï§–í‚ï®‚ïõ ‚ï§–ï‚ï®‚ïõ‚ï§–í‚ï®‚ïï‚ï§–í‚ï®‚ï° ${label}? ‚ï®–Ω‚ï§–í‚ï®‚ïõ ‚ï®‚î§‚ï®‚ï°‚ï®‚ï£‚ï§–ë‚ï§–í‚ï®‚ñì‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïú‚ï®‚ï°‚ï®‚ïõ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïï‚ï®‚ïù‚ï®‚ïõ.`)) return;
+                const label = room.type === 'private' ? 'T√¶+¶-¶¨¶¨T¬TÃ TÕT¬¶-T¬ ¶¨T¿¶¨¶-¶-T¬¶-TÀ¶¶ T«¶-T¬' : '¶¨¶-¶¶¶¨¶-T√T¬TÃ/T√¶+¶-¶¨¶¨T¬TÃ TÕT¬T√ ¶¶¶-¶-¶-¶-T¬T√';
+                if (!confirm(`¶“TÀ T√¶-¶¶T¿¶¶¶-TÀ, T«T¬¶- T≈¶-T¬¶¨T¬¶¶ ${label}? ¶ÌT¬¶- ¶+¶¶¶¶T¡T¬¶-¶¨¶¶ ¶-¶¶¶-¶-T¿¶-T¬¶¨¶-¶-.`)) return;
                 try {
                     await apiRequest(`/chat/rooms/${room.id}`, 'DELETE');
                     // Remove from state and re-render
@@ -1743,9 +1743,9 @@
                         if (chatMain) chatMain.classList.remove('active');
                     }
                     renderChatRooms();
-                    addLog(`—Ç–¨–ï ‚ï®–∑‚ï®‚ñë‚ï§–í ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï§–°‚ï®‚ïú`, 'success');
+                    addLog(`Ú‹≈ ¶Á¶-T¬ T√¶+¶-¶¨T—¶-`, 'success');
                 } catch (err) {
-                    addLog(`—Ç–≠–ú ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë: ${err.message}`, 'error');
+                    addLog(`Ú›Ã ¶ﬁT»¶¨¶-¶¶¶-: ${err.message}`, 'error');
                 }
             };
             div.style.position = 'relative';
@@ -1770,7 +1770,7 @@
         if (container) {
             container.innerHTML = '';
             if (!state.chat.rooms || state.chat.rooms.length === 0) {
-               container.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-dim)">‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚î§‚ï®‚ïõ‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ñì</div>';
+               container.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-dim)">¶›¶¶T¬ ¶+¶-T¡T¬T√¶¨¶-TÀT≈ T«¶-T¬¶-¶-</div>';
             } else {
                 state.chat.rooms.forEach(room => {
                     const div = document.createElement('div');
@@ -1791,18 +1791,18 @@
 
     window.submitFolderCreate = async function() {
         const name = document.getElementById('folder-name-input').value.trim();
-        if (!name) return addLog('‚ï®–¢‚ï®‚ñì‚ï®‚ï°‚ï®‚î§‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïï‚ï®‚ïù‚ï§–ü ‚ï®‚îê‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï®‚ïï', 'error');
+        if (!name) return addLog('¶“¶-¶¶¶+¶¨T¬¶¶ ¶¨¶-Tœ ¶¨¶-¶¨¶¶¶¨', 'error');
         
         const checkboxes = document.querySelectorAll('#folder-rooms-selection input[type="checkbox"]:checked');
         const roomIds = Array.from(checkboxes).map(c => parseInt(c.value));
         
         try {
             const resp = await apiRequest('/chat/folders', 'POST', { name: name, rooms: roomIds });
-            addLog('‚ï®–Ø‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï®‚ñë ' + name + ' ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë', 'success');
+            addLog('¶ﬂ¶-¶¨¶¶¶- ' + name + ' T¡¶-¶¨¶+¶-¶-¶-', 'success');
             document.getElementById('folder-modal').style.display = 'none';
             await loadFolders();
         } catch(e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï®‚îê‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï®‚ïï', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶-¶¨¶+¶-¶-¶¨Tœ ¶¨¶-¶¨¶¶¶¨', 'error');
         }
     };
 
@@ -1824,7 +1824,7 @@
         const allTab = document.createElement('div');
         allTab.className = 'folder-tab' + (state.chat.currentFolderId === 'all' ? ' active' : '');
         allTab.setAttribute('onclick', "window.selectFolder('all', this)");
-        allTab.innerText = '‚ï®–¢‚ï§–ë‚ï®‚ï° ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï§–õ';
+        allTab.innerText = '¶“T¡¶¶ T«¶-T¬TÀ';
         tabsContainer.appendChild(allTab);
         
         (state.chat.folders || []).forEach(folder => {
@@ -1838,7 +1838,7 @@
         const addBtn = document.createElement('button');
         addBtn.className = 'add-folder-btn';
         addBtn.setAttribute('onclick', "window.openFolderModal()");
-        addBtn.title = "‚ï®–±‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï®‚îê‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï§–ì";
+        addBtn.title = "¶·¶-¶¨¶+¶-T¬TÃ ¶¨¶-¶¨¶¶T√";
         addBtn.innerText = "+";
         tabsContainer.appendChild(addBtn);
         
@@ -1878,21 +1878,21 @@
         
         if (inputArea) {
             if (type === 'channel' && myRole !== 'admin') {
-                inputArea.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim); font-style:italic; background:var(--bg-black); border-top:1px solid #333; width:100%;">‚ï®–≤‚ï®‚ïõ‚ï®‚ïó‚ï§–ú‚ï®‚ïë‚ï®‚ïõ ‚ï®‚ñë‚ï®‚î§‚ï®‚ïù‚ï®‚ïï‚ï®‚ïú‚ï®‚ïï‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï§–ê‚ï§–õ ‚ï®‚ïù‚ï®‚ïõ‚ï®‚îÇ‚ï§–ì‚ï§–í ‚ï®‚îê‚ï®‚ïï‚ï§–ë‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï®‚ñì ‚ï§–ù‚ï§–í‚ï®‚ïõ‚ï§–í ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó</div>`;
+                inputArea.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim); font-style:italic; background:var(--bg-black); border-top:1px solid #333; width:100%;">¶‚¶-¶¨TÃ¶¶¶- ¶-¶+¶-¶¨¶-¶¨T¡T¬T¿¶-T¬¶-T¿TÀ ¶-¶-¶¶T√T¬ ¶¨¶¨T¡¶-T¬TÃ ¶- TÕT¬¶-T¬ ¶¶¶-¶-¶-¶¨</div>`;
             } else {
                 inputArea.innerHTML = `
                     <div class="chat-capsule" style="width: 100%; box-sizing: border-box;">
-                        <button class="capsule-btn" title="‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï®‚îê‚ï®‚ïï‚ï§–í‚ï§–ú" onclick="document.getElementById('file-input').click()">
+                        <button class="capsule-btn" title="¶ﬂT¿¶¨¶¶T¿¶¶¶¨¶¨T¬TÃ" onclick="document.getElementById('file-input').click()">
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                         </button>
                         <input type="file" id="file-input" style="display:none" onchange="uploadFileAndSend()">
-                        <textarea id="chat-input" rows="1" placeholder="‚ï®–±‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°..." oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.sendChatMessage(); }"></textarea>
+                        <textarea id="chat-input" rows="1" placeholder="¶·¶-¶-¶-T…¶¶¶-¶¨¶¶..." oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.sendChatMessage(); }"></textarea>
                         
                         <div class="action-buttons" style="display: flex; align-items: flex-end; gap: 4px;">
-                            <button class="capsule-btn" title="‚ï®–±‚ï®‚ïù‚ï®‚ñë‚ï®‚ï£‚ï®‚ïó‚ï§–õ">
+                            <button class="capsule-btn" title="¶·¶-¶-¶¶¶¨TÀ">
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                             </button>
-                            <button class="capsule-btn" title="‚ï®–£‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï°">
+                            <button class="capsule-btn" title="¶”¶-¶¨¶-T¡¶-¶-¶-¶¶">
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                             </button>
                             <button class="send-circle-btn" onclick="window.sendChatMessage()">
@@ -1949,19 +1949,19 @@
                 if (sessionKey) {
                     const myFp = state.chat.keyFingerprint || '';
                     if (badge) {
-                        badge.innerHTML = `–Å–Ø–§–¢ E2EE ACTIVE`;
-                        badge.title = `‚ï®–≤‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïõ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${myFp.slice(0, 23)}...`;
+                        badge.innerHTML = `®ﬂ‘“ E2EE ACTIVE`;
+                        badge.title = `¶‚¶-¶-¶¶ ¶-T¬¶¨¶¶T«¶-T¬¶-¶¶: ${myFp.slice(0, 23)}...`;
                         badge.style.color = '#0f0';
                         badge.style.background = 'rgba(0, 255, 65, 0.1)';
                         badge.style.cursor = 'pointer';
                         badge.onclick = () => {
-                            const fp = state.chat.keyFingerprint || '‚ï®‚ïú/‚ï®‚î§';
-                            alert(`–Å–Ø–§–° ‚ï®–≤‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïõ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ñë:\n${fp}\n\n‚ï®–Ø‚ï®‚ïõ‚ï®‚îê‚ï§–ê‚ï®‚ïõ‚ï§–ë‚ï®‚ïï ‚ï§–ë‚ï®‚ïõ‚ï®‚ñí‚ï®‚ï°‚ï§–ë‚ï®‚ï°‚ï®‚î§‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïõ‚ï§–ó‚ï®‚ïï‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï§–í‚ï®‚ï°‚ï®‚ñí‚ï®‚ï° ‚ï§–ë‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïõ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë ‚ï®‚ñì‚ï§–ë‚ï®‚ïó‚ï§–ì‚ï§–ï —Ç–ê–§ ‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïï ‚ï®‚î§‚ï®‚ïõ‚ï®‚ïó‚ï®‚ï¢‚ï®‚ïú‚ï§–õ ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚îê‚ï®‚ñë‚ï®‚î§‚ï®‚ñë‚ï§–í‚ï§–ú. ‚ï®–•‚ï§–ë‚ï®‚ïó‚ï®‚ïï ‚ï®‚ïú‚ï®‚ï°‚ï§–í —Ç–ê–§ ‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïñ‚ï®‚ïù‚ï®‚ïõ‚ï®‚ï¢‚ï®‚ïú‚ï®‚ñë ‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï®‚ïë‚ï®‚ñë MITM.`);
+                            const fp = state.chat.keyFingerprint || '¶-/¶+';
+                            alert(`®ﬂ‘— ¶‚¶-¶-¶¶ ¶-T¬¶¨¶¶T«¶-T¬¶-¶¶ ¶¶¶¨TŒT«¶-:\n${fp}\n\n¶ﬂ¶-¶¨T¿¶-T¡¶¨ T¡¶-¶-¶¶T¡¶¶¶+¶-¶¨¶¶¶- ¶¨T¿¶-T«¶¨T¬¶-T¬TÃ T¬¶¶¶-¶¶ T¡¶-¶-¶¶ ¶-T¬¶¨¶¶T«¶-T¬¶-¶¶ ¶-T¡¶¨T√T≈ Ú¿‘ ¶-¶-¶¨ ¶+¶-¶¨¶¶¶-TÀ T¡¶-¶-¶¨¶-¶+¶-T¬TÃ. ¶’T¡¶¨¶¨ ¶-¶¶T¬ Ú¿‘ ¶-¶-¶¨¶-¶-¶¶¶-¶- ¶-T¬¶-¶¶¶- MITM.`);
                         };
                     }
                 } else {
                     if (badge) {
-                        badge.innerHTML = '—Ç–™–∞—è‚ïï–ü E2EE ‚ï®‚ïú‚ï®‚ï°‚ï®‚î§‚ï®‚ïõ‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê‚ï®‚ï°‚ï®‚ïú';
+                        badge.innerHTML = 'Ú⁄‡ˇ¨œ E2EE ¶-¶¶¶+¶-T¡T¬T√¶¨¶¶¶-';
                         badge.style.color = '#ffaa00';
                         badge.style.background = 'rgba(255,170,0,0.1)';
                     }
@@ -1969,7 +1969,7 @@
             } catch (e) {
                 console.warn('E2EE init error:', e);
                 if (badge) {
-                    badge.innerHTML = '—Ç–™–∞—è‚ïï–ü ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë E2EE';
+                    badge.innerHTML = 'Ú⁄‡ˇ¨œ ¶ﬁT»¶¨¶-¶¶¶- E2EE';
                     badge.style.color = '#f00';
                 }
             }
@@ -2019,7 +2019,7 @@
                                 m.iv
                             );
                             m.is_secure = true;
-                        } catch(e) { m.text = "[ ‚ï®–ß‚ï®–†‚ï®–∏‚ï®–®‚ï®–¥‚ï®–∞‚ï®–Æ‚ï®–¢‚ï®–†‚ï®–≠‚ï®–Æ ]"; }
+                        } catch(e) { m.text = "[ ¶◊¶–¶Ë¶ÿ¶‰¶‡¶ﬁ¶“¶–¶›¶ﬁ ]"; }
                     }
                     renderChatMessage(m);
                 }
@@ -2051,7 +2051,7 @@
                 fileHtml = `<a href="${API_BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${API_BASE_URL}${fileUrl}" alt="attachment"></a>`;
             } else {
                 const fname = fileUrl.split('/').pop() || 'file';
-                fileHtml = `<a class="msg-file-attachment" href="${API_BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">–Å–Ø–£–ë</span> ‚ï®–±‚ï®–™‚ï®–†‚ï®–∑‚ï®–†‚ï®–≤‚ï®–º: ${fname}</a>`;
+                fileHtml = `<a class="msg-file-attachment" href="${API_BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">®ﬂ”¡</span> ¶·¶⁄¶–¶Á¶–¶‚¶Ï: ${fname}</a>`;
             }
         }
 
@@ -2059,9 +2059,9 @@
         
         let replyHtml = '';
         if (msg.reply_to_id) {
-            replyHtml = `<div class="reply-badge" onclick="document.getElementById('msg-${msg.reply_to_id}')?.scrollIntoView({behavior:'smooth'})">‚ï®–Æ‚ï§–í‚ï®‚ñì‚ï®‚ï°‚ï§–í ‚ï®‚ïú‚ï®‚ñë ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°</div>`;
+            replyHtml = `<div class="reply-badge" onclick="document.getElementById('msg-${msg.reply_to_id}')?.scrollIntoView({behavior:'smooth'})">¶ﬁT¬¶-¶¶T¬ ¶-¶- T¡¶-¶-¶-T…¶¶¶-¶¨¶¶</div>`;
         }
-        const isEditedHtml = msg.is_edited ? '<span class="is-edited">(‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ)</span>' : '';
+        const isEditedHtml = msg.is_edited ? '<span class="is-edited">(¶¨¶¨¶-¶¶¶-¶¶¶-¶-)</span>' : '';
 
         const headerDiv = document.createElement('div');
         headerDiv.className = 'msg-header';
@@ -2070,13 +2070,13 @@
         if (msg.is_secure || msg.iv) {
             const secureSpan = document.createElement('span');
             secureSpan.className = 'msg-secure-icon';
-            secureSpan.textContent = '–Å–Ø–§–¢';
+            secureSpan.textContent = '®ﬂ‘“';
             headerDiv.appendChild(secureSpan);
         }
         if (msg.is_edited) {
             const editedSpan = document.createElement('span');
             editedSpan.className = 'is-edited';
-            editedSpan.textContent = '(‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ)';
+            editedSpan.textContent = '(¶¨¶¨¶-¶¶¶-¶¶¶-¶-)';
             headerDiv.appendChild(editedSpan);
         }
 
@@ -2135,19 +2135,19 @@
             let cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
             menu.innerHTML = '';
             const replyDiv = document.createElement('div');
-            replyDiv.textContent = '‚ï®–Æ‚ï§–í‚ï®‚ñì‚ï®‚ï°‚ï§–í‚ï®‚ïï‚ï§–í‚ï§–ú';
+            replyDiv.textContent = '¶ﬁT¬¶-¶¶T¬¶¨T¬TÃ';
             replyDiv.onclick = () => setReply(msg.id, cleanText);
             menu.appendChild(replyDiv);
 
             if (isMe) {
                 const editDiv = document.createElement('div');
-                editDiv.textContent = '‚ï®–∞‚ï®‚ï°‚ï®‚î§‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï§–ú';
+                editDiv.textContent = '¶‡¶¶¶+¶-¶¶T¬¶¨T¿¶-¶-¶-T¬TÃ';
                 editDiv.onclick = () => setEdit(msg.id, cleanText);
                 menu.appendChild(editDiv);
 
                 const deleteDiv = document.createElement('div');
                 deleteDiv.className = 'delete-ctx';
-                deleteDiv.textContent = '‚ï®–≥‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú';
+                deleteDiv.textContent = '¶„¶+¶-¶¨¶¨T¬TÃ';
                 deleteDiv.onclick = () => deleteMessage(msg.id);
                 menu.appendChild(deleteDiv);
             }
@@ -2188,11 +2188,11 @@
                     reply_to_id: state.chat.replyToId
                 };
             } catch (e) {
-                addLog('—Ç–≠–ú ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ò‚ï®‚ïï‚ï§–î‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü', 'error');
+                addLog('Ú›Ã ¶ﬁT»¶¨¶-¶¶¶- T»¶¨TƒT¿¶-¶-¶-¶-¶¨Tœ T¡¶-¶-¶-T…¶¶¶-¶¨Tœ', 'error');
                 return;
             }
         } else {
-            // No E2EE —Ç–ê–§ group chat or recipient hasn't registered keys
+            // No E2EE Ú¿‘ group chat or recipient hasn't registered keys
             payload = {
                 content,
                 encryption_iv: '',
@@ -2219,7 +2219,7 @@
     /** Upload a file to the server and store the URL in pendingFile */
     async function uploadChatFile(/** @type {File} */ file) {
         if (file.size > 5 * 1024 * 1024) {
-            addLog('‚ï®–¥‚ï®‚ñë‚ï®‚ï£‚ï®‚ïó ‚ï®‚îê‚ï§–ê‚ï®‚ï°‚ï®‚ñì‚ï§–õ‚ï§–ò‚ï®‚ñë‚ï®‚ï°‚ï§–í ‚ï®‚ïó‚ï®‚ïï‚ï®‚ïù‚ï®‚ïï‚ï§–í 5 ‚ï®–¨‚ï®–°', 'error');
+            addLog('¶‰¶-¶¶¶¨ ¶¨T¿¶¶¶-TÀT»¶-¶¶T¬ ¶¨¶¨¶-¶¨T¬ 5 ¶‹¶—', 'error');
             return;
         }
         const formData = new FormData();
@@ -2244,10 +2244,10 @@
             const preview = document.getElementById('chat-file-preview');
             const nameEl = document.getElementById('chat-file-name');
             if (preview) preview.style.display = 'flex';
-            if (nameEl) nameEl.textContent = `–Å–Ø–£–û ${state.pendingFile.name} (${(file.size / 1024).toFixed(1)} KB)`;
-            addLog(`‚ï®–¥‚ï®‚ñë‚ï®‚ï£‚ï®‚ïó '${file.name}' ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ï¢‚ï®‚ï°‚ï®‚ïú`, 'success');
+            if (nameEl) nameEl.textContent = `®ﬂ”Œ ${state.pendingFile.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            addLog(`¶‰¶-¶¶¶¨ '${file.name}' ¶¨¶-¶¶T¿T√¶¶¶¶¶-`, 'success');
         } catch (e) {
-            addLog(`‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ïï ‚ï§–î‚ï®‚ñë‚ï®‚ï£‚ï®‚ïó‚ï®‚ñë: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
+            addLog(`¶ﬁT»¶¨¶-¶¶¶- ¶¨¶-¶¶T¿T√¶¨¶¶¶¨ Tƒ¶-¶¶¶¨¶-: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
         }
     }
 
@@ -2284,7 +2284,7 @@
         const query = (document.getElementById('fab-contact-search')?.value || '').trim();
         const contactList = document.getElementById('fab-contacts-list');
 
-        // If query long enough —Ç–ê–§ search server (by phone or nickname)
+        // If query long enough Ú¿‘ search server (by phone or nickname)
         if (query.length >= 2) {
             clearTimeout(_fabSearchTimer);
             _fabSearchTimer = setTimeout(async () => {
@@ -2319,8 +2319,8 @@
                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </div>
             <div>
-                <div style="font-size:14px;font-weight:600;color:var(--accent-cyan);">‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï®‚îÇ‚ï®‚ïó‚ï®‚ñë‚ï§–ë‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚î§‚ï§–ê‚ï§–ì‚ï®‚îÇ‚ï®‚ñë</div>
-                <div style="font-size:11px;color:var(--text-dim);">‚ï®–Æ‚ï§–í‚ï®‚îê‚ï§–ê‚ï®‚ñë‚ï®‚ñì‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ë‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï§–ì ‚ï®‚î§‚ï®‚ïó‚ï§–ü ‚ï§–ê‚ï®‚ï°‚ï®‚îÇ‚ï®‚ïï‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï®‚ïï ‚ï®‚ñì Skufia-Net</div>
+                <div style="font-size:14px;font-weight:600;color:var(--accent-cyan);">¶ﬂT¿¶¨¶¶¶¨¶-T¡¶¨T¬TÃ ¶+T¿T√¶¶¶-</div>
+                <div style="font-size:11px;color:var(--text-dim);">¶ﬁT¬¶¨T¿¶-¶-¶¨T¬TÃ T¡T¡TÀ¶¨¶¶T√ ¶+¶¨Tœ T¿¶¶¶¶¶¨T¡T¬T¿¶-T∆¶¨¶¨ ¶- Skufia-Net</div>
             </div>
         `;
         inviteDiv.onclick = async () => {
@@ -2329,16 +2329,16 @@
                 const fullUrl = `${window.location.origin}${resp.invite_url}`;
                 if (navigator.share) {
                     await navigator.share({
-                        title: 'Skufia-Net —Ç–ê–§ ‚ï®‚îê‚ï§–ê‚ï®‚ïï‚ï®‚îÇ‚ï®‚ïó‚ï®‚ñë‚ï§–ò‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°',
-                        text: '‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï§–ë‚ï®‚ïõ‚ï®‚ï°‚ï®‚î§‚ï®‚ïï‚ï®‚ïú‚ï§–ü‚ï®‚ï£‚ï§–ë‚ï§–ü ‚ï®‚ïë‚ï®‚ïõ ‚ï®‚ïù‚ï®‚ïú‚ï®‚ï° ‚ï®‚ñì Skufia-Net —Ç–ê–§ ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï§–°‚ï®‚ïú‚ï®‚ïú‚ï®‚ïõ‚ï®‚ïù ‚ï®‚ïù‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ï°‚ï®‚ïú‚ï®‚î§‚ï®‚ï¢‚ï®‚ï°‚ï§–ê‚ï®‚ï° ‚ï®‚î§‚ï®‚ïó‚ï§–ü ‚ï§–ë‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïï‚ï§–ï.',
+                        title: 'Skufia-Net Ú¿‘ ¶¨T¿¶¨¶¶¶¨¶-T»¶¶¶-¶¨¶¶',
+                        text: '¶ﬂT¿¶¨T¡¶-¶¶¶+¶¨¶-Tœ¶¶T¡Tœ ¶¶¶- ¶-¶-¶¶ ¶- Skufia-Net Ú¿‘ ¶¨¶-T…¶¨T…T—¶-¶-¶-¶- ¶-¶¶T¡T¡¶¶¶-¶+¶¶¶¶T¿¶¶ ¶+¶¨Tœ T¡¶-¶-¶¨T≈.',
                         url: fullUrl
                     });
                 } else {
                     await navigator.clipboard.writeText(fullUrl);
-                    addLog('‚ï®–±‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï®‚ñë-‚ï®‚îê‚ï§–ê‚ï®‚ïï‚ï®‚îÇ‚ï®‚ïó‚ï®‚ñë‚ï§–ò‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï§–ë‚ï®‚ïë‚ï®‚ïõ‚ï®‚îê‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë ‚ï®‚ñì ‚ï®‚ñí‚ï§–ì‚ï§–î‚ï®‚ï°‚ï§–ê —Ç–ê–§ ‚ï®‚ñì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ñì‚ï§–ú‚ï§–í‚ï®‚ï° ‚ï®‚ñì WhatsApp, Telegram ‚ï®‚ïï‚ï®‚ïó‚ï®‚ïï SMS', 'success');
+                    addLog('¶·T¡TÀ¶¨¶¶¶--¶¨T¿¶¨¶¶¶¨¶-T»¶¶¶-¶¨¶¶ T¡¶¶¶-¶¨¶¨T¿¶-¶-¶-¶-¶- ¶- ¶-T√Tƒ¶¶T¿ Ú¿‘ ¶-T¡T¬¶-¶-TÃT¬¶¶ ¶- WhatsApp, Telegram ¶¨¶¨¶¨ SMS', 'success');
                 }
             } catch(e) {
-                addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îÇ‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï§–ê‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï®‚ïï ‚ï§–ë‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï®‚ïï', 'error');
+                addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¶¶¶¶-¶¶T¿¶-T∆¶¨¶¨ T¡T¡TÀ¶¨¶¶¶¨', 'error');
             }
         };
         contactList.appendChild(inviteDiv);
@@ -2346,7 +2346,7 @@
         if (!users || users.length === 0) {
             const empty = document.createElement('div');
             empty.style.cssText = 'text-align:center; padding:20px; color:var(--text-dim); font-size:13px;';
-            empty.textContent = '‚ï®–Ø‚ï®‚ïõ‚ï®‚ïó‚ï§–ú‚ï®‚ïñ‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ï°‚ï®‚ïó‚ï®‚ïï ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ïú‚ï®‚ñë‚ï®‚ï£‚ï®‚î§‚ï®‚ï°‚ï®‚ïú‚ï§–õ. ‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï®‚îÇ‚ï®‚ïó‚ï®‚ñë‚ï§–ë‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚î§‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ï°‚ï®‚ï£!';
+            empty.textContent = '¶ﬂ¶-¶¨TÃ¶¨¶-¶-¶-T¬¶¶¶¨¶¨ ¶-¶¶ ¶-¶-¶¶¶+¶¶¶-TÀ. ¶ﬂT¿¶¨¶¶¶¨¶-T¡¶¨T¬¶¶ ¶+T¿T√¶¨¶¶¶¶!';
             contactList.appendChild(empty);
             return;
         }
@@ -2376,11 +2376,11 @@
                 document.getElementById('fab-hub-modal').style.display = 'none';
                 try {
                     const room = await apiRequest('/chat/rooms', 'POST', { name: 'Private', room_type: 'private', target_user_id: u.id });
-                    addLog(room.is_existing ? '‚ï®–∑‚ï®‚ñë‚ï§–í ‚ï§–ì‚ï®‚ï¢‚ï®‚ï° ‚ï§–ë‚ï§–ì‚ï§–ô‚ï®‚ï°‚ï§–ë‚ï§–í‚ï®‚ñì‚ï§–ì‚ï®‚ï°‚ï§–í' : '‚ï®–´‚ï®‚ïï‚ï§–ó‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï§–ó‚ï®‚ñë‚ï§–í ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú', 'success');
+                    addLog(room.is_existing ? '¶Á¶-T¬ T√¶¶¶¶ T¡T√T…¶¶T¡T¬¶-T√¶¶T¬' : '¶€¶¨T«¶-TÀ¶¶ T«¶-T¬ T¡¶-¶¨¶+¶-¶-', 'success');
                     await window.loadChatRooms();
                     window.selectChatRoom(room.id, u.username, 'private', u.id, 'member');
                 } catch(e) {
-                    addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ñë', 'error');
+                    addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶-¶¨¶+¶-¶-¶¨Tœ T«¶-T¬¶-', 'error');
                 }
             };
             contactList.appendChild(div);
@@ -2396,8 +2396,8 @@
         const input = document.getElementById('create-room-input');
         const descInput = document.getElementById('create-room-desc');
 
-        title.textContent = type === 'channel' ? '‚ï®–±‚ï®–Æ‚ï®–ß‚ï®–§‚ï®–†‚ï®–≤‚ï®–º ‚ï®–™‚ï®–†‚ï®–≠‚ï®–†‚ï®–´' : '‚ï®–±‚ï®–Æ‚ï®–ß‚ï®–§‚ï®–†‚ï®–≤‚ï®–º ‚ï®–£‚ï®–∞‚ï®–≥‚ï®–Ø‚ï®–Ø‚ï®–≥';
-        label.textContent = type === 'channel' ? '‚ï®–≠‚ï®‚ñë‚ï®‚ïñ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó‚ï®‚ñë' : '‚ï®–≠‚ï®‚ñë‚ï®‚ïñ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–õ';
+        title.textContent = type === 'channel' ? '¶·¶ﬁ¶◊¶‘¶–¶‚¶Ï ¶⁄¶–¶›¶–¶€' : '¶·¶ﬁ¶◊¶‘¶–¶‚¶Ï ¶”¶‡¶„¶ﬂ¶ﬂ¶„';
+        label.textContent = type === 'channel' ? '¶›¶-¶¨¶-¶-¶-¶¨¶¶ ¶¶¶-¶-¶-¶¨¶-' : '¶›¶-¶¨¶-¶-¶-¶¨¶¶ ¶¶T¿T√¶¨¶¨TÀ';
         if (typeInput) typeInput.value = type;
         if (input) input.value = '';
         if (descInput) descInput.value = '';
@@ -2424,16 +2424,16 @@
             // Use new /chat/groups endpoint which sets owner_id and invite_code
             const payload = { name, room_type: rType, is_public: isPublic, description, initial_members: [] };
             const room = await apiRequest('/chat/groups', 'POST', payload);
-            addLog(`—Ç–¨–ï ‚ï®–±‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ: ${name}`, 'success');
+            addLog(`Ú‹≈ ¶·¶-¶¨¶+¶-¶-¶-: ${name}`, 'success');
             await loadChatRooms();
             // Auto-open the new room
             if (room && room.id) {
                 selectChatRoom(room.id, name, rType, null, 'owner');
             }
-        } catch (e) { addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü', 'error'); }
+        } catch (e) { addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶-¶¨¶+¶-¶-¶¨Tœ', 'error'); }
     };
 
-    // —Ç–§–ê—Ç–§–ê—Ç–§–ê GROUP SETTINGS MODAL —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+    // Ú‘¿Ú‘¿Ú‘¿ GROUP SETTINGS MODAL Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
     /**
      * Opens the group/channel settings modal for the current room.
@@ -2454,14 +2454,14 @@
                 apiRequest(`/chat/rooms/${roomId}/members`)
             ]);
         } catch (e) {
-            addLog('‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚ïï‚ï®‚ïú‚ï§–î‚ï®‚ïõ‚ï§–ê‚ï®‚ïù‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–û ‚ï®‚ïõ ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï®‚ï°', 'error');
+            addLog('¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ ¶¨¶-¶¶T¿T√¶¨¶¨T¬TÃ ¶¨¶-Tƒ¶-T¿¶-¶-T∆¶¨TŒ ¶- ¶¶T¿T√¶¨¶¨¶¶', 'error');
             return;
         }
 
         const isAdmin = ['owner', 'admin'].includes(myRole);
         const isOwner = myRole === 'owner';
 
-        // —Ç–§–ê—Ç–§–ê Build modal —Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ Build modal Ú‘¿Ú‘¿
         const existing = document.getElementById('group-settings-modal');
         if (existing) existing.remove();
 
@@ -2475,7 +2475,7 @@
         overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
 
         const roleBadgeColor = { owner: '#f0b429', admin: '#00ff41', member: '#888', banned: '#f00' };
-        const roleLabel = { owner: '–Å–Ø–°–° ‚ï®–¢‚ï®‚ïó‚ï®‚ñë‚ï®‚î§‚ï®‚ï°‚ï®‚ïó‚ï®‚ï°‚ï§–ñ', admin: '—Ç–™–± ‚ï®–†‚ï®‚î§‚ï®‚ïù‚ï®‚ïï‚ï®‚ïú‚ï®‚ïï‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï§–ê', member: '–Å–Ø–°–¥ ‚ï®–≥‚ï§–ó‚ï®‚ñë‚ï§–ë‚ï§–í‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë', banned: '–Å–Ø–™–ª ‚ï®–ß‚ï®‚ñë‚ï®‚ñí‚ï®‚ïó‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú' };
+        const roleLabel = { owner: '®ﬂ—— ¶“¶¨¶-¶+¶¶¶¨¶¶T∆', admin: 'Ú⁄· ¶–¶+¶-¶¨¶-¶¨T¡T¬T¿¶-T¬¶-T¿', member: '®ﬂ—‰ ¶„T«¶-T¡T¬¶-¶¨¶¶', banned: '®ﬂ⁄Î ¶◊¶-¶-¶¨¶-¶¶¶¨T¿¶-¶-¶-¶-' };
 
         const membersHTML = members.map(m => {
             const canKick = isAdmin && m.role !== 'owner' && !(m.role === 'admin' && !isOwner) && m.user_id !== state.user.id;
@@ -2495,15 +2495,15 @@
                     ${canChangeRole ? `
                         <select onchange="window.updateMemberRole(${roomId}, ${m.user_id}, this.value)"
                             style="background:var(--bg-panel);border:1px solid var(--border-metal);color:var(--text-primary);padding:3px 6px;border-radius:4px;font-size:11px;cursor:pointer;">
-                            <option value="admin" ${m.role==='admin'?'selected':''}>—Ç–™–± ‚ï®–†‚ï®‚î§‚ï®‚ïù‚ï§–¶‚ï®‚ïú</option>
-                            <option value="member" ${m.role==='member'?'selected':''}>–Å–Ø–°–¥ ‚ï®–≥‚ï§–ó‚ï®‚ñë‚ï§–ë‚ï§–í‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë</option>
-                            <option value="banned" ${m.role==='banned'?'selected':''}>–Å–Ø–™–ª ‚ï®–°‚ï®‚ñë‚ï®‚ïú</option>
+                            <option value="admin" ${m.role==='admin'?'selected':''}>Ú⁄· ¶–¶+¶-T÷¶-</option>
+                            <option value="member" ${m.role==='member'?'selected':''}>®ﬂ—‰ ¶„T«¶-T¡T¬¶-¶¨¶¶</option>
+                            <option value="banned" ${m.role==='banned'?'selected':''}>®ﬂ⁄Î ¶—¶-¶-</option>
                         </select>
                     ` : ''}
                     ${canKick ? `
                         <button onclick="window.kickMember(${roomId}, ${m.user_id}, '${m.username}')"
                             style="background:rgba(255,50,50,0.15);border:1px solid rgba(255,50,50,0.3);color:#ff5555;padding:3px 8px;border-radius:4px;font-size:11px;cursor:pointer;">
-                            ‚ï®–®‚ï§–ë‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï‚ï§–í‚ï§–ú
+                            ¶ÿT¡¶¶¶¨TŒT«¶¨T¬TÃ
                         </button>
                     ` : ''}
                 </div>
@@ -2515,33 +2515,33 @@
             <!-- Header -->
             <div style="padding:20px;border-bottom:1px solid var(--border-metal);display:flex;align-items:center;gap:14px;">
                 <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#0f0,#0af);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">
-                    ${roomInfo.type === 'channel' ? '–Å–Ø–£–≤' : '–Å–Ø–°–µ'}
+                    ${roomInfo.type === 'channel' ? '®ﬂ”‚' : '®ﬂ—Â'}
                 </div>
                 <div style="flex:1;">
                     <div style="font-size:16px;font-weight:700;">${roomInfo.name}</div>
-                    <div style="font-size:12px;color:var(--text-dim);">${roomInfo.type === 'channel' ? '‚ï®–™‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó' : '‚ï®–£‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï®‚ñë'} ‚î¨‚ïñ ${roomInfo.member_count} ‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–ë‚ï§–í‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë‚ï®‚ïõ‚ï®‚ñì ‚î¨‚ïñ ${roomInfo.is_public ? '–Å–Ø–ú–ù ‚ï®–Ø‚ï§–ì‚ï®‚ñí‚ï®‚ïó‚ï®‚ïï‚ï§–ó‚ï®‚ïú‚ï§–õ‚ï®‚ï£' : '–Å–Ø–§–¢ ‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ïú‚ï§–õ‚ï®‚ï£'}</div>
+                    <div style="font-size:12px;color:var(--text-dim);">${roomInfo.type === 'channel' ? '¶⁄¶-¶-¶-¶¨' : '¶”T¿T√¶¨¶¨¶-'} T¨ ${roomInfo.member_count} T√T«¶-T¡T¬¶-¶¨¶¶¶-¶- T¨ ${roomInfo.is_public ? '®ﬂÃÕ ¶ﬂT√¶-¶¨¶¨T«¶-TÀ¶¶' : '®ﬂ‘“ ¶ﬂT¿¶¨¶-¶-T¬¶-TÀ¶¶'}</div>
                     ${roomInfo.description ? `<div style="font-size:12px;color:var(--text-secondary);margin-top:3px;">${roomInfo.description}</div>` : ''}
                 </div>
                 <button onclick="document.getElementById('group-settings-modal').remove()"
-                    style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:4px;">—Ç–¨–•</button>
+                    style="background:none;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:4px;">Ú‹’</button>
             </div>
 
             <!-- Invite section (admin only) -->
             ${isAdmin ? `
             <div style="padding:16px 20px;border-bottom:1px solid var(--border-metal);">
-                <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:8px;">–Å–Ø–§–ß ‚ï®–Ø‚ï®–∞‚ï®–®‚ï®–£‚ï®–´‚ï®–†‚ï®–±‚ï®–®‚ï®–≤‚ï®–º</div>
+                <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:8px;">®ﬂ‘◊ ¶ﬂ¶‡¶ÿ¶”¶€¶–¶·¶ÿ¶‚¶Ï</div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <div style="flex:1;background:rgba(0,255,65,0.07);border:1px solid rgba(0,255,65,0.2);border-radius:8px;padding:8px 12px;font-size:12px;font-family:monospace;color:#0f0;word-break:break-all;" id="invite-link-display">
                         ${window.location.origin}/join/${roomInfo.invite_code}
                     </div>
                     <button onclick="window.copyInviteLink('${roomInfo.invite_code}')"
                         style="background:rgba(0,255,65,0.1);border:1px solid rgba(0,255,65,0.3);color:#0f0;padding:8px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;font-size:12px;">
-                        –Å–Ø–£–õ ‚ï®–™‚ï®‚ïõ‚ï®‚îê‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï§–ú
+                        ®ﬂ”À ¶⁄¶-¶¨¶¨T¿¶-¶-¶-T¬TÃ
                     </button>
                 </div>
                 <button onclick="window.generateNewInvite(${roomId})"
                     style="margin-top:8px;background:none;border:1px solid var(--border-metal);color:var(--text-dim);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:11px;">
-                    —Ç–ñ‚ïó ‚ï®–±‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï§–ì‚ï§–û ‚ï§–ë‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï§–ì
+                    Ú∆¨ ¶·¶-¶¨¶+¶-T¬TÃ ¶-¶-¶-T√TŒ T¡T¡TÀ¶¨¶¶T√
                 </button>
             </div>` : ''}
 
@@ -2550,14 +2550,14 @@
             <div style="padding:12px 20px;border-bottom:1px solid var(--border-metal);">
                 <button onclick="document.getElementById('group-settings-modal').remove(); window.openAddMemberModal();"
                     style="width:100%;background:rgba(0,175,255,0.1);border:1px solid rgba(0,175,255,0.3);color:#0af;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;">
-                    —Ç–Æ–• ‚ï®–§‚ï®‚ïõ‚ï®‚ñí‚ï®‚ñë‚ï®‚ñì‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–ë‚ï§–í‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë‚ï®‚ïõ‚ï®‚ñì
+                    Úﬁ’ ¶‘¶-¶-¶-¶-¶¨T¬TÃ T√T«¶-T¡T¬¶-¶¨¶¶¶-¶-
                 </button>
             </div>` : ''}
 
             <!-- Members list -->
             <div>
                 <div style="padding:12px 20px 8px;font-size:11px;letter-spacing:0.1em;color:var(--text-dim);">
-                    –Å–Ø–°–µ ‚ï®–≥‚ï®–∑‚ï®–†‚ï®–±‚ï®–≤‚ï®–≠‚ï®–®‚ï®–™‚ï®–® (${members.length})
+                    ®ﬂ—Â ¶„¶Á¶–¶·¶‚¶›¶ÿ¶⁄¶ÿ (${members.length})
                 </div>
                 <div id="group-members-list">
                     ${membersHTML}
@@ -2567,9 +2567,9 @@
             <!-- Settings (admin only) -->
             ${isAdmin ? `
             <div style="padding:16px 20px;border-top:1px solid var(--border-metal);">
-                <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:10px;">—Ç–™–©—è‚ïï–ü ‚ï®–≠‚ï®–†‚ï®–±‚ï®–≤‚ï®–∞‚ï®–Æ‚ï®–©‚ï®–™‚ï®–®</div>
+                <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:10px;">Ú⁄Ÿˇ¨œ ¶›¶–¶·¶‚¶‡¶ﬁ¶Ÿ¶⁄¶ÿ</div>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                    <span style="font-size:13px;">‚ï®–Ø‚ï§–ì‚ï®‚ñí‚ï®‚ïó‚ï®‚ïï‚ï§–ó‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï®‚î§‚ï®‚ïõ‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê</span>
+                    <span style="font-size:13px;">¶ﬂT√¶-¶¨¶¨T«¶-TÀ¶¶ ¶+¶-T¡T¬T√¶¨</span>
                     <label style="position:relative;display:inline-block;width:44px;height:22px;">
                         <input type="checkbox" id="group-public-toggle" ${roomInfo.is_public ? 'checked' : ''}
                             onchange="window.toggleGroupPublic(${roomId}, this.checked)"
@@ -2585,11 +2585,11 @@
                 ${isOwner ? `
                 <button onclick="window.confirmDeleteRoom(${roomId}, '${roomInfo.name}')"
                     style="width:100%;background:rgba(255,50,50,0.1);border:1px solid rgba(255,50,50,0.4);color:#ff5555;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:8px;">
-                    –Å–Ø–ß–°—è‚ïï–ü ‚ï®–≥‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–ì ‚ï®‚ïú‚ï®‚ñë‚ï®‚ñì‚ï§–ë‚ï®‚ï°‚ï®‚îÇ‚ï®‚î§‚ï®‚ñë
+                    ®ﬂ◊—ˇ¨œ ¶„¶+¶-¶¨¶¨T¬TÃ ¶¶T¿T√¶¨¶¨T√ ¶-¶-¶-T¡¶¶¶¶¶+¶-
                 </button>` : ''}
                 <button onclick="window.leaveCurrentRoom(${roomId})"
                     style="width:100%;background:rgba(255,150,0,0.08);border:1px solid rgba(255,150,0,0.3);color:#ffaa00;padding:10px;border-radius:8px;cursor:pointer;font-size:13px;">
-                    –Å–Ø–™–∫ ‚ï®–Ø‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–ì
+                    ®ﬂ⁄Í ¶ﬂ¶-¶¶¶¨¶-T√T¬TÃ ¶¶T¿T√¶¨¶¨T√
                 </button>
             </div>
         </div>`;
@@ -2597,11 +2597,11 @@
         document.body.appendChild(overlay);
     };
 
-    // —Ç–§–ê—Ç–§–ê—Ç–§–ê Group management helper functions —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+    // Ú‘¿Ú‘¿Ú‘¿ Group management helper functions Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
     window.copyInviteLink = function(code) {
         const url = `${window.location.origin}/join/${code}`;
-        navigator.clipboard.writeText(url).then(() => addLog('—Ç–¨–ï ‚ï®–±‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïë‚ï®‚ïõ‚ï®‚îê‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë', 'success'));
+        navigator.clipboard.writeText(url).then(() => addLog('Ú‹≈ ¶·T¡TÀ¶¨¶¶¶- T¡¶¶¶-¶¨¶¨T¿¶-¶-¶-¶-¶-', 'success'));
     };
 
     window.generateNewInvite = async function(roomId) {
@@ -2609,26 +2609,26 @@
             const inv = await apiRequest(`/chat/rooms/${roomId}/invite`, 'POST', { max_uses: null, expires_hours: null });
             const el = document.getElementById('invite-link-display');
             if (el) el.textContent = `${window.location.origin}/join/${inv.invite_code}`;
-            addLog('—Ç–¨–ï ‚ï®–≠‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–ü ‚ï®‚ïï‚ï®‚ïú‚ï®‚ñì‚ï®‚ñë‚ï®‚ï£‚ï§–í-‚ï§–ë‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë', 'success');
-        } catch (e) { addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï®‚ïï‚ï®‚ïú‚ï®‚ñì‚ï®‚ñë‚ï®‚ï£‚ï§–í‚ï®‚ñë', 'error'); }
+            addLog('Ú‹≈ ¶›¶-¶-¶-Tœ ¶¨¶-¶-¶-¶¶T¬-T¡T¡TÀ¶¨¶¶¶- T¡¶-¶¨¶+¶-¶-¶-', 'success');
+        } catch (e) { addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶-¶¨¶+¶-¶-¶¨Tœ ¶¨¶-¶-¶-¶¶T¬¶-', 'error'); }
     };
 
     window.kickMember = async function(roomId, userId, username) {
-        if (!confirm(`‚ï®–®‚ï§–ë‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï‚ï§–í‚ï§–ú ${username} ‚ï®‚ïï‚ï®‚ïñ ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–õ?`)) return;
+        if (!confirm(`¶ÿT¡¶¶¶¨TŒT«¶¨T¬TÃ ${username} ¶¨¶¨ ¶¶T¿T√¶¨¶¨TÀ?`)) return;
         try {
             await apiRequest(`/chat/rooms/${roomId}/members/${userId}`, 'DELETE');
-            addLog(`—Ç–¨–ï ${username} ‚ï®‚ïï‚ï§–ë‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï§–°‚ï®‚ïú`, 'success');
+            addLog(`Ú‹≈ ${username} ¶¨T¡¶¶¶¨TŒT«T—¶-`, 'success');
             // Refresh modal
             window.openGroupSettings();
-        } catch (e) { addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïï‚ï§–ë‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü', 'error'); }
+        } catch (e) { addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¡¶¶¶¨TŒT«¶¶¶-¶¨Tœ', 'error'); }
     };
 
     window.updateMemberRole = async function(roomId, userId, newRole) {
         try {
             await apiRequest(`/chat/rooms/${roomId}/members/${userId}/role`, 'PUT', { role: newRole });
-            addLog(`—Ç–¨–ï ‚ï®–∞‚ï®‚ïõ‚ï®‚ïó‚ï§–ú ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë`, 'success');
+            addLog(`Ú‹≈ ¶‡¶-¶¨TÃ ¶-¶-¶-¶-¶-¶¨¶¶¶-¶-`, 'success');
         } catch (e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï§–ê‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïï', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨¶¨¶-¶¶¶-¶¶¶-¶¨Tœ T¿¶-¶¨¶¨', 'error');
             window.openGroupSettings(); // revert UI
         }
     };
@@ -2636,41 +2636,41 @@
     window.toggleGroupPublic = async function(roomId, isPublic) {
         try {
             await apiRequest(`/chat/rooms/${roomId}/settings`, 'PUT', { is_public: isPublic });
-            addLog(`—Ç–¨–ï ‚ï®–§‚ï®‚ïõ‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê: ${isPublic ? '‚ï®‚îê‚ï§–ì‚ï®‚ñí‚ï®‚ïó‚ï®‚ïï‚ï§–ó‚ï®‚ïú‚ï§–õ‚ï®‚ï£' : '‚ï®‚îê‚ï§–ê‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ïú‚ï§–õ‚ï®‚ï£'}`, 'success');
-        } catch (e) { addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï®‚ïú‚ï®‚ñë‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ïõ‚ï®‚ï°‚ï®‚ïë', 'error'); }
+            addLog(`Ú‹≈ ¶‘¶-T¡T¬T√¶¨: ${isPublic ? '¶¨T√¶-¶¨¶¨T«¶-TÀ¶¶' : '¶¨T¿¶¨¶-¶-T¬¶-TÀ¶¶'}`, 'success');
+        } catch (e) { addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨¶¨¶-¶¶¶-¶¶¶-¶¨Tœ ¶-¶-T¡T¬T¿¶-¶¶¶¶', 'error'); }
     };
 
     window.confirmDeleteRoom = async function(roomId, name) {
-        if (!confirm(`‚ï®–≥‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–ì ‚î¨–ª${name}‚î¨‚ïó ‚ï®‚ïú‚ï®‚ñë‚ï®‚ñì‚ï§–ë‚ï®‚ï°‚ï®‚îÇ‚ï®‚î§‚ï®‚ñë? ‚ï®–Ω‚ï§–í‚ï®‚ïõ ‚ï®‚î§‚ï®‚ï°‚ï®‚ï£‚ï§–ë‚ï§–í‚ï®‚ñì‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïú‚ï®‚ï°‚ï®‚ïó‚ï§–ú‚ï®‚ïñ‚ï§–ü ‚ï®‚ïõ‚ï§–í‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–í‚ï§–ú.`)) return;
+        if (!confirm(`¶„¶+¶-¶¨¶¨T¬TÃ ¶¶T¿T√¶¨¶¨T√ TÎ${name}T¨ ¶-¶-¶-T¡¶¶¶¶¶+¶-? ¶ÌT¬¶- ¶+¶¶¶¶T¡T¬¶-¶¨¶¶ ¶-¶¶¶¨TÃ¶¨Tœ ¶-T¬¶-¶¶¶-¶¨T¬TÃ.`)) return;
         try {
             await apiRequest(`/chat/rooms/${roomId}`, 'DELETE');
             const modal = document.getElementById('group-settings-modal');
             if (modal) modal.remove();
-            addLog('—Ç–¨–ï ‚ï®–£‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï®‚ñë ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë', 'success');
+            addLog('Ú‹≈ ¶”T¿T√¶¨¶¨¶- T√¶+¶-¶¨¶¶¶-¶-', 'success');
             // Return to sidebar
             const chatMain = document.querySelector('.chat-main');
             if (chatMain) chatMain.classList.remove('active');
             state.chat.currentRoomId = null;
             await loadChatRooms();
-        } catch (e) { addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü', 'error'); }
+        } catch (e) { addLog('¶ﬁT»¶¨¶-¶¶¶- T√¶+¶-¶¨¶¶¶-¶¨Tœ', 'error'); }
     };
 
     window.leaveCurrentRoom = async function(roomId) {
-        const name = state.chat.currentRoomName || '‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–ì';
-        if (!confirm(`‚ï®–Ø‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú ${name}?`)) return;
+        const name = state.chat.currentRoomName || '¶¶T¿T√¶¨¶¨T√';
+        if (!confirm(`¶ﬂ¶-¶¶¶¨¶-T√T¬TÃ ${name}?`)) return;
         try {
             await apiRequest(`/chat/rooms/${roomId}/leave`, 'POST');
             const modal = document.getElementById('group-settings-modal');
             if (modal) modal.remove();
-            addLog('—Ç–¨–ï ‚ï®–¢‚ï§–õ ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï®‚ïú‚ï§–ì‚ï®‚ïó‚ï®‚ïï ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–ì', 'info');
+            addLog('Ú‹≈ ¶“TÀ ¶¨¶-¶¶¶¨¶-T√¶¨¶¨ ¶¶T¿T√¶¨¶¨T√', 'info');
             const chatMain = document.querySelector('.chat-main');
             if (chatMain) chatMain.classList.remove('active');
             state.chat.currentRoomId = null;
             await loadChatRooms();
-        } catch (e) { addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ñì‚ï§–õ‚ï§–ï‚ï®‚ïõ‚ï®‚î§‚ï®‚ñë ‚ï®‚ïï‚ï®‚ïñ ‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚îê‚ï®‚îê‚ï§–õ', 'error'); }
+        } catch (e) { addLog('¶ﬁT»¶¨¶-¶¶¶- ¶-TÀT≈¶-¶+¶- ¶¨¶¨ ¶¶T¿T√¶¨¶¨TÀ', 'error'); }
     };
 
-    // —Ç–§–ê—Ç–§–ê—Ç–§–ê Join by invite code —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+    // Ú‘¿Ú‘¿Ú‘¿ Join by invite code Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
     window.openJoinByInviteModal = function() {
         const existing = document.getElementById('join-invite-modal');
@@ -2682,17 +2682,17 @@
         overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
         overlay.innerHTML = `
         <div style="background:var(--bg-panel);border:1px solid var(--border-metal);border-radius:16px;width:min(420px,92vw);padding:24px;">
-            <div style="font-size:15px;font-weight:700;margin-bottom:16px;">–Å–Ø–§–ß ‚ï®–¢‚ï®–±‚ï®–≤‚ï®–≥‚ï®–Ø‚ï®–®‚ï®–≤‚ï®–º ‚ï®–Ø‚ï®–Æ ‚ï®–±‚ï®–±‚ï®–ª‚ï®–´‚ï®–™‚ï®–•</div>
-            <input id="join-invite-input" type="text" placeholder="‚ï®–¢‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ñì‚ï§–ú‚ï§–í‚ï®‚ï° ‚ï®‚ïï‚ï®‚ïú‚ï®‚ñì‚ï®‚ñë‚ï®‚ï£‚ï§–í-‚ï§–ë‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï§–ì ‚ï®‚ïï‚ï®‚ïó‚ï®‚ïï ‚ï®‚ïë‚ï®‚ïõ‚ï®‚î§..."
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px;">®ﬂ‘◊ ¶“¶·¶‚¶„¶ﬂ¶ÿ¶‚¶Ï ¶ﬂ¶ﬁ ¶·¶·¶Î¶€¶⁄¶’</div>
+            <input id="join-invite-input" type="text" placeholder="¶“T¡T¬¶-¶-TÃT¬¶¶ ¶¨¶-¶-¶-¶¶T¬-T¡T¡TÀ¶¨¶¶T√ ¶¨¶¨¶¨ ¶¶¶-¶+..."
                 style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);border-radius:8px;padding:10px 12px;color:var(--text-primary);font-size:14px;box-sizing:border-box;margin-bottom:12px;">
             <div style="display:flex;gap:8px;">
                 <button onclick="document.getElementById('join-invite-modal').remove()"
                     style="flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);color:var(--text-secondary);padding:10px;border-radius:8px;cursor:pointer;">
-                    ‚ï®–Æ‚ï§–í‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë
+                    ¶ﬁT¬¶-¶¶¶-¶-
                 </button>
                 <button onclick="window.submitJoinInvite()"
                     style="flex:1;background:linear-gradient(135deg,#0f0,#0af);border:none;color:#000;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;">
-                    ‚ï®–¢‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê‚ï®‚ïï‚ï§–í‚ï§–ú
+                    ¶“T¡T¬T√¶¨¶¨T¬TÃ
                 </button>
             </div>
         </div>`;
@@ -2707,16 +2707,16 @@
         // Extract code from full URL if pasted
         const match = code.match(/\/join\/([A-Za-z0-9_-]+)/);
         if (match) code = match[1];
-        if (!code) { addLog('‚ï®–¢‚ï®‚ñì‚ï®‚ï°‚ï®‚î§‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïï‚ï®‚ïú‚ï®‚ñì‚ï®‚ñë‚ï®‚ï£‚ï§–í-‚ï®‚ïë‚ï®‚ïõ‚ï®‚î§', 'error'); return; }
+        if (!code) { addLog('¶“¶-¶¶¶+¶¨T¬¶¶ ¶¨¶-¶-¶-¶¶T¬-¶¶¶-¶+', 'error'); return; }
 
         try {
             const res = await apiRequest(`/chat/join/${code}`, 'POST');
             document.getElementById('join-invite-modal')?.remove();
-            addLog(`—Ç–¨–ï ${res.status}: ${res.room_name}`, 'success');
+            addLog(`Ú‹≈ ${res.status}: ${res.room_name}`, 'success');
             await loadChatRooms();
             if (res.room_id) selectChatRoom(res.room_id, res.room_name, res.room_type, null, 'member');
         } catch (e) {
-            addLog(e.message || '‚ï®–≠‚ï®‚ï°‚ï®‚ñì‚ï®‚ï°‚ï§–ê‚ï®‚ïú‚ï®‚ñë‚ï§–ü ‚ï®‚ïï‚ï®‚ïó‚ï®‚ïï ‚ï§–ì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï§–ê‚ï®‚ï°‚ï®‚ñì‚ï§–ò‚ï®‚ñë‚ï§–ü ‚ï§–ë‚ï§–ë‚ï§–õ‚ï®‚ïó‚ï®‚ïë‚ï®‚ñë', 'error');
+            addLog(e.message || '¶›¶¶¶-¶¶T¿¶-¶-Tœ ¶¨¶¨¶¨ T√T¡T¬¶-T¿¶¶¶-T»¶-Tœ T¡T¡TÀ¶¨¶¶¶-', 'error');
         }
     };
 
@@ -2748,7 +2748,7 @@
         );
 
         if (filtered.length === 0) {
-            list.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim);">‚ï®–≠‚ï®‚ïï‚ï§–ó‚ï®‚ï°‚ï®‚îÇ‚ï®‚ïõ ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ïú‚ï®‚ñë‚ï®‚ï£‚ï®‚î§‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ</div>`;
+            list.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim);">¶›¶¨T«¶¶¶¶¶- ¶-¶¶ ¶-¶-¶¶¶+¶¶¶-¶-</div>`;
             return;
         }
 
@@ -2791,10 +2791,10 @@
         const userIds = Array.from(addMemberSelectedIds);
         try {
             await apiRequest(`/chat/rooms/${state.chat.currentRoomId}/members`, 'POST', { user_ids: userIds });
-            addLog(`‚ï®–§‚ï®‚ïõ‚ï®‚ñí‚ï®‚ñë‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ ‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–ë‚ï§–í‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë‚ï®‚ïõ‚ï®‚ñì: ${userIds.length}`, 'success');
+            addLog(`¶‘¶-¶-¶-¶-¶¨¶¶¶-¶- T√T«¶-T¡T¬¶-¶¨¶¶¶-¶-: ${userIds.length}`, 'success');
             document.getElementById('add-member-modal').style.display = 'none';
         } catch (e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïï ‚ï®‚î§‚ï®‚ïõ‚ï®‚ñí‚ï®‚ñë‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ïï ‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–ë‚ï§–í‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë‚ï®‚ïõ‚ï®‚ñì', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¿¶¨ ¶+¶-¶-¶-¶-¶¨¶¶¶-¶¨¶¨ T√T«¶-T¡T¬¶-¶¨¶¶¶-¶-', 'error');
         }
     };
     // -------------------------
@@ -2809,7 +2809,7 @@
         const previewText = document.getElementById('reply-preview-text');
         if (container && previewText) {
             container.style.display = 'flex';
-            previewText.textContent = `‚ï®–Æ‚ï§–í‚ï®‚ñì‚ï®‚ï°‚ï§–í ‚ï®‚ïú‚ï®‚ñë: ${text.substring(0, 25)}...`;
+            previewText.textContent = `¶ﬁT¬¶-¶¶T¬ ¶-¶-: ${text.substring(0, 25)}...`;
         }
         document.getElementById('chat-input')?.focus();
     }
@@ -2822,7 +2822,7 @@
         const input = document.getElementById('chat-input');
         if (container && previewText && input) {
             container.style.display = 'flex';
-            previewText.textContent = `‚ï®–∞‚ï®‚ï°‚ï®‚î§‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°...`;
+            previewText.textContent = `¶‡¶¶¶+¶-¶¶T¬¶¨T¿¶-¶-¶-¶-¶¨¶¶...`;
             // @ts-ignore
             input.value = text;
             input.focus();
@@ -2837,18 +2837,18 @@
         if (container) container.style.display = 'none';
         if (input) {
             // @ts-ignore
-            if (input.value === '‚ï®–∞‚ï®‚ï°‚ï®‚î§‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°...') input.value = '';
+            if (input.value === '¶‡¶¶¶+¶-¶¶T¬¶¨T¿¶-¶-¶-¶-¶¨¶¶...') input.value = '';
         }
     }
 
     window['deleteMessage'] = async function(id) {
-        if (!confirm('‚ï®–≥‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°?')) return;
+        if (!confirm('¶„¶+¶-¶¨¶¨T¬TÃ T¡¶-¶-¶-T…¶¶¶-¶¨¶¶?')) return;
         try {
             // @ts-ignore
             await apiRequest(`/chat/messages/${id}`, 'DELETE');
         } catch(e) { 
             // @ts-ignore
-            addLog('‚ï®–≥‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïú‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú', 'error'); 
+            addLog('¶„¶+¶-¶¨¶¶¶-¶¨¶¶ ¶-¶¶ T√¶+¶-¶¨¶-T¡TÃ', 'error'); 
         }
     }
 
@@ -2957,9 +2957,9 @@
                 this.isRecording = true;
                 this.btn.classList.add('recording');
                 this.btn.style.color = 'var(--accent-color)';
-                addLog('‚ï®–ß‚ï®‚ñë‚ï®‚îê‚ï®‚ïï‚ï§–ë‚ï§–ú ‚ï®‚îÇ‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïõ‚ï®‚îÇ‚ï®‚ïõ ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü...', 'info');
+                addLog('¶◊¶-¶¨¶¨T¡TÃ ¶¶¶-¶¨¶-T¡¶-¶-¶-¶¶¶- T¡¶-¶-¶-T…¶¶¶-¶¨Tœ...', 'info');
             } catch(e) {
-                addLog('‚ï®–¨‚ï®‚ïï‚ï®‚ïë‚ï§–ê‚ï®‚ïõ‚ï§–î‚ï®‚ïõ‚ï®‚ïú ‚ï®‚ïú‚ï®‚ï°‚ï®‚î§‚ï®‚ïõ‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê‚ï®‚ï°‚ï®‚ïú: ' + e.message, 'error');
+                addLog('¶‹¶¨¶¶T¿¶-Tƒ¶-¶- ¶-¶¶¶+¶-T¡T¬T√¶¨¶¶¶-: ' + e.message, 'error');
             }
         }
         
@@ -2987,11 +2987,11 @@
                 const msgInput = document.getElementById('chat-input');
                 const originalVal = msgInput.value;
                 state.pendingFile = { url: data.audio_url, name: 'Voice Message' };
-                msgInput.value = '–Å–Ø–û–¥ ‚ï®–£‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï° ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°';
+                msgInput.value = '®ﬂŒ‰ ¶”¶-¶¨¶-T¡¶-¶-¶-¶¶ T¡¶-¶-¶-T…¶¶¶-¶¨¶¶';
                 await sendChatMsg();
                 msgInput.value = originalVal;
             } catch(e) {
-                addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïõ‚ï§–í‚ï®‚îê‚ï§–ê‚ï®‚ñë‚ï®‚ñì‚ï®‚ïë‚ï®‚ïï ‚ï®‚îÇ‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïõ‚ï®‚îÇ‚ï®‚ïõ ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü', 'error');
+                addLog('¶ﬁT»¶¨¶-¶¶¶- ¶-T¬¶¨T¿¶-¶-¶¶¶¨ ¶¶¶-¶¨¶-T¡¶-¶-¶-¶¶¶- T¡¶-¶-¶-T…¶¶¶-¶¨Tœ', 'error');
             }
         }
     }
@@ -3007,7 +3007,7 @@
             this.picker.className = 'emoji-picker premium-scroll';
             this.picker.style.display = 'none';
             
-            const emojis = ['–Å–Ø–®–ê','–Å–Ø–®–í','–Å–Ø–µ‚ñë','–Å–Ø–®–û','–Å–Ø–¥–§','–Å–Ø–®–±','–Å–Ø–°–ù','–Å–Ø–°–û','—Ç–≠–¥—è‚ïï–ü','–Å–Ø–§–µ','–Å–Ø–û–ô','–Å–Ø–°–ê','–Å–Ø–¢–ø','–Å–Ø–¥–±','–Å–Ø–µ‚ïë','–Å–Ø–¢–ê','–Å–Ø–¥–£','–Å–Ø–∑–∞','–Å–Ø–ù‚ïë','–Å–Ø–ù–•'];
+            const emojis = ['®ﬂÿ¿','®ﬂÿ¬','®ﬂÂ-','®ﬂÿŒ','®ﬂ‰‘','®ﬂÿ·','®ﬂ—Õ','®ﬂ—Œ','Ú›‰ˇ¨œ','®ﬂ‘Â','®ﬂŒ…','®ﬂ—¿','®ﬂ“Ô','®ﬂ‰·','®ﬂÂ¶','®ﬂ“¿','®ﬂ‰”','®ﬂÁ‡','®ﬂÕ¶','®ﬂÕ’'];
             emojis.forEach(emo => {
                 const span = document.createElement('span');
                 span.textContent = emo;
@@ -3105,7 +3105,7 @@
             const data = await apiRequest('/notifications/all');
             if (data && data.length > 0) {
                 const alert = data[0]; // Show most recent
-                banner.textContent = `—Ç–™–∞—è‚ïï–ü SYSTEM ALERT: ${alert.message}`;
+                banner.textContent = `Ú⁄‡ˇ¨œ SYSTEM ALERT: ${alert.message}`;
                 banner.className = alert.level;
                 banner.classList.remove('hidden');
             } else { banner.classList.add('hidden'); }
@@ -3146,20 +3146,20 @@
         e.preventDefault();
         document.getElementById('login-form').style.display = 'none';
         document.getElementById('register-form').style.display = 'block';
-        document.getElementById('auth-title').textContent = '‚ï®–∞‚ï®–•‚ï®–£‚ï®–®‚ï®–±‚ï®–≤‚ï®–∞‚ï®–†‚ï®–∂‚ï®–®‚ï®–ø';
+        document.getElementById('auth-title').textContent = '¶‡¶’¶”¶ÿ¶·¶‚¶‡¶–¶Ê¶ÿ¶Ô';
     });
 
     document.getElementById('toggle-to-login').addEventListener('click', (e) => {
         e.preventDefault();
         document.getElementById('register-form').style.display = 'none';
         document.getElementById('login-form').style.display = 'block';
-        document.getElementById('auth-title').textContent = '‚ï®–†‚ï®–¢‚ï®–≤‚ï®–Æ‚ï®–∞‚ï®–®‚ï®–ß‚ï®–†‚ï®–∂‚ï®–®‚ï®–ø';
+        document.getElementById('auth-title').textContent = '¶–¶“¶‚¶ﬁ¶‡¶ÿ¶◊¶–¶Ê¶ÿ¶Ô';
     });
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = e.target.querySelector('button');
-        btn.textContent = '‚ï®–Æ‚ï®–¶‚ï®–®‚ï®–§‚ï®–†‚ï®–≠‚ï®–®‚ï®–•...';
+        btn.textContent = '¶ﬁ¶÷¶ÿ¶‘¶–¶›¶ÿ¶’...';
         try {
             const res = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
@@ -3175,21 +3175,21 @@
             localStorage.setItem('skuf_token', data.access_token);
             state.user.token = data.access_token;
             authOverlay.style.display = 'none';
-            addLog('‚ï®–†‚ï§–ì‚ï§–í‚ï®‚ï°‚ï®‚ïú‚ï§–í‚ï®‚ïï‚ï§–î‚ï®‚ïï‚ï®‚ïë‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–ü ‚ï§–ì‚ï§–ë‚ï®‚îê‚ï®‚ï°‚ï§–ò‚ï®‚ïú‚ï®‚ñë', 'system');
+            addLog('¶–T√T¬¶¶¶-T¬¶¨Tƒ¶¨¶¶¶-T∆¶¨Tœ T√T¡¶¨¶¶T»¶-¶-', 'system');
             
             // Re-bind auth logic on boot system
             bootSystem();
         } catch (err) {
             document.getElementById('login-error').textContent = err.message;
         } finally {
-            btn.textContent = '‚ï®–¢‚ï®–Æ‚ï®–©‚ï®–≤‚ï®–® ‚ï®–¢ ‚ï®–±‚ï®–•‚ï®–≤‚ï®–º';
+            btn.textContent = '¶“¶ﬁ¶Ÿ¶‚¶ÿ ¶“ ¶·¶’¶‚¶Ï';
         }
     });
 
     document.getElementById('register-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('reg-submit-btn') || e.target.querySelector('button[type="submit"]');
-        if (btn) btn.textContent = '‚ï®–Æ‚ï®–¶‚ï®–®‚ï®–§‚ï®–†‚ï®–≠‚ï®–®‚ï®–•...';
+        if (btn) btn.textContent = '¶ﬁ¶÷¶ÿ¶‘¶–¶›¶ÿ¶’...';
         try {
             const pdConsent = document.getElementById('reg-pd-consent');
             const res = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -3199,7 +3199,7 @@
                     username: document.getElementById('reg-username').value,
                     email: document.getElementById('reg-email').value,
                     password: document.getElementById('reg-password').value,
-                    accepted_pd: pdConsent ? pdConsent.checked : false  // [‚ï®–¥‚ï®–ß-152]
+                    accepted_pd: pdConsent ? pdConsent.checked : false  // [¶‰¶◊-152]
                 })
             });
             const data = await res.json();
@@ -3207,15 +3207,15 @@
             
             document.getElementById('register-form').style.display = 'none';
             document.getElementById('login-form').style.display = 'block';
-            document.getElementById('auth-title').textContent = '‚ï®–†‚ï®–¢‚ï®–≤‚ï®–Æ‚ï®–∞‚ï®–®‚ï®–ß‚ï®–†‚ï®–∂‚ï®–®‚ï®–ø';
+            document.getElementById('auth-title').textContent = '¶–¶“¶‚¶ﬁ¶‡¶ÿ¶◊¶–¶Ê¶ÿ¶Ô';
             document.getElementById('login-username').value = document.getElementById('reg-username').value;
             document.getElementById('login-password').value = document.getElementById('reg-password').value;
-            document.getElementById('login-error').textContent = '‚ï®–∞‚ï®‚ï°‚ï®‚îÇ‚ï®‚ïï‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–ü ‚ï§–ì‚ï§–ë‚ï®‚îê‚ï®‚ï°‚ï§–ò‚ï®‚ïú‚ï®‚ñë. ‚ï®–¢‚ï§–õ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïú‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ñì‚ï§–ï‚ï®‚ïõ‚ï®‚î§.';
+            document.getElementById('login-error').textContent = '¶‡¶¶¶¶¶¨T¡T¬T¿¶-T∆¶¨Tœ T√T¡¶¨¶¶T»¶-¶-. ¶“TÀ¶¨¶-¶¨¶-¶¨T¬¶¶ ¶-T≈¶-¶+.';
             document.getElementById('login-error').style.color = '#00f2ff';
         } catch (err) {
             document.getElementById('reg-error').textContent = err.message;
         } finally {
-            if (btn) btn.textContent = '‚ï®–†‚ï®–™‚ï®–≤‚ï®–®‚ï®–¢‚ï®–®‚ï®–∞‚ï®–Æ‚ï®–¢‚ï®–†‚ï®–≤‚ï®–º ‚ï®–†‚ï®–™‚ï®–™‚ï®–†‚ï®–≥‚ï®–≠‚ï®–≤';
+            if (btn) btn.textContent = '¶–¶⁄¶‚¶ÿ¶“¶ÿ¶‡¶ﬁ¶“¶–¶‚¶Ï ¶–¶⁄¶⁄¶–¶„¶›¶‚';
         }
     });
 
@@ -3262,9 +3262,9 @@
             }
             try {
                 await apiRequest('/me/update', 'POST', { handle: newVal });
-                addLog('‚ï®–™‚ï®‚ïõ‚ï§–ê‚ï®‚ïõ‚ï§–í‚ï®‚ïë‚ï®‚ïõ‚ï®‚ï° ‚ï®‚ïï‚ï®‚ïù‚ï§–ü ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ', 'success');
+                addLog('¶⁄¶-T¿¶-T¬¶¶¶-¶¶ ¶¨¶-Tœ ¶-¶-¶-¶-¶-¶¨¶¶¶-¶-', 'success');
             } catch (err) {
-                addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïï ‚ï§–ë‚ï®‚ïõ‚ï§–ï‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ïï ‚ï®‚ïï‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï', 'error');
+                addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¿¶¨ T¡¶-T≈T¿¶-¶-¶¶¶-¶¨¶¨ ¶¨¶-¶¶¶-¶¨', 'error');
             }
         });
     }
@@ -3286,7 +3286,7 @@
     const syncContactsBtn = document.getElementById('sync-contacts-btn');
     if (syncContactsBtn) {
         syncContactsBtn.addEventListener('click', async () => {
-            syncContactsBtn.textContent = '‚ï®–®‚ï®–§‚ï®–•‚ï®–≤ ‚ï®–Ø‚ï®–Æ‚ï®–®‚ï®–±‚ï®–™...';
+            syncContactsBtn.textContent = '¶ÿ¶‘¶’¶‚ ¶ﬂ¶ﬁ¶ÿ¶·¶⁄...';
             try {
                 if ('contacts' in navigator && 'ContactsManager' in window) {
                     const props = ['name', 'tel'];
@@ -3301,26 +3301,26 @@
                             body: JSON.stringify({ contacts: payload })
                         });
                         if (resp.ok) {
-                            addLog(`‚ï®–≥‚ï§–ë‚ï®‚îê‚ï®‚ï°‚ï§–ò‚ï®‚ïú‚ï®‚ïõ ‚ï®‚îê‚ï®‚ïõ‚ï®‚î§‚ï§–í‚ï§–ü‚ï®‚ïú‚ï§–ì‚ï§–í‚ï®‚ïõ ‚ï®‚ñë‚ï®‚ñí‚ï®‚ïõ‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï§–í‚ï®‚ïõ‚ï®‚ñì: ${contacts.length}`, 'success');
+                            addLog(`¶„T¡¶¨¶¶T»¶-¶- ¶¨¶-¶+T¬Tœ¶-T√T¬¶- ¶-¶-¶-¶-¶¶¶-T¬¶-¶-: ${contacts.length}`, 'success');
                             loadChatRooms(); // refresh sidebar 
                         } else throw new Error();
                     } else {
-                        addLog('‚ï®–™‚ï®‚ïõ‚ï®‚ïú‚ï§–í‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï§–õ ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ñì‚ï§–õ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï§–õ', 'info');
+                        addLog('¶⁄¶-¶-T¬¶-¶¶T¬TÀ ¶-¶¶ ¶-TÀ¶-T¿¶-¶-TÀ', 'info');
                     }
                 } else {
-                    addLog('Contact Picker API ‚ï®‚ïú‚ï®‚ï° ‚ï®‚îê‚ï®‚ïõ‚ï®‚î§‚ï®‚î§‚ï®‚ï°‚ï§–ê‚ï®‚ï¢‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï®‚ï°‚ï§–í‚ï§–ë‚ï§–ü ‚ï®‚ïú‚ï®‚ñë ‚ï®‚ñì‚ï®‚ñë‚ï§–ò‚ï®‚ï°‚ï®‚ïù ‚ï§–ì‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ïõ‚ï®‚ï£‚ï§–ë‚ï§–í‚ï®‚ñì‚ï®‚ï°. Backend Sync Mode ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú.', 'info');
+                    addLog('Contact Picker API ¶-¶¶ ¶¨¶-¶+¶+¶¶T¿¶¶¶¨¶-¶-¶¶T¬T¡Tœ ¶-¶- ¶-¶-T»¶¶¶- T√T¡T¬T¿¶-¶¶T¡T¬¶-¶¶. Backend Sync Mode ¶-¶¶T¬¶¨¶-¶¨T¿¶-¶-¶-¶-.', 'info');
                     // Fallback to manual sync trigger on backend
                     const resp = await fetch(`${API_BASE_URL}/api/contacts/sync`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.user.token}` },
                         body: JSON.stringify({ contacts: [] })
                     });
-                    if (resp.ok) addLog('Backend Sync ‚ï®‚ïñ‚ï®‚ñë‚ï®‚ñì‚ï®‚ï°‚ï§–ê‚ï§–ò‚ï®‚ï°‚ï®‚ïú', 'success');
+                    if (resp.ok) addLog('Backend Sync ¶¨¶-¶-¶¶T¿T»¶¶¶-', 'success');
                 }
             } catch (err) {
-                addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïï‚ï®‚ïú‚ï§–ï‚ï§–ê‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïï‚ï®‚ïñ‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï®‚ïï ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïú‚ï§–í‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïõ‚ï®‚ñì', 'error');
+                addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶¨¶-T≈T¿¶-¶-¶¨¶¨¶-T∆¶¨¶¨ ¶¶¶-¶-T¬¶-¶¶T¬¶-¶-', 'error');
             } finally {
-                syncContactsBtn.textContent = '‚ï®–Ø‚ï®–Æ‚ï®–§‚ï®–≤‚ï®–ø‚ï®–≠‚ï®–≥‚ï®–≤‚ï®–º ‚ï®–™‚ï®–Æ‚ï®–≠‚ï®–≤‚ï®–†‚ï®–™‚ï®–≤‚ï®–ª';
+                syncContactsBtn.textContent = '¶ﬂ¶ﬁ¶‘¶‚¶Ô¶›¶„¶‚¶Ï ¶⁄¶ﬁ¶›¶‚¶–¶⁄¶‚¶Î';
                 settingsModal.style.display = 'none';
             }
         });
@@ -3363,9 +3363,9 @@
         const loginBtn = document.querySelector('#login-form button[type="submit"]');
         const regBtn = document.querySelector('#register-form button[type="submit"]');
         
-        if (authTitle) authTitle.textContent = '‚ï®–¢‚ï®–µ‚ï®–Æ‚ï®–§ ‚ï®–¢ SKUFENGER';
-        if (loginBtn) loginBtn.textContent = '‚ï®–¢‚ï®–Æ‚ï®–©‚ï®–≤‚ï®–® ‚ï®–¢ ‚ï®–¨‚ï®–•‚ï®–±‚ï®–±‚ï®–•‚ï®–≠‚ï®–§‚ï®–¶‚ï®–•‚ï®–∞';
-        if (regBtn) regBtn.textContent = '‚ï®–±‚ï®–Æ‚ï®–ß‚ï®–§‚ï®–†‚ï®–≤‚ï®–º ‚ï®–†‚ï®–™‚ï®–™‚ï®–†‚ï®–≥‚ï®–≠‚ï®–≤';
+        if (authTitle) authTitle.textContent = '¶“¶Â¶ﬁ¶‘ ¶“ SKUFENGER';
+        if (loginBtn) loginBtn.textContent = '¶“¶ﬁ¶Ÿ¶‚¶ÿ ¶“ ¶‹¶’¶·¶·¶’¶›¶‘¶÷¶’¶‡';
+        if (regBtn) regBtn.textContent = '¶·¶ﬁ¶◊¶‘¶–¶‚¶Ï ¶–¶⁄¶⁄¶–¶„¶›¶‚';
 
         // Force the chat view right away
         switchView('messages');
@@ -3415,15 +3415,15 @@
     // --- CALL GATEWAY (audio/video) ---
     window.skufengerCall = function(isVideo) {
         if (!state.chat.currentRoomId) {
-            addLog('‚ï®–±‚ï®‚ïú‚ï®‚ñë‚ï§–ó‚ï®‚ñë‚ï®‚ïó‚ï®‚ñë ‚ï®‚ñì‚ï§–õ‚ï®‚ñí‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïú‚ï§–í‚ï®‚ñë‚ï®‚ïë‚ï§–í ‚ï®‚î§‚ï®‚ïó‚ï§–ü ‚ï®‚ïñ‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïë‚ï®‚ñë', 'error');
+            addLog('¶·¶-¶-T«¶-¶¨¶- ¶-TÀ¶-¶¶T¿¶¨T¬¶¶ ¶¶¶-¶-T¬¶-¶¶T¬ ¶+¶¨Tœ ¶¨¶-¶-¶-¶¶¶-', 'error');
             return;
         }
         const targetId = state.chat.currentReceiverId || state.chat.currentRoomId;
         if (!window.RTCManagerInstance) {
-            addLog('RTC ‚ï®‚ïù‚ï®‚ïõ‚ï®‚î§‚ï§–ì‚ï®‚ïó‚ï§–ú ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ïï‚ï®‚ïú‚ï®‚ïï‚ï§–ñ‚ï®‚ïï‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú', 'error');
+            addLog('RTC ¶-¶-¶+T√¶¨TÃ ¶-¶¶ ¶¨¶-¶¨T∆¶¨¶-¶¨¶¨¶¨¶¨T¿¶-¶-¶-¶-', 'error');
             return;
         }
-        addLog(`‚ï®–®‚ï®‚ïú‚ï®‚ïï‚ï§–ñ‚ï®‚ïï‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–ü ${isVideo ? '‚ï®‚ñì‚ï®‚ïï‚ï®‚î§‚ï®‚ï°‚ï®‚ïõ' : '‚ï®‚ñë‚ï§–ì‚ï®‚î§‚ï®‚ïï‚ï®‚ïõ'} ‚ï®‚ïñ‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïë‚ï®‚ñë...`, 'info');
+        addLog(`¶ÿ¶-¶¨T∆¶¨¶-T∆¶¨Tœ ${isVideo ? '¶-¶¨¶+¶¶¶-' : '¶-T√¶+¶¨¶-'} ¶¨¶-¶-¶-¶¶¶-...`, 'info');
         window.RTCManagerInstance.startCall(targetId, isVideo);
     };
 
@@ -3452,15 +3452,15 @@
         switch(action) {
             case 'mute': {
                 const roomId = state.chat.currentRoomId;
-                if (!roomId) { addLog('‚ï®–±‚ï®‚ïú‚ï®‚ñë‚ï§–ó‚ï®‚ñë‚ï®‚ïó‚ï®‚ñë ‚ï®‚ñì‚ï§–õ‚ï®‚ñí‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï§–ó‚ï®‚ñë‚ï§–í', 'error'); return; }
+                if (!roomId) { addLog('¶·¶-¶-T«¶-¶¨¶- ¶-TÀ¶-¶¶T¿¶¨T¬¶¶ T«¶-T¬', 'error'); return; }
                 const mutedRooms = JSON.parse(localStorage.getItem('skuf_muted_rooms') || '[]');
                 const idx = mutedRooms.indexOf(roomId);
                 if (idx === -1) {
                     mutedRooms.push(roomId);
-                    addLog('–Å–Ø–§–• ‚ï®–≥‚ï®‚ñì‚ï®‚ï°‚ï®‚î§‚ï®‚ïõ‚ï®‚ïù‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ñë ‚ï®‚ïõ‚ï§–í‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ï°‚ï®‚ïú‚ï§–õ', 'info');
+                    addLog('®ﬂ‘’ ¶„¶-¶¶¶+¶-¶-¶¨¶¶¶-¶¨Tœ T«¶-T¬¶- ¶-T¬¶¶¶¨TŒT«¶¶¶-TÀ', 'info');
                 } else {
                     mutedRooms.splice(idx, 1);
-                    addLog('–Å–Ø–§–§ ‚ï®–≥‚ï®‚ñì‚ï®‚ï°‚ï®‚î§‚ï®‚ïõ‚ï®‚ïù‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ñë ‚ï®‚ñì‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ï°‚ï®‚ïú‚ï§–õ', 'info');
+                    addLog('®ﬂ‘‘ ¶„¶-¶¶¶+¶-¶-¶¨¶¶¶-¶¨Tœ T«¶-T¬¶- ¶-¶¶¶¨TŒT«¶¶¶-TÀ', 'info');
                 }
                 localStorage.setItem('skuf_muted_rooms', JSON.stringify(mutedRooms));
                 break;
@@ -3468,7 +3468,7 @@
             case 'search': {
                 const chatHistory = document.getElementById('chat-history');
                 if (!chatHistory) return;
-                const term = prompt('‚ï®–Ø‚ï®‚ïõ‚ï®‚ïï‚ï§–ë‚ï®‚ïë ‚ï®‚îê‚ï®‚ïõ ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü‚ï®‚ïù:');
+                const term = prompt('¶ﬂ¶-¶¨T¡¶¶ ¶¨¶- T¡¶-¶-¶-T…¶¶¶-¶¨Tœ¶-:');
                 if (!term || !term.trim()) return;
                 const messages = chatHistory.querySelectorAll('.chat-msg');
                 let found = 0;
@@ -3485,7 +3485,7 @@
                         msg.style.outline = 'none';
                     }
                 });
-                addLog(`–Å–Ø–§–ù ‚ï®–≠‚ï®‚ñë‚ï®‚ï£‚ï®‚î§‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚îê‚ï®‚ñë‚ï®‚î§‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï£: ${found}`, found ? 'info' : 'error');
+                addLog(`®ﬂ‘Õ ¶›¶-¶¶¶+¶¶¶-¶- T¡¶-¶-¶¨¶-¶+¶¶¶-¶¨¶¶: ${found}`, found ? 'info' : 'error');
                 break;
             }
             case 'wallpaper': {
@@ -3502,25 +3502,25 @@
                 const next = (parseInt(current) + 1) % wallpapers.length;
                 chatHistory.style.background = wallpapers[next];
                 localStorage.setItem('skuf_wallpaper_idx', String(next));
-                addLog('–Å–Ø–û–∏ ‚ï®–¥‚ï®‚ïõ‚ï®‚ïú ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ñë ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï§–°‚ï®‚ïú', 'info');
+                addLog('®ﬂŒË ¶‰¶-¶- T«¶-T¬¶- ¶-¶-¶-¶-¶-¶¨T—¶-', 'info');
                 break;
             }
             case 'clear': {
-                if (!state.chat.currentRoomId) { addLog('‚ï®–±‚ï®‚ïú‚ï®‚ñë‚ï§–ó‚ï®‚ñë‚ï®‚ïó‚ï®‚ñë ‚ï®‚ñì‚ï§–õ‚ï®‚ñí‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï§–ó‚ï®‚ñë‚ï§–í', 'error'); return; }
-                if (!confirm('‚ï®–Æ‚ï§–ó‚ï®‚ïï‚ï§–ë‚ï§–í‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚ïï‚ï§–ë‚ï§–í‚ï®‚ïõ‚ï§–ê‚ï®‚ïï‚ï§–û ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï£? ‚ï®–Ω‚ï§–í‚ï®‚ïõ ‚ï®‚î§‚ï®‚ï°‚ï®‚ï£‚ï§–ë‚ï§–í‚ï®‚ñì‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïú‚ï®‚ï°‚ï®‚ïõ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïï‚ï®‚ïù‚ï®‚ïõ.')) return;
+                if (!state.chat.currentRoomId) { addLog('¶·¶-¶-T«¶-¶¨¶- ¶-TÀ¶-¶¶T¿¶¨T¬¶¶ T«¶-T¬', 'error'); return; }
+                if (!confirm('¶ﬁT«¶¨T¡T¬¶¨T¬TÃ ¶¨T¡T¬¶-T¿¶¨TŒ T¡¶-¶-¶-T…¶¶¶-¶¨¶¶? ¶ÌT¬¶- ¶+¶¶¶¶T¡T¬¶-¶¨¶¶ ¶-¶¶¶-¶-T¿¶-T¬¶¨¶-¶-.')) return;
                 const chatHistory = document.getElementById('chat-history');
                 if (chatHistory) {
-                    chatHistory.innerHTML = '<div class="chat-placeholder">‚ï®–®‚ï§–ë‚ï§–í‚ï®‚ïõ‚ï§–ê‚ï®‚ïï‚ï§–ü ‚ï®‚ïõ‚ï§–ó‚ï®‚ïï‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë</div>';
+                    chatHistory.innerHTML = '<div class="chat-placeholder">¶ÿT¡T¬¶-T¿¶¨Tœ ¶-T«¶¨T…¶¶¶-¶-</div>';
                 }
-                addLog('–Å–Ø–ß–°—è‚ïï–ü ‚ï®–®‚ï§–ë‚ï§–í‚ï®‚ïõ‚ï§–ê‚ï®‚ïï‚ï§–ü ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ñë ‚ï®‚ïõ‚ï§–ó‚ï®‚ïï‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë', 'info');
+                addLog('®ﬂ◊—ˇ¨œ ¶ÿT¡T¬¶-T¿¶¨Tœ T«¶-T¬¶- ¶-T«¶¨T…¶¶¶-¶-', 'info');
                 break;
             }
             case 'encryption': {
                 const badge = document.getElementById('chat-encryption-status');
                 const isE2EE = badge && badge.textContent.includes('E2EE');
                 alert(isE2EE
-                    ? '–Å–Ø–§–¢ ‚ï®–Ω‚ï§–í‚ï®‚ïõ‚ï§–í ‚ï§–ó‚ï®‚ñë‚ï§–í ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï§–°‚ï®‚ïú ‚ï§–ë‚ï®‚ïë‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïñ‚ï®‚ïú‚ï§–õ‚ï®‚ïù ‚ï§–ò‚ï®‚ïï‚ï§–î‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°‚ï®‚ïù (E2EE).\n‚ï®–™‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï ‚ï§–ë‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ïï‚ï®‚ïï ‚ï®‚îÇ‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–ê‚ï§–ì‚ï§–û‚ï§–í‚ï§–ë‚ï§–ü ‚ï®‚ïó‚ï®‚ïõ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïó‚ï§–ú‚ï®‚ïú‚ï®‚ïõ ‚ï®‚ïï ‚ï®‚ïú‚ï®‚ï° ‚ï®‚îê‚ï®‚ï°‚ï§–ê‚ï®‚ï°‚ï®‚î§‚ï®‚ñë‚ï§–û‚ï§–í‚ï§–ë‚ï§–ü ‚ï®‚ïú‚ï®‚ñë ‚ï§–ë‚ï®‚ï°‚ï§–ê‚ï®‚ñì‚ï®‚ï°‚ï§–ê.'
-                    : '—Ç–™–∞—è‚ïï–ü ‚ï®–∏‚ï®‚ïï‚ï§–î‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ïú‚ï®‚ïõ.\n‚ï®–¢‚ï§–õ‚ï®‚ñí‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚îê‚ï§–ê‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï§–ó‚ï®‚ñë‚ï§–í ‚ï®‚î§‚ï®‚ïó‚ï§–ü ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï®‚ïï E2EE.');
+                    ? '®ﬂ‘“ ¶ÌT¬¶-T¬ T«¶-T¬ ¶¨¶-T…¶¨T…T—¶- T¡¶¶¶-¶-¶¨¶-TÀ¶- T»¶¨TƒT¿¶-¶-¶-¶-¶¨¶¶¶- (E2EE).\n¶⁄¶¨TŒT«¶¨ T¡¶¶T¡T¡¶¨¶¨ ¶¶¶¶¶-¶¶T¿¶¨T¿T√TŒT¬T¡Tœ ¶¨¶-¶¶¶-¶¨TÃ¶-¶- ¶¨ ¶-¶¶ ¶¨¶¶T¿¶¶¶+¶-TŒT¬T¡Tœ ¶-¶- T¡¶¶T¿¶-¶¶T¿.'
+                    : 'Ú⁄‡ˇ¨œ ¶Ë¶¨TƒT¿¶-¶-¶-¶-¶¨¶¶ ¶-¶¶ ¶-¶¶T¬¶¨¶-¶-¶-.\n¶“TÀ¶-¶¶T¿¶¨T¬¶¶ ¶¨T¿¶¨¶-¶-T¬¶-TÀ¶¶ T«¶-T¬ ¶+¶¨Tœ ¶-¶¶T¬¶¨¶-¶-T∆¶¨¶¨ E2EE.');
                 break;
             }
         }
@@ -3585,10 +3585,10 @@ window.previewAvatar = async function(input) {
         const dashAvatar = document.getElementById('dash-avatar');
         if (dashAvatar) applyAvatarDisplay(dashAvatar, avatarUrl);
 
-        addLog('—Ç–¨–ï ‚ï®–†‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï§–ê‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ï¢‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë ‚ï®‚ïï ‚ï§–ë‚ï®‚ïõ‚ï§–ï‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë!', 'success');
+        addLog('Ú‹≈ ¶–¶-¶-T¬¶-T¿¶¶¶- ¶¨¶-¶¶T¿T√¶¶¶¶¶-¶- ¶¨ T¡¶-T≈T¿¶-¶-¶¶¶-¶-!', 'success');
     } catch (e) {
         console.error('Avatar upload error:', e);
-        addLog(`—Ç–≠–ú ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ïï ‚ï®‚ñë‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï§–ê‚ï®‚ïë‚ï®‚ïï: ${e.message}`, 'error');
+        addLog(`Ú›Ã ¶ﬁT»¶¨¶-¶¶¶- ¶¨¶-¶¶T¿T√¶¨¶¶¶¨ ¶-¶-¶-T¬¶-T¿¶¶¶¨: ${e.message}`, 'error');
     }
 };
 
@@ -3602,7 +3602,7 @@ window.openAddMemberModal = async function() {
     document.getElementById('add-member-modal').style.display = 'flex';
     document.getElementById('add-member-search').value = '';
     const listContainer = document.getElementById('add-member-list');
-    listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">‚ï®–ß‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïú‚ï§–í‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïõ‚ï®‚ñì...</div>';
+    listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">¶◊¶-¶¶T¿T√¶¨¶¶¶- ¶¶¶-¶-T¬¶-¶¶T¬¶-¶-...</div>';
     
     try {
         const contacts = await apiRequest('/contacts');
@@ -3610,7 +3610,7 @@ window.openAddMemberModal = async function() {
         window.filterAddMemberContacts();
     } catch(e) {
         console.error('Error fetching contacts for add member:', e);
-        listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:#ff3333;">‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ïï</div>';
+        listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:#ff3333;">¶ﬁT»¶¨¶-¶¶¶- ¶¨¶-¶¶T¿T√¶¨¶¶¶¨</div>';
     }
 };
 
@@ -3625,7 +3625,7 @@ window.filterAddMemberContacts = function() {
     );
     
     if (filtered.length === 0) {
-        listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">‚ï®–≠‚ï®‚ïï‚ï§–ó‚ï®‚ï°‚ï®‚îÇ‚ï®‚ïõ ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ïú‚ï®‚ñë‚ï®‚ï£‚ï®‚î§‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ</div>';
+        listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">¶›¶¨T«¶¶¶¶¶- ¶-¶¶ ¶-¶-¶¶¶+¶¶¶-¶-</div>';
         return;
     }
     
@@ -3655,7 +3655,7 @@ window.submitAddMembers = async function() {
     const userIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
     
     if (userIds.length === 0) {
-        addLog('‚ï®–¢‚ï§–õ‚ï®‚ñí‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï§–ï‚ï®‚ïõ‚ï§–í‚ï§–ü ‚ï®‚ñí‚ï§–õ ‚ï®‚ïõ‚ï®‚î§‚ï®‚ïï‚ï®‚ïú ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïú‚ï§–í‚ï®‚ñë‚ï®‚ïë‚ï§–í', 'error');
+        addLog('¶“TÀ¶-¶¶T¿¶¨T¬¶¶ T≈¶-T¬Tœ ¶-TÀ ¶-¶+¶¨¶- ¶¶¶-¶-T¬¶-¶¶T¬', 'error');
         return;
     }
     
@@ -3663,11 +3663,11 @@ window.submitAddMembers = async function() {
         for (let uid of userIds) {
             await apiRequest(`/chat/rooms/${roomId}/members`, 'POST', { user_id: uid });
         }
-        addLog(`‚ï®–§‚ï®‚ïõ‚ï®‚ñí‚ï®‚ñë‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ ‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–ë‚ï§–í‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë‚ï®‚ïõ‚ï®‚ñì: ${userIds.length}`, 'success');
+        addLog(`¶‘¶-¶-¶-¶-¶¨¶¶¶-¶- T√T«¶-T¡T¬¶-¶¨¶¶¶-¶-: ${userIds.length}`, 'success');
         document.getElementById('add-member-modal').style.display = 'none';
     } catch(e) {
         console.error('Error adding members:', e);
-        addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïï ‚ï®‚î§‚ï®‚ïõ‚ï®‚ñí‚ï®‚ñë‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ïï', 'error');
+        addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¿¶¨ ¶+¶-¶-¶-¶-¶¨¶¶¶-¶¨¶¨', 'error');
     }
 };
 
@@ -3682,7 +3682,7 @@ class ScrambleText {
     constructor(el, delay = 0) {
         this.el = el;
         // Matrix style: Latin, Cyrillic, Numbers, and classic Katakana
-        this.chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ‚ï®–†‚ï®–°‚ï®–¢‚ï®–£‚ï®–§‚ï®–•‚ï®–ß‚ï®–®‚ï®–™‚ï®–´‚ï®–¨‚ï®–≠‚ï®–Æ‚ï®–Ø‚ï®–∞‚ï®–±‚ï®–≤‚ï®–≥‚ï®–¥‚ï®–µ‚ï®–∂‚ï®–∑‚ï®–∏‚ï®–π‚ï®–æ‚ï®–ø0123456789—É–í–≤—É–í–¥—É–í–∂—É–í–∏—É–í–∫—É–í–ª—É–í–Ω—É–í–ø—É–í‚ñí—É–í‚îÇ—É–í‚ï°—É–í‚ïñ—É–í‚ï£—É–í‚ïó—É–í‚ïú—É–í‚îê—É–ì–ë—É–ì–î—É–ì–ñ—É–ì–ò—É–ì–ö—É–ì–õ—É–ì–ú—É–ì–ù—É–ì–û—É–ì–ü—É–ì–¢—É–ì–•—É–ì–®—É–ì–´—É–ì–Æ—É–ì–Ø—É–ì–∞—É–ì–±—É–ì–≤—É–ì–¥—É–ì–∂—É–ì–∏—É–ì–π—É–ì–∫—É–ì–ª—É–ì–º—É–ì–Ω—É–ì–ø—É–ì‚ñë—É–ì‚ñí—É–ì‚ñì—É–ì‚îÇ';
+        this.chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ¶–¶—¶“¶”¶‘¶’¶◊¶ÿ¶⁄¶€¶‹¶›¶ﬁ¶ﬂ¶‡¶·¶‚¶„¶‰¶Â¶Ê¶Á¶Ë¶È¶Ó¶Ô0123456789Û¬‚Û¬‰Û¬ÊÛ¬ËÛ¬ÍÛ¬ÎÛ¬ÌÛ¬ÔÛ¬-Û¬¶Û¬¶Û¬¨Û¬¶Û¬¨Û¬-Û¬¨Û√¡Û√ƒÛ√∆Û√»Û√ Û√ÀÛ√ÃÛ√ÕÛ√ŒÛ√œÛ√“Û√’Û√ÿÛ√€Û√ﬁÛ√ﬂÛ√‡Û√·Û√‚Û√‰Û√ÊÛ√ËÛ√ÈÛ√ÍÛ√ÎÛ√ÏÛ√ÌÛ√ÔÛ√-Û√-Û√-Û√¶';
         this.original = el.getAttribute('data-text') || el.innerText;
         this.delay = delay;
     }
@@ -3774,7 +3774,7 @@ if (mobileToggle && sidePanel) {
 // =============================================================================
 
 /**
- * Fix #1 —Ç–ê–§ Address bar overlap
+ * Fix #1 Ú¿‘ Address bar overlap
  * Yandex Browser (and Chrome/Firefox on Android) shrink the visual viewport
  * when the address bar appears. We keep --app-height in sync with the actual
  * visible area so nothing gets hidden behind the browser chrome.
@@ -3797,7 +3797,7 @@ if (mobileToggle && sidePanel) {
 })();
 
 /**
- * Fix #2 —Ç–ê–§ Back button behavior
+ * Fix #2 Ú¿‘ Back button behavior
  * Without history management, any back press exits the PWA.
  * We push a state entry on each view/chat navigation so the browser
  * back button navigates within the app instead of closing it.
@@ -3816,7 +3816,7 @@ if (mobileToggle && sidePanel) {
         if (!s || !s.skufia) return;
 
         if (s.chat) {
-            // Was in chat —Ç–ê–§ close the chat panel, go back to room list
+            // Was in chat Ú¿‘ close the chat panel, go back to room list
             const chatMain = document.querySelector('.chat-main');
             const chatLayout = document.querySelector('.chat-layout');
             if (chatLayout) chatLayout.classList.remove('chat-open');

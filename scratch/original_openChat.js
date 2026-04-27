@@ -1,4 +1,4 @@
-Ôªødocument.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
     // --- Utility: Apply Avatar Sprite ---
     function applyAvatarDisplay(element, url, index = null) {
         if (!element) return;
@@ -76,7 +76,7 @@
     window.marketState = {
         page: 1,
         layout: 'grid',
-        filters: { q: '', cat: '‚ï®–¢‚ï§–ë‚ï®‚ï°', loc: '‚ï®–¢‚ï®‚ï°‚ï®‚ïñ‚ï®‚î§‚ï®‚ï°', sort: 'newest', min: null, max: null }
+        filters: { q: '', cat: '¶“T¡¶¶', loc: '¶“¶¶¶¨¶+¶¶', sort: 'newest', min: null, max: null }
     };
     window.updatePriceFilter = debounce(function(e, type) { 
         window.marketState.filters[type] = e.target.value; 
@@ -117,15 +117,15 @@
     };
 
     // =========================================================================
-    // SECURE CRYPTO ENGINE v2 —Ç–ê–§ Signal-inspired E2EE
+    // SECURE CRYPTO ENGINE v2 Ú¿‘ Signal-inspired E2EE
     // =========================================================================
     // Security properties:
-    // —Ç–¨–ï RSA private key: non-extractable, persisted in IndexedDB only
-    // —Ç–¨–ï AES session keys: non-extractable, cached per-room in IndexedDB
-    // —Ç–¨–ï Key fingerprint: SHA-256 of public key bytes, displayed to user
-    // —Ç–¨–ï Per-room AES-256-GCM keys —Ç–ê–§ no universal key
-    // —Ç–¨–ï Private key NEVER sent to server
-    // —Ç–¨–ï Server stores only: public keys + RSA-wrapped AES bundles
+    // Ú‹≈ RSA private key: non-extractable, persisted in IndexedDB only
+    // Ú‹≈ AES session keys: non-extractable, cached per-room in IndexedDB
+    // Ú‹≈ Key fingerprint: SHA-256 of public key bytes, displayed to user
+    // Ú‹≈ Per-room AES-256-GCM keys Ú¿‘ no universal key
+    // Ú‹≈ Private key NEVER sent to server
+    // Ú‹≈ Server stores only: public keys + RSA-wrapped AES bundles
     // =========================================================================
 
     const IDB_NAME = 'skufia_vault';
@@ -186,11 +186,11 @@
 
     class CryptoManager {
 
-        // —Ç–§–ê—Ç–§–ê RSA Key Pair —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ RSA Key Pair Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Generate RSA-OAEP 4096-bit key pair.
-         * Private key is NON-EXTRACTABLE —Ç–ê–§ cannot be exported by any JS code.
+         * Private key is NON-EXTRACTABLE Ú¿‘ cannot be exported by any JS code.
          * @returns {Promise<CryptoKeyPair>}
          */
         static async generateKeyPair() {
@@ -201,7 +201,7 @@
                     publicExponent: new Uint8Array([1, 0, 1]),
                     hash: 'SHA-256',
                 },
-                false,                            // —Ç–ñ–† extractable: FALSE (private key protected!)
+                false,                            // Ú∆– extractable: FALSE (private key protected!)
                 ['encrypt', 'decrypt']
             );
         }
@@ -245,22 +245,22 @@
                 .join(':');
         }
 
-        // —Ç–§–ê—Ç–§–ê AES Session Key —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ AES Session Key Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Generate a fresh AES-256-GCM key for a chat session.
-         * NON-EXTRACTABLE —Ç–ê–§ key bytes never leave the browser's crypto engine.
+         * NON-EXTRACTABLE Ú¿‘ key bytes never leave the browser's crypto engine.
          * @returns {Promise<CryptoKey>}
          */
         static async generateSessionKey() {
             return await window.crypto.subtle.generateKey(
                 { name: 'AES-GCM', length: 256 },
-                false,              // —Ç–ñ–† non-extractable!
+                false,              // Ú∆– non-extractable!
                 ['encrypt', 'decrypt']
             );
         }
 
-        // —Ç–§–ê—Ç–§–ê Key Wrapping (RSA-OAEP wraps AES) —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ Key Wrapping (RSA-OAEP wraps AES) Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Wrap (encrypt) an AES session key with an RSA public key.
@@ -296,12 +296,12 @@
                 rsaPrivateKey,
                 { name: 'RSA-OAEP' },
                 { name: 'AES-GCM', length: 256 },
-                false,              // —Ç–ñ–† result is also non-extractable
+                false,              // Ú∆– result is also non-extractable
                 ['encrypt', 'decrypt']
             );
         }
 
-        // —Ç–§–ê—Ç–§–ê Message Encryption / Decryption —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+        // Ú‘¿Ú‘¿ Message Encryption / Decryption Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
         /**
          * Encrypt plaintext with AES-256-GCM.
@@ -342,7 +342,7 @@
         }
     }
 
-    // —Ç–§–ê—Ç–§–ê Key Vault: persist identity + session keys in IndexedDB —Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê—Ç–§–ê
+    // Ú‘¿Ú‘¿ Key Vault: persist identity + session keys in IndexedDB Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿Ú‘¿
 
     /**
      * Get or generate the user's RSA identity key pair.
@@ -361,27 +361,27 @@
 
             if (storedPub && storedPriv) {
                 // storedPriv is the non-extractable CryptoKey object saved in IDB
-                addLog('–Å–Ø–§–† ‚ï®–ß‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ï°‚ï®‚ï£ ‚ï®‚ïï‚ï®‚ïñ ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï§–°‚ï®‚ïú‚ï®‚ïú‚ï®‚ïõ‚ï®‚îÇ‚ï®‚ïõ ‚ï§–ï‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ïó‚ï®‚ïï‚ï§–ô‚ï®‚ñë...', 'info');
+                addLog('®ﬂ‘– ¶◊¶-¶¶T¿T√¶¨¶¶¶- ¶¶¶¨TŒT«¶¶¶¶ ¶¨¶¨ ¶¨¶-T…¶¨T…T—¶-¶-¶-¶¶¶- T≈T¿¶-¶-¶¨¶¨¶¨T…¶-...', 'info');
                 state.chat.keys.publicKey = await CryptoManager.importPublicKey(storedPub);
                 state.chat.keys.privateKey = storedPriv; // already a CryptoKey
                 // Always re-register pubKey in case server restarted
                 await apiRequest('/me/key', 'POST', { public_key: storedPub }).catch(() => {});
                 const fp = await CryptoManager.keyFingerprint(storedPub);
                 state.chat.keyFingerprint = fp;
-                addLog(`–Å–Ø–§–° ‚ï®–™‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï ‚ï®‚ñì‚ï®‚ïõ‚ï§–ë‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï§–õ | ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${fp.slice(0, 23)}...`, 'success');
+                addLog(`®ﬂ‘— ¶⁄¶¨TŒT«¶¨ ¶-¶-T¡T¡T¬¶-¶-¶-¶-¶¨¶¶¶-TÀ | ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶: ${fp.slice(0, 23)}...`, 'success');
                 // Clear old insecure localStorage keys if present
                 localStorage.removeItem('skufia_pub_spki');
                 localStorage.removeItem('skufia_priv_pkcs8');
                 return;
             }
         } catch (e) {
-            addLog('—Ç–™–∞—è‚ïï–ü ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ó‚ï§–í‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï§–ï‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ïó‚ï®‚ïï‚ï§–ô‚ï®‚ñë, ‚ï®‚îÇ‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï§–ê‚ï®‚ïï‚ï§–ê‚ï§–ì‚ï®‚ï°‚ï®‚ïù ‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï§–õ‚ï®‚ï° ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï...', 'info');
+            addLog('Ú⁄‡ˇ¨œ ¶ﬁT»¶¨¶-¶¶¶- T«T¬¶¶¶-¶¨Tœ T≈T¿¶-¶-¶¨¶¨¶¨T…¶-, ¶¶¶¶¶-¶¶T¿¶¨T¿T√¶¶¶- ¶-¶-¶-TÀ¶¶ ¶¶¶¨TŒT«¶¨...', 'info');
             await vaultDelete(IDB_STORE_KEYS, 'pub_base64');
             await vaultDelete(IDB_STORE_KEYS, 'priv_cryptokey');
         }
 
         // Generate fresh RSA-4096 identity key pair
-        addLog('—Ç–™–©—è‚ïï–ü ‚ï®–£‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï§–ê‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–ü RSA-4096 ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ï°‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚îê‚ï®‚ñë‚ï§–ê‚ï§–õ...', 'info');
+        addLog('Ú⁄Ÿˇ¨œ ¶”¶¶¶-¶¶T¿¶-T∆¶¨Tœ RSA-4096 ¶¶¶¨TŒT«¶¶¶-¶-¶¶ ¶¨¶-T¿TÀ...', 'info');
         const pair = await CryptoManager.generateKeyPair();
         state.chat.keys.publicKey = pair.publicKey;
         state.chat.keys.privateKey = pair.privateKey;
@@ -400,7 +400,7 @@
 
         const fp = await CryptoManager.keyFingerprint(pubBase64);
         state.chat.keyFingerprint = fp;
-        addLog(`—Ç–¨–ï E2EE ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï§–õ ‚ï®‚ïï ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï§–õ | ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${fp.slice(0, 23)}...`, 'success');
+        addLog(`Ú‹≈ E2EE ¶¶¶¨TŒT«¶¨ T¡¶-¶¨¶+¶-¶-TÀ ¶¨ ¶¨¶-T…¶¨T…¶¶¶-TÀ | ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶: ${fp.slice(0, 23)}...`, 'success');
     }
 
     /**
@@ -439,28 +439,28 @@
                 // Cache in memory and IndexedDB
                 state.chat.sessionKeys[roomId] = sessionKey;
                 await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
-                addLog(`–Å–Ø–§–£ ‚ï®–±‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ïï‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó ‚ï®‚ñì‚ï®‚ïõ‚ï§–ë‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú ‚ï®‚î§‚ï®‚ïó‚ï§–ü ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïù‚ï®‚ïú‚ï®‚ñë‚ï§–í‚ï§–õ #${roomId}`, 'success');
+                addLog(`®ﬂ‘” ¶·¶¶T¡T¡¶¨¶-¶-¶-TÀ¶¶ ¶¶¶¨TŒT« ¶-¶-T¡T¡T¬¶-¶-¶-¶-¶¨¶¶¶- ¶+¶¨Tœ ¶¶¶-¶-¶-¶-T¬TÀ #${roomId}`, 'success');
                 return sessionKey;
             }
         } catch (e) {
-            // 404 = no key yet —Ç–ê–§ we are the initiator
+            // 404 = no key yet Ú¿‘ we are the initiator
         }
 
         // 4. Generate new session key and distribute to both parties
         if (!receiverId) return null;
 
-        addLog(`–Å–Ø–§–° ‚ï®–≥‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïë‚ï®‚ñë E2EE ‚ï§–ë‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ïï‚ï®‚ïï ‚ï§–ë ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïó‚ï§–ú‚ï®‚ïñ‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ï°‚ï®‚ïó‚ï®‚ï°‚ï®‚ïù #${receiverId}...`, 'info');
+        addLog(`®ﬂ‘— ¶„T¡T¬¶-¶-¶-¶-¶¶¶- E2EE T¡¶¶T¡T¡¶¨¶¨ T¡ ¶¨¶-¶¨TÃ¶¨¶-¶-¶-T¬¶¶¶¨¶¶¶- #${receiverId}...`, 'info');
 
         // Fetch recipient's public key
         const targetKeyData = await apiRequest(`/users/${receiverId}/key`).catch(() => null);
         if (!targetKeyData || !targetKeyData.public_key) {
-            addLog('—Ç–™–∞—è‚ïï–ü ‚ï®–Ø‚ï®‚ïõ‚ï®‚ïó‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ï°‚ï®‚ïó‚ï§–ú ‚ï®‚ï°‚ï§–ô‚ï§–° ‚ï®‚ïú‚ï®‚ï° ‚ï®‚ïñ‚ï®‚ñë‚ï§–ê‚ï®‚ï°‚ï®‚îÇ‚ï®‚ïï‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïó ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ïï E2EE', 'error');
+            addLog('Ú⁄‡ˇ¨œ ¶ﬂ¶-¶¨T√T«¶-T¬¶¶¶¨TÃ ¶¶T…T— ¶-¶¶ ¶¨¶-T¿¶¶¶¶¶¨T¡T¬T¿¶¨T¿¶-¶-¶-¶¨ ¶¶¶¨TŒT«¶¨ E2EE', 'error');
             return null;
         }
 
         // Show fingerprint of recipient's key for MITM detection
         const recipientFp = await CryptoManager.keyFingerprint(targetKeyData.public_key);
-        addLog(`–Å–Ø–§–ù ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ñë ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïó‚ï§–ì‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ï°‚ï®‚ïó‚ï§–ü: ${recipientFp.slice(0, 23)}...`, 'info');
+        addLog(`®ﬂ‘Õ ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶ ¶¶¶¨TŒT«¶- ¶¨¶-¶¨T√T«¶-T¬¶¶¶¨Tœ: ${recipientFp.slice(0, 23)}...`, 'info');
 
         // Generate fresh AES-256-GCM session key
         const sessionKey = await CryptoManager.generateSessionKey();
@@ -475,7 +475,7 @@
         const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
         const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
 
-        // Store both bundles on server (server cannot decrypt —Ç–ê–§ only wrapped blobs)
+        // Store both bundles on server (server cannot decrypt Ú¿‘ only wrapped blobs)
         const keysPayload = {};
         keysPayload[String(receiverId)] = wrappedForRecipient;
         keysPayload[String(state.user.id)] = wrappedForSelf;
@@ -484,7 +484,7 @@
         // Cache in IndexedDB
         await vaultPut(IDB_STORE_SESSION, `room_${roomId}`, sessionKey).catch(() => {});
 
-        addLog(`—Ç–¨–ï E2EE ‚ï§–ë‚ï®‚ï°‚ï§–ë‚ï§–ë‚ï®‚ïï‚ï§–ü ‚ï§–ì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ñë | ‚ï®–Æ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${recipientFp.slice(0, 11)}...`, 'success');
+        addLog(`Ú‹≈ E2EE T¡¶¶T¡T¡¶¨Tœ T√T¡T¬¶-¶-¶-¶-¶¨¶¶¶-¶- | ¶ﬁT¬¶¨¶¶T«¶-T¬¶-¶¶: ${recipientFp.slice(0, 11)}...`, 'success');
         return sessionKey;
     }
 
@@ -639,7 +639,7 @@
             h4.textContent = title;
             const backLink = document.createElement('div');
             backLink.className = 'back-link';
-            backLink.textContent = '<< ‚ï®–¢‚ï®‚ï°‚ï§–ê‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú‚ï§–ë‚ï§–ü ‚ï®‚ïë ‚ï§–ë‚ï®‚îê‚ï®‚ïï‚ï§–ë‚ï®‚ïë‚ï§–ì';
+            backLink.textContent = '<< ¶“¶¶T¿¶-T√T¬TÃT¡Tœ ¶¶ T¡¶¨¶¨T¡¶¶T√';
             backLink.onclick = loadForum;
             container.appendChild(h4);
             container.appendChild(backLink);
@@ -652,7 +652,7 @@
 
                 const metaDiv = document.createElement('div');
                 metaDiv.className = 'msg-meta';
-                metaDiv.textContent = `by ${post.author} | –Å–Ø–°–ù `;
+                metaDiv.textContent = `by ${post.author} | ®ﬂ—Õ `;
 
                 const likesSpan = document.createElement('span');
                 likesSpan.id = `likes-${post.id}`;
@@ -660,7 +660,7 @@
 
                 const btn = document.createElement('button');
                 btn.className = 'small-btn';
-                btn.textContent = '‚ï®–Ø‚ï®‚ïõ‚ï®‚î§‚ï®‚î§‚ï®‚ï°‚ï§–ê‚ï®‚ï¢‚ï®‚ñë‚ï§–í‚ï§–ú';
+                btn.textContent = '¶ﬂ¶-¶+¶+¶¶T¿¶¶¶-T¬TÃ';
                 btn.onclick = () => likePost(post.id);
 
                 metaDiv.appendChild(likesSpan);
@@ -720,7 +720,7 @@
             const articles = await apiRequest('/wiki');
             container.innerHTML = '';
             if (articles.length === 0) {
-                container.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: ‚ï®–Ø‚ï®‚ïõ‚ï®‚ïï‚ï§–ë‚ï®‚ïë ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï®‚ïú‚ï®‚ï° ‚ï®‚î§‚ï®‚ñë‚ï®‚ïó ‚ï§–ê‚ï®‚ï°‚ï®‚ïñ‚ï§–ì‚ï®‚ïó‚ï§–ú‚ï§–í‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ñì.</div>';
+                container.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: ¶ﬂ¶-¶¨T¡¶¶ ¶+¶-¶-¶-TÀT≈ ¶-¶¶ ¶+¶-¶¨ T¿¶¶¶¨T√¶¨TÃT¬¶-T¬¶-¶-.</div>';
                 return;
             }
             articles.forEach(art => {
@@ -731,7 +731,7 @@
 
                 const metaDiv = document.createElement('div');
                 metaDiv.className = 'msg-meta';
-                metaDiv.textContent = '–Å–Ø–°–ù ';
+                metaDiv.textContent = '®ﬂ—Õ ';
 
                 const likesSpan = document.createElement('span');
                 likesSpan.id = `wiki-likes-${art.id}`;
@@ -739,7 +739,7 @@
 
                 const likeBtn = document.createElement('button');
                 likeBtn.className = 'small-btn';
-                likeBtn.textContent = '‚ï®–Æ‚ï®‚î§‚ï®‚ïõ‚ï®‚ñí‚ï§–ê‚ï®‚ïï‚ï§–í‚ï§–ú';
+                likeBtn.textContent = '¶ﬁ¶+¶-¶-T¿¶¨T¬TÃ';
                 likeBtn.onclick = () => likeWiki(art.id);
 
                 metaDiv.appendChild(likesSpan);
@@ -748,11 +748,11 @@
 
                 const p = document.createElement('p');
                 p.className = 'wiki-excerpt';
-                p.textContent = art.content ? art.content.substring(0, 150) + '...' : '‚ï®–™‚ï®‚ïõ‚ï®‚ïú‚ï§–í‚ï®‚ï°‚ï®‚ïú‚ï§–í ‚ï®‚ïñ‚ï®‚ñë‚ï§–ë‚ï®‚ï°‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï§–ó‚ï®‚ï°‚ï®‚ïú';
+                p.textContent = art.content ? art.content.substring(0, 150) + '...' : '¶⁄¶-¶-T¬¶¶¶-T¬ ¶¨¶-T¡¶¶¶¶T¿¶¶T«¶¶¶-';
 
                 const openBtn = document.createElement('button');
                 openBtn.className = 'cyber-btn-small';
-                openBtn.textContent = '‚ï®–Æ‚ï®–≤‚ï®–™‚ï®–∞‚ï®–ª‚ï®–≤‚ï®–º ‚ï®–§‚ï®–†‚ï®–≠‚ï®–≠‚ï®–ª‚ï®–•';
+                openBtn.textContent = '¶ﬁ¶‚¶⁄¶‡¶Î¶‚¶Ï ¶‘¶–¶›¶›¶Î¶’';
                 openBtn.onclick = () => loadWikiArticle(art.id);
 
                 div.appendChild(h3);
@@ -786,10 +786,10 @@
         container.innerHTML = '<div class="system-msg">Scanning trade frequencies...</div>';
         try {
             const params = new URLSearchParams();
-            if (window.marketState.filters.cat && window.marketState.filters.cat !== '‚ï®–¢‚ï§–ë‚ï®‚ï°') {
+            if (window.marketState.filters.cat && window.marketState.filters.cat !== '¶“T¡¶¶') {
                 params.append('category', window.marketState.filters.cat);
             }
-            if (window.marketState.filters.loc && window.marketState.filters.loc !== '‚ï®–¢‚ï®‚ï°‚ï®‚ïñ‚ï®‚î§‚ï®‚ï°') {
+            if (window.marketState.filters.loc && window.marketState.filters.loc !== '¶“¶¶¶¨¶+¶¶') {
                 params.append('location', window.marketState.filters.loc);
             }
             if (window.marketState.filters.q) {
@@ -811,7 +811,7 @@
 
             container.innerHTML = '';
             if (!listings || listings.length === 0) {
-                container.innerHTML = '<div class="system-msg">MARKET_EMPTY: ‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ïõ‚ï®‚ñì ‚ï®‚ïú‚ï®‚ñë ‚ï®‚ñí‚ï®‚ïï‚ï§–ê‚ï®‚ï¢‚ï®‚ï°.</div>';
+                container.innerHTML = '<div class="system-msg">MARKET_EMPTY: ¶›¶¶T¬ ¶-¶¶T¬¶¨¶-¶-TÀT≈ ¶¨¶-T¬¶-¶- ¶-¶- ¶-¶¨T¿¶¶¶¶.</div>';
                 if(window.renderMarketPagination) window.renderMarketPagination(1, 1);
                 return;
             }
@@ -830,20 +830,20 @@
                 // Status Badge
                 let statusBadgeHtml = '';
                 if (item.status === 'sold') {
-                    statusBadgeHtml = `<span class="status-badge sold">‚ï®–Ø‚ï®–∞‚ï®–Æ‚ï®–§‚ï®–†‚ï®–≠‚ï®–Æ</span>`;
+                    statusBadgeHtml = `<span class="status-badge sold">¶ﬂ¶‡¶ﬁ¶‘¶–¶›¶ﬁ</span>`;
                 } else if (item.status === 'reserved') {
-                    statusBadgeHtml = `<span class="status-badge reserved">‚ï®–¢ ‚ï®–∞‚ï®–•‚ï®–ß‚ï®–•‚ï®–∞‚ï®–¢‚ï®–•</span>`;
+                    statusBadgeHtml = `<span class="status-badge reserved">¶“ ¶‡¶’¶◊¶’¶‡¶“¶’</span>`;
                 } else {
-                    statusBadgeHtml = `<span class="status-badge active">‚ï®–†‚ï®–™‚ï®–≤‚ï®–®‚ï®–¢‚ï®–•‚ï®–≠</span>`;
+                    statusBadgeHtml = `<span class="status-badge active">¶–¶⁄¶‚¶ÿ¶“¶’¶›</span>`;
                 }
 
                 // Favorite Heart
                 const isFav = item.is_favorite ? 'favorited' : '';
-                const favHtml = `<span class="favorite-btn ${isFav}" onclick="toggleFavorite(event, ${item.id})">—Ç–≠–¥—è‚ïï–ü</span>`;
+                const favHtml = `<span class="favorite-btn ${isFav}" onclick="toggleFavorite(event, ${item.id})">Ú›‰ˇ¨œ</span>`;
 
                 let deleteButtonHTML = '';
                 if (item.seller_id === state.user.id) {
-                    deleteButtonHTML = `<button class="btn-danger" style="margin-top: 5px; font-size: 10px; width: 100%" onclick="event.stopPropagation(); deleteMarketListing(${item.id})">‚ï®–≥‚ï®–§‚ï®–†‚ï®–´‚ï®–®‚ï®–≤‚ï®–º ‚ï®–´‚ï®–Æ‚ï®–≤</button>`;
+                    deleteButtonHTML = `<button class="btn-danger" style="margin-top: 5px; font-size: 10px; width: 100%" onclick="event.stopPropagation(); deleteMarketListing(${item.id})">¶„¶‘¶–¶€¶ÿ¶‚¶Ï ¶€¶ﬁ¶‚</button>`;
                 }
 
                 const imgContainer = document.createElement('div');
@@ -851,7 +851,7 @@
                 imgContainer.innerHTML = coverImageHtml + statusBadgeHtml + favHtml; // Safe: no user text in these HTML strings
                 const viewsDiv = document.createElement('div');
                 viewsDiv.className = 'views-count';
-                viewsDiv.textContent = `–Å–Ø–°–ë ${item.views_count || 0}`;
+                viewsDiv.textContent = `®ﬂ—¡ ${item.views_count || 0}`;
                 imgContainer.appendChild(viewsDiv);
 
                 const bodyDiv = document.createElement('div');
@@ -909,7 +909,7 @@
                 window.renderMarketPagination(data.page || 1, data.pages || 1);
             }
         } catch (e) {
-            container.innerHTML = '<div class="system-msg">ERROR: ‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï§–ë‚ï®‚ïï‚ï®‚ïú‚ï§–ï‚ï§–ê‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï° ‚ï®‚ñí‚ï®‚ïï‚ï§–ê‚ï®‚ï¢‚ï®‚ïï.</div>';
+            container.innerHTML = '<div class="system-msg">ERROR: ¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ T¡¶¨¶-T≈T¿¶-¶-¶¨¶¨¶¨T¿¶-¶-¶-T¬TÃ ¶+¶-¶-¶-TÀ¶¶ ¶-¶¨T¿¶¶¶¨.</div>';
         }
     }
 
@@ -936,7 +936,7 @@
 
         const prevBtn = document.createElement('button');
         prevBtn.className = 'cyber-btn-small';
-        prevBtn.textContent = '‚ï®–≠‚ï®–†‚ï®–ß‚ï®–†‚ï®–§';
+        prevBtn.textContent = '¶›¶–¶◊¶–¶‘';
         prevBtn.disabled = currentPage <= 1;
         if(currentPage <= 1) prevBtn.style.opacity = '0.5';
         prevBtn.onclick = () => {
@@ -949,11 +949,11 @@
         const pageText = document.createElement('span');
         pageText.style.color = 'var(--text-main)';
         pageText.style.fontFamily = 'var(--font-mono)';
-        pageText.textContent = `‚ï®–±‚ï®–≤‚ï®–∞‚ï®–†‚ï®–≠‚ï®–®‚ï®–∂‚ï®–† ${currentPage} / ${totalPages}`;
+        pageText.textContent = `¶·¶‚¶‡¶–¶›¶ÿ¶Ê¶– ${currentPage} / ${totalPages}`;
 
         const nextBtn = document.createElement('button');
         nextBtn.className = 'cyber-btn-small';
-        nextBtn.textContent = '‚ï®–¢‚ï®–Ø‚ï®–•‚ï®–∞‚ï®–•‚ï®–§';
+        nextBtn.textContent = '¶“¶ﬂ¶’¶‡¶’¶‘';
         nextBtn.disabled = currentPage >= totalPages;
         if(currentPage >= totalPages) nextBtn.style.opacity = '0.5';
         nextBtn.onclick = () => {
@@ -975,10 +975,10 @@
             const target = event.currentTarget;
             if (res.status === 'added') {
                 target.classList.add('favorited');
-                addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï®‚î§‚ï®‚ïõ‚ï®‚ñí‚ï®‚ñë‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú ‚ï®‚ñì ‚ï®‚ïï‚ï®‚ïñ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï°', 'info');
+                addLog('¶€¶-T¬ ¶+¶-¶-¶-¶-¶¨¶¶¶- ¶- ¶¨¶¨¶-T¿¶-¶-¶-¶-¶¶', 'info');
             } else {
                 target.classList.remove('favorited');
-                addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú ‚ï®‚ïï‚ï®‚ïñ ‚ï®‚ïï‚ï®‚ïñ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï®‚ïõ‚ï®‚îÇ‚ï®‚ïõ', 'info');
+                addLog('¶€¶-T¬ T√¶+¶-¶¨¶¶¶- ¶¨¶¨ ¶¨¶¨¶-T¿¶-¶-¶-¶-¶¶¶-', 'info');
             }
         } catch (e) { console.error("Favorite toggle failed", e); }
     }
@@ -989,7 +989,7 @@
 
             document.getElementById('listing-detail-title').textContent = item.title;
             document.getElementById('listing-detail-price').textContent = item.price;
-            document.getElementById('listing-detail-desc').textContent = item.description || '‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚ïõ‚ï®‚îê‚ï®‚ïï‚ï§–ë‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü.';
+            document.getElementById('listing-detail-desc').textContent = item.description || '¶›¶¶T¬ ¶-¶¨¶¨T¡¶-¶-¶¨Tœ.';
 
             const statusContainer = document.getElementById('listing-detail-status');
             if (item.seller_id === state.user.id) {
@@ -1002,15 +1002,15 @@
 
                 const optActive = document.createElement('option');
                 optActive.value = 'active';
-                optActive.textContent = '‚ï®–†‚ï®–™‚ï®–≤‚ï®–®‚ï®–¢‚ï®–•‚ï®–≠';
+                optActive.textContent = '¶–¶⁄¶‚¶ÿ¶“¶’¶›';
 
                 const optReserved = document.createElement('option');
                 optReserved.value = 'reserved';
-                optReserved.textContent = '‚ï®–¢ ‚ï®–∞‚ï®–•‚ï®–ß‚ï®–•‚ï®–∞‚ï®–¢‚ï®–•';
+                optReserved.textContent = '¶“ ¶‡¶’¶◊¶’¶‡¶“¶’';
 
                 const optSold = document.createElement('option');
                 optSold.value = 'sold';
-                optSold.textContent = '‚ï®–Ø‚ï®–∞‚ï®–Æ‚ï®–§‚ï®–†‚ï®–≠‚ï®–Æ';
+                optSold.textContent = '¶ﬂ¶‡¶ﬁ¶‘¶–¶›¶ﬁ';
 
                 select.appendChild(optActive);
                 select.appendChild(optReserved);
@@ -1021,22 +1021,22 @@
                 select.onchange = async (e) => {
                     try {
                         await apiRequest(`/market/${item.id}/status`, 'PATCH', { status: e.target.value });
-                        addLog('‚ï®–±‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú', 'success');
+                        addLog('¶·T¬¶-T¬T√T¡ ¶¨¶-T¬¶- ¶-¶-¶-¶-¶-¶¨¶¶¶-', 'success');
                         loadMarket(); // Refresh list in background
                     } catch (err) {
-                        addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïï ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ïï ‚ï§–ë‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë‚ï®‚ñë', 'error');
+                        addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¿¶¨ ¶-¶-¶-¶-¶-¶¨¶¶¶-¶¨¶¨ T¡T¬¶-T¬T√T¡¶-', 'error');
                         // Revert selection on error
                         select.value = item.status || 'active';
                     }
                 };
 
-                statusContainer.innerHTML = '‚ï®–±‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë: ';
+                statusContainer.innerHTML = '¶·T¬¶-T¬T√T¡: ';
                 statusContainer.appendChild(select);
             } else {
-                let statusText = '‚ï®–†‚ï®–™‚ï®–≤‚ï®–®‚ï®–¢‚ï®–•‚ï®–≠';
-                if (item.status === 'sold') statusText = '‚ï®–Ø‚ï®–∞‚ï®–Æ‚ï®–§‚ï®–†‚ï®–≠‚ï®–Æ';
-                if (item.status === 'reserved') statusText = '‚ï®–¢ ‚ï®–∞‚ï®–•‚ï®–ß‚ï®–•‚ï®–∞‚ï®–¢‚ï®–•';
-                statusContainer.textContent = `‚ï®–±‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ì‚ï§–ë: ${statusText}`;
+                let statusText = '¶–¶⁄¶‚¶ÿ¶“¶’¶›';
+                if (item.status === 'sold') statusText = '¶ﬂ¶‡¶ﬁ¶‘¶–¶›¶ﬁ';
+                if (item.status === 'reserved') statusText = '¶“ ¶‡¶’¶◊¶’¶‡¶“¶’';
+                statusContainer.textContent = `¶·T¬¶-T¬T√T¡: ${statusText}`;
             }
 
             const gallery = document.getElementById('listing-detail-gallery');
@@ -1054,7 +1054,7 @@
                     gallery.appendChild(img);
                 });
             } else {
-                gallery.innerHTML = '<div style="color: var(--text-dim); font-style: italic;">‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï§–î‚ï®‚ïõ‚ï§–í‚ï®‚ïõ‚ï®‚îÇ‚ï§–ê‚ï®‚ñë‚ï§–î‚ï®‚ïï‚ï®‚ï£</div>';
+                gallery.innerHTML = '<div style="color: var(--text-dim); font-style: italic;">¶›¶¶T¬ Tƒ¶-T¬¶-¶¶T¿¶-Tƒ¶¨¶¶</div>';
             }
 
             document.getElementById('listing-detail-message-btn').onclick = () => {
@@ -1063,34 +1063,34 @@
             };
 
             const favBtn = document.getElementById('listing-detail-fav-btn');
-            favBtn.textContent = item.is_favorite ? '‚ï®–≥‚ï®–°‚ï®–∞‚ï®–†‚ï®–≤‚ï®–º ‚ï®–®‚ï®–ß ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–£‚ï®–Æ' : '—Ç–≠–¥—è‚ïï–ü ‚ï®–¢ ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–•';
+            favBtn.textContent = item.is_favorite ? '¶„¶—¶‡¶–¶‚¶Ï ¶ÿ¶◊ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶”¶ﬁ' : 'Ú›‰ˇ¨œ ¶“ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶’';
             favBtn.onclick = async (e) => {
                 await window.toggleFavorite(e, item.id);
-                favBtn.textContent = favBtn.classList.contains('favorited') ? '‚ï®–≥‚ï®–°‚ï®–∞‚ï®–†‚ï®–≤‚ï®–º ‚ï®–®‚ï®–ß ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–£‚ï®–Æ' : '—Ç–≠–¥—è‚ïï–ü ‚ï®–¢ ‚ï®–®‚ï®–ß‚ï®–°‚ï®–∞‚ï®–†‚ï®–≠‚ï®–≠‚ï®–Æ‚ï®–•';
+                favBtn.textContent = favBtn.classList.contains('favorited') ? '¶„¶—¶‡¶–¶‚¶Ï ¶ÿ¶◊ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶”¶ﬁ' : 'Ú›‰ˇ¨œ ¶“ ¶ÿ¶◊¶—¶‡¶–¶›¶›¶ﬁ¶’';
             };
 
             document.getElementById('listing-detail-modal').style.display = 'flex';
         } catch(e) {
-            addLog('‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚î§‚ï®‚ï°‚ï§–í‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë', 'error');
+            addLog('¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ ¶¨¶-¶¶T¿T√¶¨¶¨T¬TÃ ¶+¶¶T¬¶-¶¨¶¨ ¶¨¶-T¬¶-', 'error');
         }
     }
 
     // @ts-ignore
     window.deleteMarketListing = async function(itemId) {
-        if (!confirm('‚ï®–Ø‚ï®‚ïõ‚ï®‚î§‚ï§–í‚ï®‚ñì‚ï®‚ï°‚ï§–ê‚ï®‚ï¢‚ï®‚î§‚ï®‚ñë‚ï®‚ï°‚ï§–í‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë?')) return;
+        if (!confirm('¶ﬂ¶-¶+T¬¶-¶¶T¿¶¶¶+¶-¶¶T¬¶¶ T√¶+¶-¶¨¶¶¶-¶¨¶¶ ¶¨¶-T¬¶-?')) return;
         try {
             await apiRequest(`/market/${itemId}`, 'DELETE');
-            addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï§–ë‚ï®‚ïú‚ï§–ü‚ï§–í ‚ï§–ë ‚ï®‚ñí‚ï®‚ïï‚ï§–ê‚ï®‚ï¢‚ï®‚ïï', 'success');
+            addLog('¶€¶-T¬ T¡¶-TœT¬ T¡ ¶-¶¨T¿¶¶¶¨', 'success');
             loadMarket();
         } catch(e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïï ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ïï ‚ï®‚ïó‚ï®‚ïõ‚ï§–í‚ï®‚ñë', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- ¶¨T¿¶¨ T√¶+¶-¶¨¶¶¶-¶¨¶¨ ¶¨¶-T¬¶-', 'error');
         }
     }
 
     window.loadWikiArticle = async function(artId) {
         try {
             const art = await apiRequest(`/wiki/${artId}`);
-            alert(`--- ‚ï®–£‚ï®–®‚ï®–Ø‚ï®–•‚ï®–∞‚ï®–≤‚ï®–•‚ï®–™‚ï®–±‚ï®–≤‚ï®–Æ‚ï®–¢‚ï®–†‚ï®–ø ‚ï®–°‚ï®–†‚ï®–ß‚ï®–† --- \n\n${art.title.toUpperCase()}\n\n${art.content}`);
+            alert(`--- ¶”¶ÿ¶ﬂ¶’¶‡¶‚¶’¶⁄¶·¶‚¶ﬁ¶“¶–¶Ô ¶—¶–¶◊¶– --- \n\n${art.title.toUpperCase()}\n\n${art.content}`);
         } catch (e) { addLog('Article data corrupted', 'error'); }
     }
     
@@ -1132,9 +1132,9 @@
 
             uploadedImageUrls.push(...urls);
             renderMarketPhotoPreview();
-            addLog(`‚ï®–ß‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ï¢‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ ${urls.length} ‚ï§–î‚ï®‚ïõ‚ï§–í‚ï®‚ïõ`, 'success');
+            addLog(`¶◊¶-¶¶T¿T√¶¶¶¶¶-¶- ${urls.length} Tƒ¶-T¬¶-`, 'success');
         } catch (e) {
-            addLog(`‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï®‚ïñ‚ï®‚ñë‚ï®‚îÇ‚ï§–ê‚ï§–ì‚ï®‚ïñ‚ï®‚ïë‚ï®‚ïï ‚ï§–î‚ï®‚ïõ‚ï§–í‚ï®‚ïõ: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
+            addLog(`¶ﬁT»¶¨¶-¶¶¶- ¶¨¶-¶¶T¿T√¶¨¶¶¶¨ Tƒ¶-T¬¶-: ${e instanceof Error ? e.message : 'unknown'}`, 'error');
         }
     }
 
@@ -1208,11 +1208,11 @@
         // @ts-ignore
         const description = descElem.value;
         // @ts-ignore
-        const category = catElem?.value || '‚ï®–∞‚ï®‚ñë‚ï®‚ïñ‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï°';
+        const category = catElem?.value || '¶‡¶-¶¨¶-¶-¶¶';
         // @ts-ignore
-        const location = locElem?.value || '‚ï®–¢‚ï§–ë‚ï§–ü ‚ï§–ë‚ï®‚ï°‚ï§–í‚ï§–ú';
+        const location = locElem?.value || '¶“T¡Tœ T¡¶¶T¬TÃ';
         
-        if (!title || !price) { addLog('Validation Error: ‚ï®–ß‚ï®‚ñë‚ï®‚îê‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïú‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïú‚ï®‚ñë‚ï®‚ïñ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïï ‚ï§–ñ‚ï®‚ï°‚ï®‚ïú‚ï§–ì', 'error'); return; }
+        if (!title || !price) { addLog('Validation Error: ¶◊¶-¶¨¶-¶¨¶-¶¨T¬¶¶ ¶-¶-¶¨¶-¶-¶-¶¨¶¶ ¶¨ T∆¶¶¶-T√', 'error'); return; }
         
         try {
             await apiRequest('/market', 'POST', {
@@ -1223,7 +1223,7 @@
                 location,
                 images: uploadedImageUrls
             });
-            addLog('‚ï®–´‚ï®‚ïõ‚ï§–í ‚ï§–ì‚ï§–ë‚ï®‚îê‚ï®‚ï°‚ï§–ò‚ï®‚ïú‚ï®‚ïõ ‚ï®‚ïõ‚ï®‚îê‚ï§–ì‚ï®‚ñí‚ï®‚ïó‚ï®‚ïï‚ï®‚ïë‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú', 'success');
+            addLog('¶€¶-T¬ T√T¡¶¨¶¶T»¶-¶- ¶-¶¨T√¶-¶¨¶¨¶¶¶-¶-¶-¶-', 'success');
             // @ts-ignore
             titleElem.value = '';
             // @ts-ignore
@@ -1278,7 +1278,7 @@
                 const td6 = document.createElement('td');
                 const chatBtn = document.createElement('button');
                 chatBtn.className = 'cyber-btn-small';
-                chatBtn.textContent = '‚ï®–±‚ï®–•‚ï®–™‚ï®–∞‚ï®–•‚ï®–≤‚ï®–≠‚ï®–ª‚ï®–© ‚ï®–∑‚ï®–†‚ï®–≤';
+                chatBtn.textContent = '¶·¶’¶⁄¶‡¶’¶‚¶›¶Î¶Ÿ ¶Á¶–¶‚';
                 chatBtn.onclick = () => startPrivateChat(u.id);
                 td6.appendChild(chatBtn);
 
@@ -1297,11 +1297,11 @@
     // @ts-ignore
     window.startPrivateChat = async function(targetId) {
         if (targetId === state.user.id) {
-            addLog('‚ï®–≠‚ï®‚ï°‚ï®‚ïó‚ï§–ú‚ï®‚ïñ‚ï§–ü ‚ï®‚ïõ‚ï§–í‚ï®‚ïë‚ï§–ê‚ï§–õ‚ï§–í‚ï§–ú ‚ï§–ó‚ï®‚ñë‚ï§–í ‚ï§–ë ‚ï§–ë‚ï®‚ñë‚ï®‚ïù‚ï®‚ïï‚ï®‚ïù ‚ï§–ë‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïõ‚ï®‚ï£', 'error');
+            addLog('¶›¶¶¶¨TÃ¶¨Tœ ¶-T¬¶¶T¿TÀT¬TÃ T«¶-T¬ T¡ T¡¶-¶-¶¨¶- T¡¶-¶-¶-¶¶', 'error');
             return;
         }
         try {
-            addLog('‚ï®–Æ‚ï§–í‚ï®‚ïë‚ï§–ê‚ï§–õ‚ï®‚ñì‚ï®‚ñë‚ï§–û ‚ï®‚ïñ‚ï®‚ñë‚ï§–ô‚ï®‚ïï‚ï§–ô‚ï§–°‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó ‚ï§–ë‚ï®‚ñì‚ï§–ü‚ï®‚ïñ‚ï®‚ïï...', 'info');
+            addLog('¶ﬁT¬¶¶T¿TÀ¶-¶-TŒ ¶¨¶-T…¶¨T…T—¶-¶-TÀ¶¶ ¶¶¶-¶-¶-¶¨ T¡¶-Tœ¶¨¶¨...', 'info');
             // Use the dedicated /chat/private endpoint (get-or-create, no duplicates)
             const room = await apiRequest('/chat/private', 'POST', {
                 target_user_id: targetId
@@ -1310,12 +1310,12 @@
             // Refresh room list and then select the new/existing room
             await loadChatRooms();
             const roomInList = state.chat.rooms.find(r => r.id === room.id);
-            const roomName = roomInList ? roomInList.name : '‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï§–ó‚ï®‚ñë‚ï§–í';
+            const roomName = roomInList ? roomInList.name : '¶ﬂT¿¶¨¶-¶-T¬¶-TÀ¶¶ T«¶-T¬';
             const roomType = roomInList ? roomInList.type : 'private';
             selectChatRoom(room.id, roomName, roomType, targetId);
-            addLog('E2EE-‚ï®–™‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó ‚ï§–ì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú', 'success');
+            addLog('E2EE-¶⁄¶-¶-¶-¶¨ T√T¡T¬¶-¶-¶-¶-¶¨¶¶¶-', 'success');
         } catch (e) {
-            addLog('‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï§–ì‚ï§–ë‚ï§–í‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ë‚ï®‚ïõ‚ï®‚ï°‚ï®‚î§‚ï®‚ïï‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°', 'error');
+            addLog('¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ T√T¡T¬¶-¶-¶-¶-¶¨T¬TÃ T¡¶-¶¶¶+¶¨¶-¶¶¶-¶¨¶¶', 'error');
             console.error('startPrivateChat error:', e);
         }
     }
@@ -1329,7 +1329,7 @@
             const events = await apiRequest('/events');
             container.innerHTML = '';
             if (!events || events.length === 0) {
-                container.innerHTML = '<div class="system-msg">‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï§–ë‚ï®‚ïõ‚ï®‚ñí‚ï§–õ‚ï§–í‚ï®‚ïï‚ï®‚ï£.</div>';
+                container.innerHTML = '<div class="system-msg">¶›¶¶T¬ ¶-¶¶T¬¶¨¶-¶-TÀT≈ T¡¶-¶-TÀT¬¶¨¶¶.</div>';
                 return;
             }
             events.forEach(/** @param {any} e */ e => {
@@ -1348,14 +1348,14 @@
                 h4.textContent = e.title;
 
                 const p = document.createElement('p');
-                p.textContent = `–Å–Ø–£–ù ${e.location || '‚ï®–±‚ï®‚ï°‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï§–í‚ï®‚ïú‚ï®‚ñë‚ï§–ü ‚ï®‚ïó‚ï®‚ïõ‚ï®‚ïë‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï§–ü'}`;
+                p.textContent = `®ﬂ”Õ ${e.location || '¶·¶¶¶¶T¿¶¶T¬¶-¶-Tœ ¶¨¶-¶¶¶-T∆¶¨Tœ'}`;
 
                 contentDiv.appendChild(h4);
                 contentDiv.appendChild(p);
 
                 const actionDiv = document.createElement('div');
                 actionDiv.className = 'event-action';
-                actionDiv.textContent = '> ‚ï®–§‚ï®–•‚ï®–≤‚ï®–†‚ï®–´‚ï®–®';
+                actionDiv.textContent = '> ¶‘¶’¶‚¶–¶€¶ÿ';
 
                 eventCard.appendChild(dateDiv);
                 eventCard.appendChild(contentDiv);
@@ -1389,11 +1389,11 @@
         // @ts-ignore
         const description = descElem.value;
         
-        if (!title) { addLog('Validation Error: ‚ï®–≥‚ï®‚ïë‚ï®‚ñë‚ï®‚ï¢‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïú‚ï®‚ñë‚ï®‚ïñ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°', 'error'); return; }
+        if (!title) { addLog('Validation Error: ¶„¶¶¶-¶¶¶¨T¬¶¶ ¶-¶-¶¨¶-¶-¶-¶¨¶¶', 'error'); return; }
         
         try {
             await apiRequest('/events', 'POST', { title, event_date, location, description });
-            addLog('‚ï®–±‚ï®‚ïõ‚ï®‚ñí‚ï§–õ‚ï§–í‚ï®‚ïï‚ï®‚ï° ‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ‚ï®‚ïú‚ï§–ë‚ï®‚ïï‚ï§–ê‚ï®‚ïõ‚ï®‚ñì‚ï®‚ñë‚ï®‚ïú‚ï®‚ïõ', 'success');
+            addLog('¶·¶-¶-TÀT¬¶¨¶¶ ¶-¶-¶-¶-T¡¶¨T¿¶-¶-¶-¶-¶-', 'success');
             // @ts-ignore
             titleElem.value = '';
             // @ts-ignore
@@ -1411,10 +1411,10 @@
     function showEventDetails(event) {
         addLog(`Accessing mission data: ${event.title}`, 'info');
         const details = `
-            ‚ï®–∂‚ï®–•‚ï®–´‚ï®–º: ${event.title}
-            ‚ï®–§‚ï®–†‚ï®–≤‚ï®–†: ${new Date(event.event_date).toLocaleString()}
-            ‚ï®–´‚ï®–Æ‚ï®–™‚ï®–†‚ï®–∂‚ï®–®‚ï®–ø: ${event.location}
-            ‚ï®–Æ‚ï®–Ø‚ï®–®‚ï®–±‚ï®–†‚ï®–≠‚ï®–®‚ï®–•: ${event.description || '‚ï®–§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïú‚ï§–õ‚ï®‚ï° ‚ï®‚ïñ‚ï®‚ñë‚ï§–ë‚ï®‚ï°‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï§–ó‚ï®‚ï°‚ï®‚ïú‚ï§–õ'}
+            ¶Ê¶’¶€¶Ï: ${event.title}
+            ¶‘¶–¶‚¶–: ${new Date(event.event_date).toLocaleString()}
+            ¶€¶ﬁ¶⁄¶–¶Ê¶ÿ¶Ô: ${event.location}
+            ¶ﬁ¶ﬂ¶ÿ¶·¶–¶›¶ÿ¶’: ${event.description || '¶‘¶-¶-¶-TÀ¶¶ ¶¨¶-T¡¶¶¶¶T¿¶¶T«¶¶¶-TÀ'}
         `;
         alert(details);
     }
@@ -1449,14 +1449,14 @@
         const sidebarRank = document.querySelector('.side-panel .rank');
         const sidebarAvatar = document.querySelector('.side-panel .avatar-placeholder');
         
-        if (sidebarName) sidebarName.textContent = `‚ï®–Æ‚ï®‚îê‚ï®‚ï°‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï§–ê: ${data.display_name || data.username}`;
+        if (sidebarName) sidebarName.textContent = `¶ﬁ¶¨¶¶T¿¶-T¬¶-T¿: ${data.display_name || data.username}`;
         if (sidebarRank) sidebarRank.textContent = data.rank;
         if (sidebarAvatar && data.avatar_url) {
             applyAvatarDisplay(sidebarAvatar, data.avatar_url);
         }
     }
 
-    // --- ‚ï®–§‚ï®–•‚ï®–©‚ï®–±‚ï®–≤‚ï®–¢‚ï®–®‚ï®–ø: ‚ï®–´‚ï®–®‚ï®–∑‚ï®–≠‚ï®–ª‚ï®–© ‚ï®–™‚ï®–†‚ï®–°‚ï®–®‚ï®–≠‚ï®–•‚ï®–≤ ---
+    // --- ¶‘¶’¶Ÿ¶·¶‚¶“¶ÿ¶Ô: ¶€¶ÿ¶Á¶›¶Î¶Ÿ ¶⁄¶–¶—¶ÿ¶›¶’¶‚ ---
     window.saveProfile = async function() {
         const bioEl = document.getElementById('dash-bio');
         const callsignEl = document.getElementById('dash-callsign-input');
@@ -1473,12 +1473,12 @@
                 state.user.username = result.display_name;
                 const display = document.getElementById('dash-username-display');
                 if (display) display.textContent = result.display_name;
-                addLog('‚ï®–´‚ï®‚ïï‚ï§–ó‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï° ‚ï®‚î§‚ï®‚ï°‚ï®‚ïó‚ï®‚ïõ ‚ï§–ì‚ï§–ë‚ï®‚îê‚ï®‚ï°‚ï§–ò‚ï®‚ïú‚ï®‚ïõ ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ —Ç–¨–ï', 'success');
+                addLog('¶€¶¨T«¶-¶-¶¶ ¶+¶¶¶¨¶- T√T¡¶¨¶¶T»¶-¶- ¶-¶-¶-¶-¶-¶¨¶¶¶-¶- Ú‹≈', 'success');
                 loadDashboard(); // Refresh everything
             }
         } catch (e) {
             console.error('Profile update error:', e);
-            addLog('‚ï®–≠‚ï®‚ï° ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï§–ú ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï®‚îê‚ï§–ê‚ï®‚ïõ‚ï§–î‚ï®‚ïï‚ï®‚ïó‚ï§–ú (‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïñ‚ï®‚ïù‚ï®‚ïõ‚ï®‚ï¢‚ï®‚ïú‚ï®‚ïõ, ‚ï®‚îê‚ï®‚ïõ‚ï®‚ïñ‚ï§–õ‚ï®‚ñì‚ï®‚ïú‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïñ‚ï®‚ñë‚ï®‚ïú‚ï§–ü‚ï§–í)', 'error');
+            addLog('¶›¶¶ T√¶+¶-¶¨¶-T¡TÃ ¶-¶-¶-¶-¶-¶¨T¬TÃ ¶¨T¿¶-Tƒ¶¨¶¨TÃ (¶-¶-¶¨¶-¶-¶¶¶-¶-, ¶¨¶-¶¨TÀ¶-¶-¶-¶¶ ¶¨¶-¶-TœT¬)', 'error');
         }
     }
 
@@ -1524,11 +1524,11 @@
             const dashAvatar = document.getElementById('dash-avatar');
             if (dashAvatar) applyAvatarDisplay(dashAvatar, url);
             
-            addLog('‚ï®–†‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï§–ê ‚ï®‚ïõ‚ï®‚ñí‚ï®‚ïú‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïó‚ï®‚ï°‚ï®‚ïú: ‚ï®–™‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó ‚ï§–ë‚ï®‚ñì‚ï§–ü‚ï®‚ïñ‚ï®‚ïï ‚ï®‚ñë‚ï®‚ïë‚ï§–í‚ï®‚ïï‚ï®‚ñì‚ï®‚ï°‚ï®‚ïú —Ç–¨–ï', 'success');
+            addLog('¶–¶-¶-T¬¶-T¿ ¶-¶-¶-¶-¶-¶¨¶¶¶-: ¶⁄¶-¶-¶-¶¨ T¡¶-Tœ¶¨¶¨ ¶-¶¶T¬¶¨¶-¶¶¶- Ú‹≈', 'success');
             window.closeAvatarModal();
             loadDashboard(); // Refresh UI
         } catch (e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïï‚ï®‚ïú‚ï§–ï‚ï§–ê‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïï‚ï®‚ïñ‚ï®‚ñë‚ï§–ñ‚ï®‚ïï‚ï®‚ïï ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó‚ï®‚ñë ‚ï®‚ñë‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï§–ê‚ï®‚ñë', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶¨¶-T≈T¿¶-¶-¶¨¶¨¶-T∆¶¨¶¨ ¶¶¶-¶-¶-¶¨¶- ¶-¶-¶-T¬¶-T¿¶-', 'error');
         }
     }
 
@@ -1581,7 +1581,7 @@
                         );
                         msg.is_secure = true;
                     } catch (e) {
-                        msg.content = "[ ‚ï®–§‚ï®–†‚ï®–≠‚ï®–≠‚ï®–ª‚ï®–• ‚ï®–ß‚ï®–†‚ï®–∏‚ï®–®‚ï®–¥‚ï®–∞‚ï®–Æ‚ï®–¢‚ï®–†‚ï®–≠‚ï®–ª // ‚ï®–™‚ï®–´‚ï®–æ‚ï®–∑ ‚ï®–≠‚ï®–• ‚ï®–≠‚ï®–†‚ï®–©‚ï®–§‚ï®–•‚ï®–≠ ]";
+                        msg.content = "[ ¶‘¶–¶›¶›¶Î¶’ ¶◊¶–¶Ë¶ÿ¶‰¶‡¶ﬁ¶“¶–¶›¶Î // ¶⁄¶€¶Ó¶Á ¶›¶’ ¶›¶–¶Ÿ¶‘¶’¶› ]";
                     }
                 }
 
@@ -1608,7 +1608,7 @@
                     }
                     if (!el.querySelector('.is-edited')) {
                         const mheader = el.querySelector('.msg-header');
-                        if (mheader) mheader.insertAdjacentHTML('beforeend', '<span class="is-edited">(‚ï®‚ïï‚ï®‚ïñ‚ï®‚ïù‚ï®‚ï°‚ï®‚ïú‚ï®‚ï°‚ï®‚ïú‚ï®‚ïõ)</span>');
+                        if (mheader) mheader.insertAdjacentHTML('beforeend', '<span class="is-edited">(¶¨¶¨¶-¶¶¶-¶¶¶-¶-)</span>');
                     }
                 }
             } else if (data.type === 'delete_message') {
@@ -1618,7 +1618,7 @@
                 if (state.chat.currentRoomId === data.room_id && data.sender_id !== state.user.id) {
                     const typingEl = document.getElementById('typing-indicator');
                     if (typingEl) {
-                        typingEl.textContent = `${data.sender} ‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï®‚ï°‚ï§–í...`;
+                        typingEl.textContent = `${data.sender} ¶¨¶¶T«¶-T¬¶-¶¶T¬...`;
                         typingEl.style.display = 'block';
                         // @ts-ignore
                         if (window.typingTimeout) clearTimeout(window.typingTimeout);
@@ -1705,7 +1705,7 @@
 
             const lastMsgDiv = document.createElement('div');
             lastMsgDiv.className = 'sidebar-item-last-msg';
-            lastMsgDiv.textContent = room.last_message || '‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï§–ë‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï£';
+            lastMsgDiv.textContent = room.last_message || '¶›¶¶T¬ T¡¶-¶-¶-T…¶¶¶-¶¨¶¶';
 
             infoDiv.appendChild(nameDiv);
             infoDiv.appendChild(lastMsgDiv);
@@ -1717,8 +1717,8 @@
             // Delete/Leave button (visible on hover)
             const deleteBtn = document.createElement('button');
             deleteBtn.className = 'room-delete-btn';
-            deleteBtn.innerHTML = '—Ç–¨–•';
-            deleteBtn.title = room.type === 'private' ? '‚ï®–≥‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ó‚ï®‚ñë‚ï§–í' : '‚ï®–Ø‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú / ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú';
+            deleteBtn.innerHTML = 'Ú‹’';
+            deleteBtn.title = room.type === 'private' ? '¶„¶+¶-¶¨¶¨T¬TÃ T«¶-T¬' : '¶ﬂ¶-¶¶¶¨¶-T√T¬TÃ / T√¶+¶-¶¨¶¨T¬TÃ';
             deleteBtn.style.cssText = `
                 display: none; position: absolute; right: 6px; top: 50%;
                 transform: translateY(-50%);
@@ -1731,8 +1731,8 @@
             deleteBtn.onmouseleave = () => deleteBtn.style.background = 'rgba(255,50,50,0.15)';
             deleteBtn.onclick = async (e) => {
                 e.stopPropagation();
-                const label = room.type === 'private' ? '‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ù‚ï§–í‚ï®‚ïõ‚ï§–í ‚ï®‚îê‚ï§–ê‚ï®‚ïï‚ï®‚ñì‚ï®‚ñë‚ï§–í‚ï®‚ïú‚ï§–õ‚ï®‚ï£ ‚ï§–ó‚ï®‚ñë‚ï§–í' : '‚ï®‚îê‚ï®‚ïõ‚ï®‚ïë‚ï®‚ïï‚ï®‚ïú‚ï§–ì‚ï§–í‚ï§–ú/‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï®‚ïï‚ï§–í‚ï§–ú ‚ï§–ù‚ï§–í‚ï§–ì ‚ï®‚ïë‚ï®‚ïõ‚ï®‚ïù‚ï®‚ïú‚ï®‚ñë‚ï§–í‚ï§–ì';
-                if (!confirm(`‚ï®–¢‚ï§–õ ‚ï§–ì‚ï®‚ñì‚ï®‚ï°‚ï§–ê‚ï®‚ï°‚ï®‚ïú‚ï§–õ, ‚ï§–ó‚ï§–í‚ï®‚ïõ ‚ï§–ï‚ï®‚ïõ‚ï§–í‚ï®‚ïï‚ï§–í‚ï®‚ï° ${label}? ‚ï®–Ω‚ï§–í‚ï®‚ïõ ‚ï®‚î§‚ï®‚ï°‚ï®‚ï£‚ï§–ë‚ï§–í‚ï®‚ñì‚ï®‚ïï‚ï®‚ï° ‚ï®‚ïú‚ï®‚ï°‚ï®‚ïõ‚ï®‚ñí‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïï‚ï®‚ïù‚ï®‚ïõ.`)) return;
+                const label = room.type === 'private' ? 'T√¶+¶-¶¨¶¨T¬TÃ TÕT¬¶-T¬ ¶¨T¿¶¨¶-¶-T¬¶-TÀ¶¶ T«¶-T¬' : '¶¨¶-¶¶¶¨¶-T√T¬TÃ/T√¶+¶-¶¨¶¨T¬TÃ TÕT¬T√ ¶¶¶-¶-¶-¶-T¬T√';
+                if (!confirm(`¶“TÀ T√¶-¶¶T¿¶¶¶-TÀ, T«T¬¶- T≈¶-T¬¶¨T¬¶¶ ${label}? ¶ÌT¬¶- ¶+¶¶¶¶T¡T¬¶-¶¨¶¶ ¶-¶¶¶-¶-T¿¶-T¬¶¨¶-¶-.`)) return;
                 try {
                     await apiRequest(`/chat/rooms/${room.id}`, 'DELETE');
                     // Remove from state and re-render
@@ -1743,9 +1743,9 @@
                         if (chatMain) chatMain.classList.remove('active');
                     }
                     renderChatRooms();
-                    addLog(`—Ç–¨–ï ‚ï®–∑‚ï®‚ñë‚ï§–í ‚ï§–ì‚ï®‚î§‚ï®‚ñë‚ï®‚ïó‚ï§–°‚ï®‚ïú`, 'success');
+                    addLog(`Ú‹≈ ¶Á¶-T¬ T√¶+¶-¶¨T—¶-`, 'success');
                 } catch (err) {
-                    addLog(`—Ç–≠–ú ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë: ${err.message}`, 'error');
+                    addLog(`Ú›Ã ¶ﬁT»¶¨¶-¶¶¶-: ${err.message}`, 'error');
                 }
             };
             div.style.position = 'relative';
@@ -1770,7 +1770,7 @@
         if (container) {
             container.innerHTML = '';
             if (!state.chat.rooms || state.chat.rooms.length === 0) {
-               container.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-dim)">‚ï®–≠‚ï®‚ï°‚ï§–í ‚ï®‚î§‚ï®‚ïõ‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê‚ï®‚ïú‚ï§–õ‚ï§–ï ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ñì</div>';
+               container.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-dim)">¶›¶¶T¬ ¶+¶-T¡T¬T√¶¨¶-TÀT≈ T«¶-T¬¶-¶-</div>';
             } else {
                 state.chat.rooms.forEach(room => {
                     const div = document.createElement('div');
@@ -1791,18 +1791,18 @@
 
     window.submitFolderCreate = async function() {
         const name = document.getElementById('folder-name-input').value.trim();
-        if (!name) return addLog('‚ï®–¢‚ï®‚ñì‚ï®‚ï°‚ï®‚î§‚ï®‚ïï‚ï§–í‚ï®‚ï° ‚ï®‚ïï‚ï®‚ïù‚ï§–ü ‚ï®‚îê‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï®‚ïï', 'error');
+        if (!name) return addLog('¶“¶-¶¶¶+¶¨T¬¶¶ ¶¨¶-Tœ ¶¨¶-¶¨¶¶¶¨', 'error');
         
         const checkboxes = document.querySelectorAll('#folder-rooms-selection input[type="checkbox"]:checked');
         const roomIds = Array.from(checkboxes).map(c => parseInt(c.value));
         
         try {
             const resp = await apiRequest('/chat/folders', 'POST', { name: name, rooms: roomIds });
-            addLog('‚ï®–Ø‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï®‚ñë ' + name + ' ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë', 'success');
+            addLog('¶ﬂ¶-¶¨¶¶¶- ' + name + ' T¡¶-¶¨¶+¶-¶-¶-', 'success');
             document.getElementById('folder-modal').style.display = 'none';
             await loadFolders();
         } catch(e) {
-            addLog('‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë ‚ï§–ë‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï®‚ïú‚ï®‚ïï‚ï§–ü ‚ï®‚îê‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï®‚ïï', 'error');
+            addLog('¶ﬁT»¶¨¶-¶¶¶- T¡¶-¶¨¶+¶-¶-¶¨Tœ ¶¨¶-¶¨¶¶¶¨', 'error');
         }
     };
 
@@ -1824,7 +1824,7 @@
         const allTab = document.createElement('div');
         allTab.className = 'folder-tab' + (state.chat.currentFolderId === 'all' ? ' active' : '');
         allTab.setAttribute('onclick', "window.selectFolder('all', this)");
-        allTab.innerText = '‚ï®–¢‚ï§–ë‚ï®‚ï° ‚ï§–ó‚ï®‚ñë‚ï§–í‚ï§–õ';
+        allTab.innerText = '¶“T¡¶¶ T«¶-T¬TÀ';
         tabsContainer.appendChild(allTab);
         
         (state.chat.folders || []).forEach(folder => {
@@ -1838,7 +1838,7 @@
         const addBtn = document.createElement('button');
         addBtn.className = 'add-folder-btn';
         addBtn.setAttribute('onclick', "window.openFolderModal()");
-        addBtn.title = "‚ï®–±‚ï®‚ïõ‚ï®‚ïñ‚ï®‚î§‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï®‚îê‚ï®‚ñë‚ï®‚îê‚ï®‚ïë‚ï§–ì";
+        addBtn.title = "¶·¶-¶¨¶+¶-T¬TÃ ¶¨¶-¶¨¶¶T√";
         addBtn.innerText = "+";
         tabsContainer.appendChild(addBtn);
         
@@ -1878,21 +1878,21 @@
         
         if (inputArea) {
             if (type === 'channel' && myRole !== 'admin') {
-                inputArea.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim); font-style:italic; background:var(--bg-black); border-top:1px solid #333; width:100%;">‚ï®–≤‚ï®‚ïõ‚ï®‚ïó‚ï§–ú‚ï®‚ïë‚ï®‚ïõ ‚ï®‚ñë‚ï®‚î§‚ï®‚ïù‚ï®‚ïï‚ï®‚ïú‚ï®‚ïï‚ï§–ë‚ï§–í‚ï§–ê‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï§–ê‚ï§–õ ‚ï®‚ïù‚ï®‚ïõ‚ï®‚îÇ‚ï§–ì‚ï§–í ‚ï®‚îê‚ï®‚ïï‚ï§–ë‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï®‚ñì ‚ï§–ù‚ï§–í‚ï®‚ïõ‚ï§–í ‚ï®‚ïë‚ï®‚ñë‚ï®‚ïú‚ï®‚ñë‚ï®‚ïó</div>`;
+                inputArea.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim); font-style:italic; background:var(--bg-black); border-top:1px solid #333; width:100%;">¶‚¶-¶¨TÃ¶¶¶- ¶-¶+¶-¶¨¶-¶¨T¡T¬T¿¶-T¬¶-T¿TÀ ¶-¶-¶¶T√T¬ ¶¨¶¨T¡¶-T¬TÃ ¶- TÕT¬¶-T¬ ¶¶¶-¶-¶-¶¨</div>`;
             } else {
                 inputArea.innerHTML = `
                     <div class="chat-capsule" style="width: 100%; box-sizing: border-box;">
-                        <button class="capsule-btn" title="‚ï®–Ø‚ï§–ê‚ï®‚ïï‚ï®‚ïë‚ï§–ê‚ï®‚ï°‚ï®‚îê‚ï®‚ïï‚ï§–í‚ï§–ú" onclick="document.getElementById('file-input').click()">
+                        <button class="capsule-btn" title="¶ﬂT¿¶¨¶¶T¿¶¶¶¨¶¨T¬TÃ" onclick="document.getElementById('file-input').click()">
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                         </button>
                         <input type="file" id="file-input" style="display:none" onchange="uploadFileAndSend()">
-                        <textarea id="chat-input" rows="1" placeholder="‚ï®–±‚ï®‚ïõ‚ï®‚ïõ‚ï®‚ñí‚ï§–ô‚ï®‚ï°‚ï®‚ïú‚ï®‚ïï‚ï®‚ï°..." oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.sendChatMessage(); }"></textarea>
+                        <textarea id="chat-input" rows="1" placeholder="¶·¶-¶-¶-T…¶¶¶-¶¨¶¶..." oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 120) + 'px';" onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); window.sendChatMessage(); }"></textarea>
                         
                         <div class="action-buttons" style="display: flex; align-items: flex-end; gap: 4px;">
-                            <button class="capsule-btn" title="‚ï®–±‚ï®‚ïù‚ï®‚ñë‚ï®‚ï£‚ï®‚ïó‚ï§–õ">
+                            <button class="capsule-btn" title="¶·¶-¶-¶¶¶¨TÀ">
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
                             </button>
-                            <button class="capsule-btn" title="‚ï®–£‚ï®‚ïõ‚ï®‚ïó‚ï®‚ïõ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï°">
+                            <button class="capsule-btn" title="¶”¶-¶¨¶-T¡¶-¶-¶-¶¶">
                                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                             </button>
                             <button class="send-circle-btn" onclick="window.sendChatMessage()">
@@ -1949,19 +1949,19 @@
                 if (sessionKey) {
                     const myFp = state.chat.keyFingerprint || '';
                     if (badge) {
-                        badge.innerHTML = `–Å–Ø–§–¢ E2EE ACTIVE`;
-                        badge.title = `‚ï®–≤‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïõ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë: ${myFp.slice(0, 23)}...`;
+                        badge.innerHTML = `®ﬂ‘“ E2EE ACTIVE`;
+                        badge.title = `¶‚¶-¶-¶¶ ¶-T¬¶¨¶¶T«¶-T¬¶-¶¶: ${myFp.slice(0, 23)}...`;
                         badge.style.color = '#0f0';
                         badge.style.background = 'rgba(0, 255, 65, 0.1)';
                         badge.style.cursor = 'pointer';
                         badge.onclick = () => {
-                            const fp = state.chat.keyFingerprint || '‚ï®‚ïú/‚ï®‚î§';
-                            alert(`–Å–Ø–§–° ‚ï®–≤‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïõ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë ‚ï®‚ïë‚ï®‚ïó‚ï§–û‚ï§–ó‚ï®‚ñë:\n${fp}\n\n‚ï®–Ø‚ï®‚ïõ‚ï®‚îê‚ï§–ê‚ï®‚ïõ‚ï§–ë‚ï®‚ïï ‚ï§–ë‚ï®‚ïõ‚ï®‚ñí‚ï®‚ï°‚ï§–ë‚ï®‚ï°‚ï®‚î§‚ï®‚ïú‚ï®‚ïï‚ï®‚ïë‚ï®‚ñë ‚ï®‚îê‚ï§–ê‚ï®‚ïõ‚ï§–ó‚ï®‚ïï‚ï§–í‚ï®‚ñë‚ï§–í‚ï§–ú ‚ï§–í‚ï®‚ï°‚ï®‚ñí‚ï®‚ï° ‚ï§–ë‚ï®‚ñì‚ï®‚ïõ‚ï®‚ï£ ‚ï®‚ïõ‚ï§–í‚ï®‚îê‚ï®‚ï°‚ï§–ó‚ï®‚ñë‚ï§–í‚ï®‚ïõ‚ï®‚ïë ‚ï®‚ñì‚ï§–ë‚ï®‚ïó‚ï§–ì‚ï§–ï —Ç–ê–§ ‚ï®‚ïõ‚ï®‚ïú‚ï®‚ïï ‚ï®‚î§‚ï®‚ïõ‚ï®‚ïó‚ï®‚ï¢‚ï®‚ïú‚ï§–õ ‚ï§–ë‚ï®‚ïõ‚ï®‚ñì‚ï®‚îê‚ï®‚ñë‚ï®‚î§‚ï®‚ñë‚ï§–í‚ï§–ú. ‚ï®–•‚ï§–ë‚ï®‚ïó‚ï®‚ïï ‚ï®‚ïú‚ï®‚ï°‚ï§–í —Ç–ê–§ ‚ï®‚ñì‚ï®‚ïõ‚ï®‚ïñ‚ï®‚ïù‚ï®‚ïõ‚ï®‚ï¢‚ï®‚ïú‚ï®‚ñë ‚ï®‚ñë‚ï§–í‚ï®‚ñë‚ï®‚ïë‚ï®‚ñë MITM.`);
+                            const fp = state.chat.keyFingerprint || '¶-/¶+';
+                            alert(`®ﬂ‘— ¶‚¶-¶-¶¶ ¶-T¬¶¨¶¶T«¶-T¬¶-¶¶ ¶¶¶¨TŒT«¶-:\n${fp}\n\n¶ﬂ¶-¶¨T¿¶-T¡¶¨ T¡¶-¶-¶¶T¡¶¶¶+¶-¶¨¶¶¶- ¶¨T¿¶-T«¶¨T¬¶-T¬TÃ T¬¶¶¶-¶¶ T¡¶-¶-¶¶ ¶-T¬¶¨¶¶T«¶-T¬¶-¶¶ ¶-T¡¶¨T√T≈ Ú¿‘ ¶-¶-¶¨ ¶+¶-¶¨¶¶¶-TÀ T¡¶-¶-¶¨¶-¶+¶-T¬TÃ. ¶’T¡¶¨¶¨ ¶-¶¶T¬ Ú¿‘ ¶-¶-¶¨¶-¶-¶¶¶-¶- ¶-T¬¶-¶¶¶- MITM.`);
                         };
                     }
                 } else {
                     if (badge) {
-                        badge.innerHTML = '—Ç–™–∞—è‚ïï–ü E2EE ‚ï®‚ïú‚ï®‚ï°‚ï®‚î§‚ï®‚ïõ‚ï§–ë‚ï§–í‚ï§–ì‚ï®‚îê‚ï®‚ï°‚ï®‚ïú';
+                        badge.innerHTML = 'Ú⁄‡ˇ¨œ E2EE ¶-¶¶¶+¶-T¡T¬T√¶¨¶¶¶-';
                         badge.style.color = '#ffaa00';
                         badge.style.background = 'rgba(255,170,0,0.1)';
                     }
@@ -1969,7 +1969,7 @@
             } catch (e) {
                 console.warn('E2EE init error:', e);
                 if (badge) {
-                    badge.innerHTML = '—Ç–™–∞—è‚ïï–ü ‚ï®–Æ‚ï§–ò‚ï®‚ïï‚ï®‚ñí‚ï®‚ïë‚ï®‚ñë E2EE';
+                    badge.innerHTML = 'Ú⁄‡ˇ¨œ ¶ﬁT»¶¨¶-¶¶¶- E2EE';
                     badge.style.color = '#f00';
                 }
             }
@@ -2019,7 +2019,7 @@
                                 m.iv
                             );
                             m.is_secure = true;
-                        } catch(e) { m.text = "[ ‚ï®–ß‚ï®–†‚ï®–∏‚ï®–®‚ï®–¥‚ï®–∞‚ï®–Æ‚ï®–¢‚ï®–†‚ï®–≠‚ï®–Æ ]"; }
+                        } catch(e) { m.text = "[ ¶◊¶–¶Ë¶ÿ¶‰¶‡¶ﬁ¶“¶–¶›¶ﬁ ]"; }
                     }
                     renderChatMessage(m);
                 }

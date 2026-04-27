@@ -362,6 +362,30 @@ class RTCManager {
             }
             
             if (window.playSound) window.playSound('alert', true);
+            
+            if (navigator.vibrate) {
+                navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
+            }
+            
+            if (window.Notification && Notification.permission === "granted") {
+                try {
+                    const callType = this.isVideoCall ? 'Видеозвонок' : 'Аудиозвонок';
+                    const notification = new Notification("Входящий вызов", {
+                        body: `Вам звонит ${name} (${callType})`,
+                        icon: '/pwa/icon-192.png',
+                        requireInteraction: true,
+                        tag: 'incoming_call',
+                        vibrate: [1000, 500, 1000, 500, 1000, 500, 1000]
+                    });
+                    notification.onclick = function() {
+                        window.focus();
+                        this.close();
+                    };
+                } catch(e) {}
+            } else if (window.Notification && Notification.permission !== "denied") {
+                Notification.requestPermission();
+            }
+            
             this.showModal('Входящий вызов...', name, avatarHtml, true);
         } else if(type === 'answer') {
             if(this.peerConnection) {
@@ -381,6 +405,7 @@ class RTCManager {
     async acceptCall() {
         if(!this.incomingOffer) return;
         if(window.stopSound) window.stopSound('alert');
+        if (navigator.vibrate) navigator.vibrate(0);
         this._callWasAnswered = true;
         // Clear any missed-call timeout (we are answering!)
         if (this._missedCallTimeout) {
@@ -613,6 +638,7 @@ class RTCManager {
 
     endCall(emit = true) {
         if(window.stopSound) window.stopSound('alert');
+        if (navigator.vibrate) navigator.vibrate(0);
         // Clear the no-answer timeout if still pending
         if (this._missedCallTimeout) {
             clearTimeout(this._missedCallTimeout);

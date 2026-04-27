@@ -214,7 +214,7 @@
                 metaDiv.style.marginBottom = '15px';
                 
                 const authorSpan = document.createElement('div');
-                authorSpan.innerHTML = `<strong style="color: var(--neon-cyan);">@${post.author}</strong> <span style="font-size: 0.85em; color: var(--text-dim); margin-left: 10px;">ID: ${post.id.substring(0,6)}</span>`;
+                authorSpan.innerHTML = `<strong style="color: var(--neon-cyan);">@${post.author}</strong> <span style="font-size: 0.85em; color: var(--text-dim); margin-left: 10px;">ID: ${String(post.id).substring(0,6)}</span>`;
                 
                 const actionsDiv = document.createElement('div');
                 actionsDiv.style.display = 'flex';
