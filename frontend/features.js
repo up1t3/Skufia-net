@@ -853,7 +853,9 @@
             const roomInList = state.chat.rooms.find(r => r.id === room.id);
             const roomName = roomInList ? roomInList.name : 'Приватный чат';
             const roomType = roomInList ? roomInList.type : 'private';
-            selectChatRoom(room.id, roomName, roomType, targetId);
+            const roomAvatar = roomInList ? roomInList.avatar_url : undefined;
+            const myRole = roomInList ? roomInList.my_role : 'member';
+            selectChatRoom(room.id, roomName, roomType, targetId, myRole, roomAvatar);
             addLog('E2EE-Канал установлен', 'success');
         } catch (e) {
             addLog('Не удалось установить соединение', 'error');

@@ -545,7 +545,7 @@ window.initChatCore = function() {
             div.appendChild(infoDiv);
             div.appendChild(statusSpan);
             div.appendChild(deleteBtn);
-            div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
+            div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role, room.avatar_url);
             list.appendChild(div);
         });
 
@@ -581,7 +581,7 @@ window.initChatCore = function() {
         renderChatRooms();
     }
 
-    async function selectChatRoom(roomId, roomName, type, receiverId, myRole) {
+    async function selectChatRoom(roomId, roomName, type, receiverId, myRole, avatarUrl) {
         const chatInput = document.getElementById('chat-input');
         if (chatInput && state.chat.currentRoomId && state.chat.currentRoomId !== roomId) {
             const currentVal = chatInput.value;
@@ -609,7 +609,11 @@ window.initChatCore = function() {
             const headerTitle = document.getElementById('chat-header-title');
             
             if (headerAvatar) {
-                headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                if (avatarUrl) {
+                    headerAvatar.innerHTML = `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                } else {
+                    headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                }
                 headerAvatar.style.background = 'transparent';
                 headerAvatar.style.color = 'transparent';
             }
@@ -1412,7 +1416,7 @@ window.initChatCore = function() {
                     const room = await apiRequest('/chat/rooms', 'POST', { name: 'Private', room_type: 'private', target_user_id: u.id });
                     addLog(room.is_existing ? 'Чат уже существует' : 'Личный чат создан', 'success');
                     await window.loadChatRooms();
-                    window.selectChatRoom(room.id, u.username, 'private', u.id, 'member');
+                    window.selectChatRoom(room.id, u.username, 'private', u.id, 'member', u.avatar_url);
                 } catch(e) {
                     addLog('Ошибка создания чата', 'error');
                 }
@@ -2317,7 +2321,7 @@ window.initChatCore = function() {
                 btn.textContent = room.room_name || room.name || 'Чат';
                 btn.onclick = () => {
                     modal.remove();
-                    window.selectChatRoom(room.id, room.room_name, room.type, room.other_user_id, room.role);
+                    window.selectChatRoom(room.id, room.room_name || room.name, room.type, room.other_user_id, room.role, room.avatar_url);
                     setTimeout(() => {
                         const input = document.getElementById('chat-input');
                         if (input) {
