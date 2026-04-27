@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1.0.6'; // Bumped to fix fetch abort on mobile keyboard collapse
+const CACHE_NAME = 'skufia-chat-v1.0.7'; // Bumped for robust cache-busting during install
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -17,7 +17,7 @@ const ASSETS_TO_CACHE = [
 
 
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); // Force the waiting service worker to become the active service worker.
+    
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then((cache) => {
@@ -41,11 +41,6 @@ self.addEventListener('activate', (event) => {
             );
         }).then(() => {
             return self.clients.claim();
-        }).then(() => {
-            // Notify all open PWA windows to reload so they pick up fresh assets
-            return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-                clientList.forEach(client => client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME }));
-            });
         })
     );
 });
@@ -204,4 +199,11 @@ self.addEventListener('pushsubscriptionchange', function(event) {
             })
             .catch(err => console.error('[SW] pushsubscriptionchange error:', err))
     );
+});
+
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
