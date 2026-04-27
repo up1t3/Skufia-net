@@ -78,3 +78,18 @@ jobs:
           # Optional pushes if customized:
           # docker push ghcr.io/$REPO_OWNER/skufia-postgres:latest || true
           # docker push ghcr.io/$REPO_OWNER/skufia-frontend:latest || true
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-docker
+    if: success()
+    steps:
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/skufia
+            bash deploy.sh

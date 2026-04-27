@@ -26,6 +26,10 @@
     <meta name="theme-color" content="#0a0e14">
 </head>
 <body data-theme="telegram">
+    <div id="pwa-update-banner" style="display: none; position: fixed; top: 0; left: 0; width: 100%; background: var(--accent-blue, #007bff); color: white; z-index: 10000; padding: 10px 20px; box-sizing: border-box; align-items: center; justify-content: space-between; font-family: 'Inter', sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <div>Доступно обновление приложения.</div>
+        <button id="pwa-update-btn" style="background: white; color: var(--accent-blue, #007bff); border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Обновить</button>
+    </div>
     <div class="crt-overlay"></div>
     <div class="scanline"></div>
 
@@ -961,7 +965,7 @@
 
         <footer class="system-footer">
             <div class="footer-left">CONN: SECURE // PROTOCOL: SKUF_NET_v2</div>
-            <div class="footer-right">© 2000-2026 SKUFIA ENTERPRISE SYSTEMS</div>
+            <div class="footer-right">© 2000-2026 SKUFIA ENTERPRISE SYSTEMS | <span id="app-version">v1.0.6</span></div>
         </footer>
     </div>
     

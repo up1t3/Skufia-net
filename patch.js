@@ -1,198 +1,64 @@
 const fs = require('fs');
-let content = fs.readFileSync('frontend/app.js', 'utf8');
+let code = fs.readFileSync('frontend/app.js', 'utf8');
+const startTag = "navigator.serviceWorker.addEventListener('message'";
+const endTag = "// Push Notifications Logic";
 
-// 1. Update state
-content = content.replace('sessionKeys: {} // Map of roomId -> CryptoKey (AES)', 
-                          'sessionKeys: {}, // Map of roomId -> CryptoKey (AES)\n            currentFolderId: \'all\',\n            folders: []');
+const startIdx = code.indexOf(startTag);
+if (startIdx !== -1) {
+    let before = code.substring(0, startIdx);
+    // Find the end of the block
+    let rest = code.substring(startIdx);
+    let endIdx = rest.indexOf(endTag);
+    if (endIdx !== -1) {
+        let after = rest.substring(endIdx);
+        // Replace the block
+        let replacement = `let refreshing = false;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (!refreshing) {
+                    refreshing = true;
+                    window.location.reload();
+                }
+            });
 
-// 2. Update switchView
-content = content.replace("if (viewId === 'messages') loadChatRooms();", 
-                          "if (viewId === 'messages') { loadChatRooms(); if (window.loadFolders) window.loadFolders(); }");
-
-// 3. Add Folders logic and rewrite loadChatRooms
-let RegExpToMatch = /async function loadChatRooms\(\) \{[\s\S]*?catch \(e\) \{ addLog\('Failed to load chat channels', 'error'\); \}\s*\}/;
-let match = content.match(RegExpToMatch);
-if (match) {
-    let original = match[0];
-    let replacement = `async function loadChatRooms() {
-        const list = document.getElementById('chat-rooms-list');
-        if (!list) return;
-        try {
-            const rooms = await apiRequest('/chat/rooms');
-            state.chat.rooms = rooms;
-            renderChatRooms();
-        } catch (e) { addLog('Failed to load chat channels', 'error'); }
-    }
-
-    function renderChatRooms() {
-        const list = document.getElementById('chat-rooms-list');
-        if (!list) return;
-        list.innerHTML = '';
-        
-        let roomsToRender = state.chat.rooms || [];
-        if (state.chat.currentFolderId !== 'all') {
-            const folder = state.chat.folders.find(f => f.id == state.chat.currentFolderId);
-            if (folder && folder.rooms) {
-                roomsToRender = roomsToRender.filter(r => folder.rooms.includes(r.id));
-            }
-        }
-
-        // @ts-ignore
-        roomsToRender.forEach(room => {
-            const div = document.createElement('div');
-            div.className = \`sidebar-item \${state.chat.currentRoomId === room.id ? 'active' : ''}\`;
-            div.dataset.name = (room.name || '').toLowerCase();
-            
-            const avatarDiv = document.createElement('div');
-            avatarDiv.className = 'sidebar-item-avatar';
-            
-            if (room.avatar_url) {
-                const img = document.createElement('img');
-                img.src = room.avatar_url;
-                img.alt = 'AV';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                avatarDiv.appendChild(img);
-            } else {
-                const initial = room.name ? room.name.charAt(0).toUpperCase() : '?';
-                avatarDiv.textContent = initial;
-                avatarDiv.classList.add('dynamic-avatar');
-                const charCode = initial.charCodeAt(0) || 0;
-                const hue = (charCode * 137) % 360;
-                avatarDiv.style.background = \`linear-gradient(135deg, hsl(\${hue}, 70%, 50%), hsl(\${hue}, 80%, 30%))\`;
-                avatarDiv.style.color = '#fff';
-                avatarDiv.style.display = 'flex';
-                avatarDiv.style.alignItems = 'center';
-                avatarDiv.style.justifyContent = 'center';
-                avatarDiv.style.fontSize = '20px';
-                avatarDiv.style.fontWeight = 'bold';
-                avatarDiv.style.textShadow = '0 1px 3px rgba(0,0,0,0.5)';
+            function showUpdateBanner(worker) {
+                const banner = document.getElementById('pwa-update-banner');
+                const btn = document.getElementById('pwa-update-btn');
+                if (banner && btn) {
+                    banner.style.display = 'flex';
+                    btn.onclick = () => {
+                        banner.style.display = 'none';
+                        worker.postMessage({ type: 'SKIP_WAITING' });
+                    };
+                }
             }
 
-            const infoDiv = document.createElement('div');
-            infoDiv.className = 'sidebar-item-info';
-
-            const nameDiv = document.createElement('div');
-            nameDiv.className = 'sidebar-item-name';
-            nameDiv.textContent = room.name;
-
-            const lastMsgDiv = document.createElement('div');
-            lastMsgDiv.className = 'sidebar-item-last-msg';
-            lastMsgDiv.textContent = room.last_message || 'Нет сообщений';
-
-            infoDiv.appendChild(nameDiv);
-            infoDiv.appendChild(lastMsgDiv);
-
-            const statusSpan = document.createElement('span');
-            statusSpan.className = \`status-dot \${room.is_online ? 'online' : ''}\`;
-            statusSpan.style.display = 'none';
-
-            div.appendChild(avatarDiv);
-            div.appendChild(infoDiv);
-            div.appendChild(statusSpan);
-            div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role);
-            list.appendChild(div);
-        });
-    }
-
-    // --- FOLDERS LOGIC ---
-    window.openFolderModal = function() {
-        const input = document.getElementById('folder-name-input');
-        if(input) input.value = '';
-        const container = document.getElementById('folder-rooms-selection');
-        if (container) {
-            container.innerHTML = '';
-            if (!state.chat.rooms || state.chat.rooms.length === 0) {
-               container.innerHTML = '<div style="padding:10px;text-align:center;color:var(--text-dim)">Нет доступных чатов</div>';
-            } else {
-                state.chat.rooms.forEach(room => {
-                    const div = document.createElement('div');
-                    div.style.display = 'flex';
-                    div.style.alignItems = 'center';
-                    div.style.gap = '10px';
-                    div.style.padding = '8px';
-                    div.style.borderBottom = '1px solid var(--border-metal)';
-                    
-                    div.innerHTML = \`<input type="checkbox" id="folder-room-\${room.id}" value="\${room.id}" style="width:16px; height:16px; cursor:pointer;">
-                        <label for="folder-room-\${room.id}" style="color:var(--text-main); cursor:pointer;">\${room.name}</label>\`;
-                    container.appendChild(div);
+            navigator.serviceWorker.ready.then(reg => {
+                if (reg.waiting) {
+                    showUpdateBanner(reg.waiting);
+                }
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdateBanner(newWorker);
+                        }
+                    });
                 });
-            }
-        }
-        document.getElementById('folder-modal').style.display = 'flex';
-    };
-
-    window.submitFolderCreate = async function() {
-        const name = document.getElementById('folder-name-input').value.trim();
-        if (!name) return addLog('Введите имя папки', 'error');
-        
-        const checkboxes = document.querySelectorAll('#folder-rooms-selection input[type="checkbox"]:checked');
-        const roomIds = Array.from(checkboxes).map(c => parseInt(c.value));
-        
-        try {
-            const resp = await apiRequest('/chat/folders', 'POST', { name: name, room_ids: roomIds });
-            addLog('Папка ' + name + ' создана', 'success');
-            document.getElementById('folder-modal').style.display = 'none';
-            await loadFolders();
-        } catch(e) {
-            addLog('Ошибка создания папки', 'error');
-        }
-    };
-
-    window.loadFolders = async function() {
-        try {
-            state.chat.folders = await apiRequest('/chat/folders');
-            renderFoldersTabs();
-        } catch(e) {
-            console.error('Failed to load folders:', e);
+            });
         }
     }
 
-    function renderFoldersTabs() {
-        const tabsContainer = document.getElementById('chat-folders-tabs');
-        if (!tabsContainer) return;
+    `;
         
-        tabsContainer.innerHTML = '';
+        // Remove the preceding comments from before
+        let beforeTrimmed = before.replace(/\/\/ Auto-reload when a new SW activates with a fresh cache\s*\/\/ This prevents the PWA from running stale broken JS after an update\s*$/, '');
         
-        const allTab = document.createElement('div');
-        allTab.className = 'folder-tab' + (state.chat.currentFolderId === 'all' ? ' active' : '');
-        allTab.setAttribute('onclick', "window.selectFolder('all', this)");
-        allTab.innerText = 'Все чаты';
-        tabsContainer.appendChild(allTab);
-        
-        (state.chat.folders || []).forEach(folder => {
-             const fTab = document.createElement('div');
-             fTab.className = 'folder-tab' + (state.chat.currentFolderId == folder.id ? ' active' : '');
-             fTab.setAttribute('onclick', "window.selectFolder(" + folder.id + ", this)");
-             fTab.innerText = folder.name;
-             tabsContainer.appendChild(fTab);
-        });
-        
-        const addBtn = document.createElement('button');
-        addBtn.className = 'add-folder-btn';
-        addBtn.setAttribute('onclick', "window.openFolderModal()");
-        addBtn.title = "Создать папку";
-        addBtn.innerText = "+";
-        tabsContainer.appendChild(addBtn);
-        
-        renderChatRooms();
+        let newCode = beforeTrimmed + replacement + after;
+        fs.writeFileSync('frontend/app.js', newCode);
+        console.log("Patched app.js successfully");
+    } else {
+        console.log("end tag not found");
     }
-
-    window.selectFolder = function(folderId, element) {
-        state.chat.currentFolderId = folderId;
-        const tabs = document.querySelectorAll('#chat-folders-tabs .folder-tab');
-        tabs.forEach(t => t.classList.remove('active'));
-        if (element) element.classList.add('active');
-        renderChatRooms();
-    };`;
-    content = content.replace(original, replacement);
-    
-    // global exports
-    content = content.replace('window.loadChatRooms = loadChatRooms;', 'window.loadChatRooms = loadChatRooms;\n    window.loadFolders = loadFolders;\n    window.renderChatRooms = renderChatRooms;');
-    
-    fs.writeFileSync('frontend/app.js', content, 'utf8');
-    console.log('Successfully patched app.js');
 } else {
-    console.log('Regex failed to match');
+    console.log("start tag not found");
 }
