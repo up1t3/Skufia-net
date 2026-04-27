@@ -26,6 +26,7 @@ from auth import get_current_user, oauth2_scheme
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from schemas import CategoryResponse, TopicResponse, PostResponse
 
 router = APIRouter()
 
@@ -138,11 +139,20 @@ def update_karma(db: Session, user_id: int, amount: int = 10):
 
 
 # --- FORUM MODULE ---
-@router.get('/topics', response_model=List[dict])
-def list_topics(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@router.get('/categories', response_model=List[CategoryResponse])
+def list_categories(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Lists all forum categories"""
+    categories = db.query(Category).order_by(Category.order.asc()).all()
+    return categories
+
+@router.get('/topics', response_model=List[TopicResponse])
+def list_topics(category_id: Optional[int] = None, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Lists all active transmissions (topics) in the forum"""
-    topics = db.query(Topic).order_by(Topic.created_at.desc()).all()
-    return [{"id": t.id, "title": t.title, "author": get_display_name(t.author), "created_at": t.created_at} for t in topics]
+    query = db.query(Topic)
+    if category_id:
+        query = query.filter(Topic.category_id == category_id)
+    topics = query.order_by(Topic.created_at.desc()).all()
+    return [{"id": t.id, "title": t.title, "author": get_display_name(t.author), "created_at": t.created_at, "category_id": t.category_id} for t in topics]
 
 @router.post('/topics')
 def create_topic(topic: TopicCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
@@ -154,7 +164,7 @@ def create_topic(topic: TopicCreate, current_user: User = Depends(get_current_us
     update_karma(db, current_user.id, amount=10)
     return {"id": db_topic.id, "status": "Carrier signal established. Topic live."}
 
-@router.get('/topics/{topic_id}/posts')
+@router.get('/topics/{topic_id}/posts', response_model=List[PostResponse])
 def get_posts(topic_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Retrieves all posts for a forum topic with like counts"""
     posts = db.query(Post).filter(Post.topic_id == topic_id).all()

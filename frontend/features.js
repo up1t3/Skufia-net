@@ -11,14 +11,113 @@
         container.style.flexDirection = 'column';
         container.style.gap = '15px';
         
-        container.innerHTML = '<div class="system-msg" style="animation: pulse 1.5s infinite;">Scanning forum sectors...</div>';
+        container.innerHTML = '<div class="system-msg" style="animation: pulse 1.5s infinite;">Сканирование секторов форума...</div>';
         try {
-            const data = await apiRequest('/topics'); 
+            const categories = await apiRequest('/categories'); 
             container.innerHTML = '';
-            if (data.length === 0) {
-                container.innerHTML = '<div class="system-msg">No active transmissions found in this sector.</div>';
+            
+            // Add "All topics" header or just categories
+            const headerDiv = document.createElement('div');
+            headerDiv.style.marginBottom = '10px';
+            headerDiv.style.borderBottom = '1px solid var(--border-metal)';
+            headerDiv.style.paddingBottom = '10px';
+            headerDiv.innerHTML = '<h3 style="margin: 0; color: var(--text-main);">РАЗДЕЛЫ ФОРУМА</h3>';
+            container.appendChild(headerDiv);
+
+            if (!categories || categories.length === 0) {
+                container.innerHTML += '<div class="system-msg">No active sectors found.</div>';
+                
+                // Fallback to all topics if no categories
+                const btnDiv = document.createElement('div');
+                btnDiv.innerHTML = '<button class="cyber-btn-small" onclick="loadCategoryTopics(null, \'Все темы\')">Посмотреть все темы</button>';
+                container.appendChild(btnDiv);
                 return;
             }
+            
+            categories.forEach(cat => {
+                const div = document.createElement('div');
+                div.className = 'forum-item glass-panel';
+                div.style.cursor = 'pointer';
+                div.style.padding = '15px 20px';
+                div.style.borderRadius = '12px';
+                div.style.borderLeft = '4px solid var(--accent-cyan)';
+                div.style.transition = 'transform 0.2s, box-shadow 0.2s';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                
+                div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 5px 15px rgba(0, 242, 255, 0.15)'; };
+                div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
+                div.onclick = () => loadCategoryTopics(cat.id, cat.name);
+
+                const infoDiv = document.createElement('div');
+                const strong = document.createElement('strong');
+                strong.textContent = cat.name;
+                strong.style.display = 'block';
+                strong.style.fontSize = '1.1em';
+                strong.style.color = 'var(--text-main)';
+                strong.style.marginBottom = '5px';
+                
+                const span = document.createElement('span');
+                span.className = 'msg-meta';
+                span.innerHTML = `<span style="color: var(--text-dim);">${cat.description || ''}</span>`;
+                
+                infoDiv.appendChild(strong);
+                infoDiv.appendChild(span);
+                
+                const arrow = document.createElement('div');
+                arrow.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" stroke="var(--accent-cyan)" stroke-width="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+                
+                div.appendChild(infoDiv);
+                div.appendChild(arrow);
+                container.appendChild(div);
+            });
+            
+            // Add a button to view all topics
+            const allTopicsBtn = document.createElement('button');
+            allTopicsBtn.className = 'cyber-btn';
+            allTopicsBtn.style.marginTop = '10px';
+            allTopicsBtn.innerText = 'ВСЕ ТЕМЫ СЕТИ';
+            allTopicsBtn.onclick = () => loadCategoryTopics(null, 'Все темы');
+            container.appendChild(allTopicsBtn);
+            
+        } catch (e) { 
+            console.error("Forum Categories Error:", e);
+            container.innerHTML = `<div class="system-msg">ERROR: Не удалось синхронизировать данные форума. Подробности: ${e.message || 'Неизвестная ошибка'}</div>`; 
+        }
+    }
+
+    window.loadCategoryTopics = async function(categoryId, categoryName) {
+        const container = document.getElementById('forum-list');
+        if (!container) return;
+        
+        container.innerHTML = '<div class="system-msg" style="animation: pulse 1.5s infinite;">Перехват сигналов...</div>';
+        
+        try {
+            const url = categoryId ? `/topics?category_id=${categoryId}` : '/topics';
+            const data = await apiRequest(url); 
+            container.innerHTML = '';
+            
+            const headerDiv = document.createElement('div');
+            headerDiv.style.display = 'flex';
+            headerDiv.style.alignItems = 'center';
+            headerDiv.style.gap = '15px';
+            headerDiv.style.marginBottom = '15px';
+            headerDiv.style.borderBottom = '1px solid var(--border-metal)';
+            headerDiv.style.paddingBottom = '15px';
+            headerDiv.innerHTML = `
+                <button class="cyber-btn-small" onclick="loadForum()" style="display: flex; align-items: center; gap: 5px;">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> РАЗДЕЛЫ
+                </button>
+                <h3 style="margin: 0; color: var(--text-main);">${categoryName}</h3>
+            `;
+            container.appendChild(headerDiv);
+
+            if (!data || data.length === 0) {
+                container.innerHTML += '<div class="system-msg">Нет активных тем в данном разделе.</div>';
+                return;
+            }
+            
             data.forEach(topic => {
                 const div = document.createElement('div');
                 div.className = 'forum-item glass-panel';
@@ -45,7 +144,8 @@
                 
                 const span = document.createElement('span');
                 span.className = 'msg-meta';
-                span.innerHTML = `<span style="color: var(--accent-cyan);">@${topic.author}</span> • Ожидает ответов`;
+                const dateStr = new Date(topic.created_at).toLocaleDateString();
+                span.innerHTML = `<span style="color: var(--accent-cyan);">@${topic.author}</span> • ${dateStr}`;
                 
                 infoDiv.appendChild(strong);
                 infoDiv.appendChild(span);
@@ -57,7 +157,10 @@
                 div.appendChild(arrow);
                 container.appendChild(div);
             });
-        } catch (e) { container.innerHTML = '<div class="system-msg">ERROR: Unable to synchronize forum data.</div>'; }
+        } catch (e) { 
+            console.error("Topics Load Error:", e);
+            container.innerHTML = `<div class="system-msg">ERROR: Сбой загрузки тем. Подробности: ${e.message || 'Неизвестная ошибка'}</div>`; 
+        }
     }
 
     async function loadTopicPosts(topicId, title) {
@@ -188,90 +291,146 @@
 
     // --- MODULE: WIKI ---
     async function loadWiki() {
-        const container = document.querySelector('.wiki-content');
+        const container = document.querySelector('.wiki-layout');
         if (!container) return;
+        
         try {
+            // Setup two-column layout
             const articles = await apiRequest('/wiki');
-            container.innerHTML = '';
-            if (articles.length === 0) {
-                container.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: Поиск данных не дал результатов.</div>';
-                return;
-            }
-            container.style.display = 'flex';
-            container.style.flexDirection = 'column';
-            container.style.gap = '15px';
             
+            // Group articles by category
+            const categories = {};
             articles.forEach(art => {
-                const div = document.createElement('div');
-                div.className = 'wiki-card glass-panel';
-                div.style.padding = '20px';
-                div.style.borderRadius = '12px';
-                div.style.borderLeft = '4px solid #f0b429';
-                div.style.display = 'flex';
-                div.style.flexDirection = 'column';
-                div.style.gap = '10px';
-                div.style.transition = 'transform 0.2s, box-shadow 0.2s';
-                
-                div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 5px 15px rgba(240, 180, 41, 0.15)'; };
-                div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
-
-                const headerRow = document.createElement('div');
-                headerRow.style.display = 'flex';
-                headerRow.style.justifyContent = 'space-between';
-                headerRow.style.alignItems = 'flex-start';
-
-                const h3 = document.createElement('h3');
-                h3.textContent = art.title;
-                h3.style.margin = '0';
-                h3.style.color = 'var(--text-main)';
-                h3.style.fontSize = '1.2em';
-
-                const metaDiv = document.createElement('div');
-                metaDiv.style.display = 'flex';
-                metaDiv.style.alignItems = 'center';
-                metaDiv.style.gap = '8px';
-
-                const likesSpan = document.createElement('span');
-                likesSpan.id = `wiki-likes-${art.id}`;
-                likesSpan.style.color = 'var(--accent-green)';
-                likesSpan.style.fontWeight = 'bold';
-                likesSpan.textContent = art.likes || 0;
-
-                const likeBtn = document.createElement('button');
-                likeBtn.className = 'cyber-btn-small';
-                likeBtn.innerHTML = '👍 +1';
-                likeBtn.onclick = (e) => { e.stopPropagation(); likeWiki(art.id); };
-
-                metaDiv.appendChild(likesSpan);
-                metaDiv.appendChild(likeBtn);
-
-                headerRow.appendChild(h3);
-                headerRow.appendChild(metaDiv);
-
-                const p = document.createElement('p');
-                p.className = 'wiki-excerpt';
-                p.style.margin = '0';
-                p.style.color = 'var(--text-dim)';
-                p.style.lineHeight = '1.5';
-                p.textContent = art.content ? art.content.substring(0, 150) + '...' : 'Контент засекречен';
-
-                const openBtn = document.createElement('button');
-                openBtn.className = 'cyber-btn-small';
-                openBtn.style.alignSelf = 'flex-start';
-                openBtn.style.marginTop = '5px';
-                openBtn.style.border = '1px solid #f0b429';
-                openBtn.style.color = '#f0b429';
-                openBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: middle; margin-right: 5px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>ЧИТАТЬ ДОКУМЕНТ';
-                openBtn.onclick = () => loadWikiArticle(art.id);
-
-                div.appendChild(headerRow);
-                div.appendChild(p);
-                div.appendChild(openBtn);
-                container.appendChild(div);
+                const cat = art.category || 'Общее';
+                if (!categories[cat]) categories[cat] = [];
+                categories[cat].push(art);
             });
+            
+            // Generate Sidebar HTML
+            let sidebarHTML = '<h4>Категории</h4><ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 10px;">';
+            Object.keys(categories).sort().forEach(cat => {
+                sidebarHTML += `
+                    <li>
+                        <button class="cyber-btn-small" style="width: 100%; text-align: left; background: transparent; border-color: var(--border-metal); color: var(--text-main);" onclick="renderWikiCategory('${cat}')">${cat} (${categories[cat].length})</button>
+                    </li>
+                `;
+            });
+            sidebarHTML += '</ul>';
+            
+            const sidebar = container.querySelector('.wiki-sidebar');
+            if (sidebar) sidebar.innerHTML = sidebarHTML;
+            
+            // Store globally for category switching
+            window.wikiCategoriesData = categories;
+            
+            // Render first category by default if exists
+            const firstCategory = Object.keys(categories).sort()[0];
+            if (firstCategory) {
+                renderWikiCategory(firstCategory);
+            } else {
+                const content = container.querySelector('.wiki-content');
+                if (content) content.innerHTML = '<div class="system-msg">LIBRARY_EMPTY: Поиск данных не дал результатов.</div>';
+            }
+            
         } catch (e) {
-            container.innerHTML = '<div class="system-msg">ERROR: Wiki access failed.</div>';
+            console.error("Wiki Load Error:", e);
+            const content = container.querySelector('.wiki-content');
+            if (content) content.innerHTML = `<div class="system-msg">ERROR: Wiki access failed. Подробности: ${e.message || 'Неизвестная ошибка'}</div>`;
         }
+    }
+    
+    window.renderWikiCategory = function(categoryName) {
+        const container = document.querySelector('.wiki-content');
+        if (!container || !window.wikiCategoriesData) return;
+        
+        const articles = window.wikiCategoriesData[categoryName] || [];
+        
+        container.innerHTML = `
+            <div style="margin-bottom: 20px; border-bottom: 1px solid var(--border-metal); padding-bottom: 10px;">
+                <h3 style="margin: 0; color: #f0b429;">${categoryName}</h3>
+            </div>
+        `;
+        
+        if (articles.length === 0) {
+            container.innerHTML += '<div class="system-msg">В данной категории нет статей.</div>';
+            return;
+        }
+        
+        const listDiv = document.createElement('div');
+        listDiv.style.display = 'flex';
+        listDiv.style.flexDirection = 'column';
+        listDiv.style.gap = '15px';
+        
+        articles.forEach(art => {
+            const div = document.createElement('div');
+            div.className = 'wiki-card glass-panel';
+            div.style.padding = '20px';
+            div.style.borderRadius = '12px';
+            div.style.borderLeft = '4px solid #f0b429';
+            div.style.display = 'flex';
+            div.style.flexDirection = 'column';
+            div.style.gap = '10px';
+            div.style.transition = 'transform 0.2s, box-shadow 0.2s';
+            
+            div.onmouseover = () => { div.style.transform = 'translateY(-2px)'; div.style.boxShadow = '0 5px 15px rgba(240, 180, 41, 0.15)'; };
+            div.onmouseout = () => { div.style.transform = 'translateY(0)'; div.style.boxShadow = 'none'; };
+
+            const headerRow = document.createElement('div');
+            headerRow.style.display = 'flex';
+            headerRow.style.justifyContent = 'space-between';
+            headerRow.style.alignItems = 'flex-start';
+
+            const h3 = document.createElement('h3');
+            h3.textContent = art.title;
+            h3.style.margin = '0';
+            h3.style.color = 'var(--text-main)';
+            h3.style.fontSize = '1.2em';
+
+            const metaDiv = document.createElement('div');
+            metaDiv.style.display = 'flex';
+            metaDiv.style.alignItems = 'center';
+            metaDiv.style.gap = '8px';
+
+            const likesSpan = document.createElement('span');
+            likesSpan.id = `wiki-likes-${art.id}`;
+            likesSpan.style.color = 'var(--accent-green)';
+            likesSpan.style.fontWeight = 'bold';
+            likesSpan.textContent = art.likes || 0;
+
+            const likeBtn = document.createElement('button');
+            likeBtn.className = 'cyber-btn-small';
+            likeBtn.innerHTML = '👍 +1';
+            likeBtn.onclick = (e) => { e.stopPropagation(); likeWiki(art.id); };
+
+            metaDiv.appendChild(likesSpan);
+            metaDiv.appendChild(likeBtn);
+
+            headerRow.appendChild(h3);
+            headerRow.appendChild(metaDiv);
+
+            const p = document.createElement('p');
+            p.className = 'wiki-excerpt';
+            p.style.margin = '0';
+            p.style.color = 'var(--text-dim)';
+            p.style.lineHeight = '1.5';
+            p.textContent = art.content ? art.content.substring(0, 150) + '...' : 'Контент засекречен';
+
+            const openBtn = document.createElement('button');
+            openBtn.className = 'cyber-btn-small';
+            openBtn.style.alignSelf = 'flex-start';
+            openBtn.style.marginTop = '5px';
+            openBtn.style.border = '1px solid #f0b429';
+            openBtn.style.color = '#f0b429';
+            openBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="vertical-align: middle; margin-right: 5px;"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>ЧИТАТЬ ДОКУМЕНТ';
+            openBtn.onclick = () => loadWikiArticle(art.id);
+
+            div.appendChild(headerRow);
+            div.appendChild(p);
+            div.appendChild(openBtn);
+            listDiv.appendChild(div);
+        });
+        
+        container.appendChild(listDiv);
     }
 
     // @ts-ignore

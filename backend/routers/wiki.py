@@ -26,6 +26,7 @@ from auth import get_current_user, oauth2_scheme
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from schemas import WikiArticleResponse
 
 router = APIRouter()
 
@@ -39,6 +40,7 @@ def get_display_name(user: User):
 class WikiCreate(BaseModel):
     title: str
     content: str
+    category: str = "Общее"
 
 class TopicCreate(BaseModel):
     title: str
@@ -138,7 +140,7 @@ def update_karma(db: Session, user_id: int, amount: int = 10):
 
 
 # --- WIKI MODULE ---
-@router.get('/wiki', response_model=List[dict])
+@router.get('/wiki', response_model=List[WikiArticleResponse])
 def get_wiki(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     articles = db.query(WikiArticle).all()
     articles_data = []
@@ -148,13 +150,16 @@ def get_wiki(current_user: User = Depends(get_current_user), db: Session = Depen
             "id": a.id, 
             "title": a.title, 
             "content": a.content or "",
+            "category": getattr(a, 'category', "Общее"),
             "author": a.author_id, 
             "likes": likes_count,
-            "is_verified": a.is_verified
+            "is_verified": a.is_verified,
+            "created_at": a.created_at,
+            "updated_at": a.updated_at
         })
     return articles_data
 
-@router.get('/wiki/{article_id}', response_model=dict)
+@router.get('/wiki/{article_id}', response_model=WikiArticleResponse)
 def get_wiki_detail(article_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Fetches full article data from the Cyber-Industrial archives."""
     article = db.query(WikiArticle).filter(WikiArticle.id == article_id).first()
@@ -165,9 +170,12 @@ def get_wiki_detail(article_id: int, current_user: User = Depends(get_current_us
         "id": article.id, 
         "title": article.title, 
         "content": article.content,
+        "category": getattr(article, 'category', "Общее"),
         "author": article.author_id, 
         "likes": likes_count,
-        "is_verified": article.is_verified
+        "is_verified": article.is_verified,
+        "created_at": article.created_at,
+        "updated_at": article.updated_at
     }
 
 @router.post('/wiki/{article_id}/like')
