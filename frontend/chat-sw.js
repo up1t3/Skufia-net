@@ -174,7 +174,18 @@ self.addEventListener('notificationclick', function(event) {
             }
             // No window open - open messenger
             if (clients.openWindow) {
-                const url = notifData.roomId ? `/messenger.html#room=${notifData.roomId}` : '/messenger.html';
+                let url = notifData.roomId ? `/messenger.html#room=${notifData.roomId}` : '/messenger.html';
+                
+                if (notifData.action === 'call') {
+                    if (event.action === 'decline') {
+                        // User declined and app is closed -> let server timeout handle the missed call
+                        return;
+                    }
+                    // If accepted, action=accept. If just clicked the notification body, action=open
+                    const act = event.action === 'accept' ? 'accept' : 'open';
+                    url = `/messenger.html#call_action=${act}&caller_id=${notifData.sender_id}`;
+                }
+                
                 return clients.openWindow(url);
             }
         })

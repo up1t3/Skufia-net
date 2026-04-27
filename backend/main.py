@@ -238,31 +238,48 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                         finally:
                                             db.close()
                                 
-                                pending_rtc_calls[call_key] = asyncio.create_task(missed_call_timeout(user_id, target_id))
+                                task = asyncio.create_task(missed_call_timeout(user_id, target_id))
+                                pending_rtc_calls[call_key] = {
+                                    "task": task,
+                                    "offer": data.get('payload')
+                                }
 
-                                # Trigger Web Push if target is not connected
-                                if target_id not in manager.active_connections:
-                                    from ws_manager import trigger_web_push
-                                    db = SessionLocal()
-                                    from database import User
-                                    sender_user = db.query(User).filter(User.id == user_id).first()
-                                    sender_name = sender_user.profile.nickname if sender_user and sender_user.profile else "Пользователь"
-                                    db.close()
-                                    push_payload = {
-                                        "title": f"Входящий видеозвонок",
-                                        "body": f"Вам звонит {sender_name}. Нажмите, чтобы ответить.",
-                                        "data": {"action": "call", "sender_id": user_id}
-                                    }
-                                    asyncio.create_task(trigger_web_push(target_id, push_payload))
+                                # ALWAYS Trigger Web Push for calls to ensure background delivery
+                                from ws_manager import trigger_web_push
+                                db = SessionLocal()
+                                from database import User
+                                sender_user = db.query(User).filter(User.id == user_id).first()
+                                sender_name = sender_user.profile.nickname if sender_user and sender_user.profile else "Пользователь"
+                                db.close()
+                                push_payload = {
+                                    "title": f"Входящий видеозвонок",
+                                    "body": f"Вам звонит {sender_name}. Нажмите, чтобы ответить.",
+                                    "data": {"action": "call", "sender_id": user_id}
+                                }
+                                asyncio.create_task(trigger_web_push(target_id, push_payload))
                                     
-                            if data.get('signal_type') in ['answer', 'end', 'reject']:
+                            elif data.get('signal_type') == 'request_offer':
+                                # Receiver is asking for the cached offer (after waking up from push)
+                                call_key = f"{target_id}_{user_id}" # caller is target_id, receiver is user_id
+                                if call_key in pending_rtc_calls:
+                                    cached_offer = pending_rtc_calls[call_key].get('offer')
+                                    if cached_offer:
+                                        offer_msg = {
+                                            "type": "rtc_signal",
+                                            "sender_id": target_id,
+                                            "signal_type": "offer",
+                                            "payload": cached_offer
+                                        }
+                                        await manager.send_personal_message(offer_msg, user_id)
+                                        
+                            elif data.get('signal_type') in ['answer', 'end', 'reject']:
                                 call_key = f"{target_id}_{user_id}"
                                 if call_key in pending_rtc_calls:
-                                    pending_rtc_calls[call_key].cancel()
+                                    pending_rtc_calls[call_key]["task"].cancel()
                                     del pending_rtc_calls[call_key]
                                 call_key_self = f"{user_id}_{target_id}"
                                 if call_key_self in pending_rtc_calls:
-                                    pending_rtc_calls[call_key_self].cancel()
+                                    pending_rtc_calls[call_key_self]["task"].cancel()
                                     del pending_rtc_calls[call_key_self]
                     elif data.get('type') == 'typing_indicator':
                         target_id = data.get('target')

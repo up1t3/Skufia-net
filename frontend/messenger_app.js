@@ -283,6 +283,25 @@ document.addEventListener('DOMContentLoaded', () => {
             
             console.log('--- SYSTEM BOOT COMPLETE ---');
 
+            // --- CHECK FOR BACKGROUND CALL INTENT ---
+            if (window.location.hash.includes('call_action=')) {
+                const params = new URLSearchParams(window.location.hash.substring(1));
+                const action = params.get('call_action');
+                const callerId = params.get('caller_id');
+                if (callerId) {
+                    window.history.replaceState(null, '', window.location.pathname); // Clean URL
+                    if (action === 'accept' || action === 'open') {
+                        if (window.RTCManagerInstance) {
+                            if (action === 'accept') window.RTCManagerInstance.autoAcceptCallerId = parseInt(callerId, 10);
+                            // Wait briefly for WS to be fully ready before requesting offer
+                            setTimeout(() => {
+                                window.sendSocketEvent('rtc_signal', { target: parseInt(callerId, 10), signal_type: 'request_offer' });
+                            }, 500); 
+                        }
+                    }
+                }
+            }
+
             // Integrity check before showing the app
             const roomsList = document.getElementById('chat-rooms-list');
             if (roomsList && roomsList.children.length === 0) {
@@ -328,6 +347,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             updateBanner.style.cssText = 'position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%); z-index: 999999; transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: max-content; max-width: 95vw;';
                             document.body.appendChild(updateBanner);
                             setTimeout(() => { updateBanner.style.bottom = '30px'; }, 100);
+                        }
+                    } else if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+                        const notifData = event.data.data;
+                        const action = event.data.action;
+                        if (notifData && notifData.action === 'call') {
+                            const callerId = parseInt(notifData.sender_id, 10);
+                            if (action === 'accept' || action === '') {
+                                if (window.RTCManagerInstance) {
+                                    if (action === 'accept') window.RTCManagerInstance.autoAcceptCallerId = callerId;
+                                    window.sendSocketEvent('rtc_signal', { target: callerId, signal_type: 'request_offer' });
+                                }
+                            } else if (action === 'decline') {
+                                window.sendSocketEvent('rtc_signal', { target: callerId, signal_type: 'reject' });
+                                if (window.RTCManagerInstance) window.RTCManagerInstance.endCall(false);
+                            }
                         }
                     }
                 });

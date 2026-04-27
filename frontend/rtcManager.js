@@ -234,6 +234,7 @@ class RTCManager {
         this.timerInterval = null;
         this.callStartTime = null;
         this.isMinimized = false;
+        this.autoAcceptCallerId = null;
         
         // Buttons
         document.getElementById('rtc-accept-btn').addEventListener('click', () => this.acceptCall());
@@ -347,6 +348,13 @@ class RTCManager {
             this.isCalling = true;
             this.incomingOffer = parsedPayload;
             this.isVideoCall = parsedPayload.sdp && parsedPayload.sdp.includes('m=video');
+            
+            if (this.autoAcceptCallerId === senderId) {
+                console.log('[RTC] Auto-accepting call from push notification intent');
+                this.autoAcceptCallerId = null;
+                this.acceptCall();
+                return;
+            }
             
             // Try to resolve name and avatar
             let name = 'User ' + senderId;
