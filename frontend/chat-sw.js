@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v1.0.9'; // Bumped for robust cache-busting during install
+const CACHE_NAME = 'skufia-chat-v1.1.0'; // Bumped for robust cache-busting during install
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -50,7 +50,13 @@ self.addEventListener('activate', (event) => {
                 })
             );
         }).then(() => {
-            return self.clients.claim();
+            return self.clients.claim().then(() => {
+                self.clients.matchAll().then(clients => {
+                    clients.forEach(client => {
+                        client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME });
+                    });
+                });
+            });
         })
     );
 });

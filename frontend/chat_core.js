@@ -462,13 +462,7 @@ window.initChatCore = function() {
             avatarDiv.className = 'sidebar-item-avatar';
             
             if (room.avatar_url) {
-                const img = document.createElement('img');
-                img.src = room.avatar_url;
-                img.alt = 'AV';
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                avatarDiv.appendChild(img);
+                window.applyAvatarDisplay(avatarDiv, room.avatar_url);
             } else {
                 const initial = room.name ? room.name.charAt(0).toUpperCase() : '?';
                 avatarDiv.textContent = initial;
@@ -609,12 +603,13 @@ window.initChatCore = function() {
             const headerTitle = document.getElementById('chat-header-title');
             
             if (headerAvatar) {
+                headerAvatar.innerHTML = '';
                 if (avatarUrl) {
-                    headerAvatar.innerHTML = `<img src="${avatarUrl}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    window.applyAvatarDisplay(headerAvatar, avatarUrl);
                 } else {
-                    headerAvatar.innerHTML = `<img src="https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+                    window.applyAvatarDisplay(headerAvatar, `https://api.dicebear.com/7.x/identicon/svg?seed=${roomName}`);
                 }
-                headerAvatar.style.background = 'transparent';
+                headerAvatar.style.backgroundColor = 'transparent';
                 headerAvatar.style.color = 'transparent';
             }
             if (headerTitle) {
@@ -835,11 +830,7 @@ window.initChatCore = function() {
             const senderProfile = (state.chat.rooms || []).find(r => r.other_user_id === msg.sender_id);
             const avatarUrl = msg.avatar_url || msg.sender_avatar || (senderProfile && senderProfile.avatar_url) || null;
             if (avatarUrl) {
-                const img = document.createElement('img');
-                img.src = avatarUrl;
-                img.alt = msg.sender || '?';
-                img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;';
-                avatarDiv.appendChild(img);
+                window.applyAvatarDisplay(avatarDiv, avatarUrl);
             } else {
                 const initial = (msg.sender || '?').charAt(0).toUpperCase();
                 const hue = (initial.charCodeAt(0) * 137) % 360;
@@ -1397,19 +1388,20 @@ window.initChatCore = function() {
             const initial = (u.username || '?').charAt(0).toUpperCase();
             const charCode = initial.charCodeAt(0) || 65;
             const hue = (charCode * 137) % 360;
-            const avatarHtml = u.avatar_url 
-                ? `<div class="sidebar-item-avatar" style="overflow:hidden;"><img src="${u.avatar_url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;"></div>` 
-                : `<div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;">${initial}</div>`;
             const onlineDot = u.is_online ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00f2ff;margin-left:5px;vertical-align:middle;"></span>` : '';
             const handleText = u.handle ? `<span style="color:var(--text-dim);font-size:11px;">${u.handle}</span>` : '';
-            
             div.innerHTML = `
-                ${avatarHtml}
+                <div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;overflow:hidden;">
+                    ${u.avatar_url ? '' : initial}
+                </div>
                 <div class="sidebar-item-info">
                     <div class="sidebar-item-name">${u.username}${onlineDot}</div>
                     <div class="sidebar-item-last-msg">${handleText || 'Skufia-Net'}</div>
                 </div>
             `;
+            if (u.avatar_url) {
+                window.applyAvatarDisplay(div.querySelector('.sidebar-item-avatar'), u.avatar_url);
+            }
             div.onclick = async () => {
                 document.getElementById('fab-hub-modal').style.display = 'none';
                 try {
