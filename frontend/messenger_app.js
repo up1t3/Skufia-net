@@ -293,10 +293,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (action === 'accept' || action === 'open') {
                         if (window.RTCManagerInstance) {
                             if (action === 'accept') window.RTCManagerInstance.autoAcceptCallerId = parseInt(callerId, 10);
-                            // Wait briefly for WS to be fully ready before requesting offer
-                            setTimeout(() => {
-                                window.sendSocketEvent('rtc_signal', { target: parseInt(callerId, 10), signal_type: 'request_offer' });
-                            }, 500); 
+                            // Wait for WS to be fully ready before requesting offer
+                            const attemptSend = () => {
+                                if (state.chat.socket && state.chat.socket.readyState === WebSocket.OPEN) {
+                                    window.sendSocketEvent('rtc_signal', { target: parseInt(callerId, 10), signal_type: 'request_offer' });
+                                } else {
+                                    setTimeout(attemptSend, 200);
+                                }
+                            };
+                            attemptSend();
                         }
                     }
                 }

@@ -15,6 +15,9 @@ class RTCManager {
         this.currentFacingMode = 'user';
         this._missedCallTimeout = null;  // 45-sec no-answer timer
         this._callWasAnswered = false;   // flag to detect missed vs ended
+        this._ringtoneAudio = new Audio('assets/sounds/system_alert.mp3');
+        this._ringtoneAudio.loop = true;
+        this._vibrateInterval = null;
         
         // Ice Servers - Google STUN as fallback and local Coturn server
         this.iceServers = {
@@ -312,6 +315,36 @@ class RTCManager {
         }
     }
 
+    startRingtone() {
+        if (window.state && window.state.audioEnabled === false) return;
+        try {
+            this._ringtoneAudio.currentTime = 0;
+            this._ringtoneAudio.play().catch(e => console.warn('Ringtone blocked:', e));
+        } catch(e) {}
+        
+        if (navigator.vibrate) {
+            navigator.vibrate([1000, 1000]);
+            this._vibrateInterval = setInterval(() => {
+                if (navigator.vibrate) navigator.vibrate([1000, 1000]);
+            }, 2000);
+        }
+    }
+
+    stopRingtone() {
+        try {
+            this._ringtoneAudio.pause();
+            this._ringtoneAudio.currentTime = 0;
+        } catch(e) {}
+        
+        if (this._vibrateInterval) {
+            clearInterval(this._vibrateInterval);
+            this._vibrateInterval = null;
+        }
+        if (navigator.vibrate) {
+            navigator.vibrate(0);
+        }
+    }
+
     handleIncomingSignal(type, payload, senderId) {
         let parsedPayload = payload;
         try {
@@ -369,11 +402,7 @@ class RTCManager {
                 }
             }
             
-            if (window.playSound) window.playSound('alert', true);
-            
-            if (navigator.vibrate) {
-                navigator.vibrate([1000, 500, 1000, 500, 1000, 500, 1000]);
-            }
+            this.startRingtone();
             
             if (window.Notification && Notification.permission === "granted") {
                 try {
@@ -407,13 +436,23 @@ class RTCManager {
             }
         } else if(type === 'end') {
             this.endCall(false);
+        } else if(type === 'reject') {
+            if (this.isCalling && this.currentCallTarget === senderId) {
+                this.endCall(false);
+                if(window.addLog) window.addLog('Вызов отклонен', 'warning');
+            }
+        } else if(type === 'request_offer') {
+            if (this.isCalling && this.currentCallTarget === senderId && this.peerConnection && this.peerConnection.localDescription) {
+                if(window.sendSocketEvent) {
+                    window.sendSocketEvent('rtc_signal', { target: senderId, signal_type: 'offer', payload: JSON.stringify(this.peerConnection.localDescription) });
+                }
+            }
         }
     }
 
     async acceptCall() {
         if(!this.incomingOffer) return;
-        if(window.stopSound) window.stopSound('alert');
-        if (navigator.vibrate) navigator.vibrate(0);
+        this.stopRingtone();
         this._callWasAnswered = true;
         // Clear any missed-call timeout (we are answering!)
         if (this._missedCallTimeout) {
@@ -645,8 +684,7 @@ class RTCManager {
     }
 
     endCall(emit = true) {
-        if(window.stopSound) window.stopSound('alert');
-        if (navigator.vibrate) navigator.vibrate(0);
+        this.stopRingtone();
         // Clear the no-answer timeout if still pending
         if (this._missedCallTimeout) {
             clearTimeout(this._missedCallTimeout);

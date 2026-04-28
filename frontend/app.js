@@ -106,6 +106,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // --- SYSTEM BOOT & ALERTS ---
     async function bootSystem() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('install') === '1') {
+            document.getElementById('auth-overlay').style.display = 'none';
+            document.getElementById('install-overlay').style.display = 'flex';
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('chat-sw.js').catch(console.error);
+            }
+            return;
+        }
+
         if (!state.user.token) {
             document.getElementById('auth-overlay').style.display = 'flex';
             // Wait for user to log in
@@ -288,6 +298,30 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
+        
+        // Setup direct install button (standalone installer)
+        const directBtn = document.getElementById('direct-install-btn');
+        const statusText = document.getElementById('install-status-text');
+        if (directBtn) {
+            directBtn.style.display = 'block';
+            if (statusText) statusText.style.display = 'none';
+            directBtn.addEventListener('click', async (clickEvent) => {
+                clickEvent.preventDefault();
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    addLog('PWA Installation Accepted', 'success');
+                    if (statusText) {
+                        statusText.textContent = 'Установка начата. Вы можете закрыть эту страницу.';
+                        statusText.style.display = 'block';
+                    }
+                    directBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+        }
+
+        // Setup in-app header install button
         const installBtn = document.getElementById('install-pwa-btn');
         if (installBtn) {
             installBtn.style.display = 'flex';

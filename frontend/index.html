@@ -118,6 +118,22 @@
         </div>
     </div>
     
+    <!-- Install PWA Overlay -->
+    <div id="install-overlay" class="modal auth-modal-custom" style="display: none; align-items: center; justify-content: center; z-index: 9999; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
+        <div class="modal-content auth-content" style="text-align: center; max-width: 400px; padding: 40px 20px; border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0,242,255,0.2);">
+            <div style="margin-bottom: 20px; display: flex; justify-content: center;">
+                <svg viewBox="0 0 24 24" width="64" height="64" stroke="var(--accent-cyan)" stroke-width="1.5" fill="none" style="filter: drop-shadow(0 0 5px var(--accent-cyan));"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+            </div>
+            <h2 style="margin-bottom: 15px; letter-spacing: 2px;">SKUFIA APP</h2>
+            <p style="color: var(--text-dim); margin-bottom: 25px; font-size: 14px; line-height: 1.5;">
+                Установите веб-приложение для мгновенного доступа к защищенному мессенджеру и звонкам.
+            </p>
+            <button id="direct-install-btn" class="cyber-btn primary-btn auth-main-btn" style="display: none; width: 100%; margin-bottom: 15px; font-weight: bold; letter-spacing: 1px; padding: 15px;">СКАЧАТЬ ПРИЛОЖЕНИЕ</button>
+            <p id="install-status-text" style="color: var(--accent-cyan); font-size: 12px; margin-bottom: 15px;">Ожидание готовности устройства...</p>
+            <a href="?" style="color: var(--text-dim); text-decoration: none; font-size: 13px; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='var(--text-dim)'">Перейти к авторизации</a>
+        </div>
+    </div>
+    
     <!-- Avatar Crop Modal -->
     <div id="avatar-crop-modal" class="modal" style="display: none; z-index: 10000;">
         <div class="modal-content" style="max-width: 500px; padding: 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px;">

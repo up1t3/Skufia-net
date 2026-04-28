@@ -20,7 +20,10 @@ import os
 import datetime
 from sqlalchemy import func
 
-pending_rtc_calls = {}
+import redis.asyncio as aioredis
+
+redis_client = aioredis.from_url(os.environ.get("REDIS_URL", "redis://localhost:6379"), decode_responses=True)
+
 from auth import decode_token, router as auth_router
 from rate_limit import check_rate_limit
 try:
@@ -214,8 +217,9 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 call_key = f"{user_id}_{target_id}"
                                 async def missed_call_timeout(u_id, t_id):
                                     await asyncio.sleep(45)
-                                    if pending_rtc_calls.get(f"{u_id}_{t_id}"):
-                                        del pending_rtc_calls[f"{u_id}_{t_id}"]
+                                    call_key = f"rtc_offer:{u_id}:{t_id}"
+                                    if await redis_client.exists(call_key):
+                                        await redis_client.delete(call_key)
                                         cancel_msg = {"type": "rtc_signal", "sender_id": t_id, "signal_type": "end", "payload": None}
                                         await manager.send_personal_message(cancel_msg, u_id)
                                         await manager.send_personal_message(cancel_msg, t_id)
@@ -238,11 +242,12 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                         finally:
                                             db.close()
                                 
-                                task = asyncio.create_task(missed_call_timeout(user_id, target_id))
-                                pending_rtc_calls[call_key] = {
-                                    "task": task,
-                                    "offer": data.get('payload')
-                                }
+                                asyncio.create_task(missed_call_timeout(user_id, target_id))
+                                
+                                # Store offer in Redis with 45s expiration
+                                call_key = f"rtc_offer:{user_id}:{target_id}"
+                                import json
+                                await redis_client.setex(call_key, 45, json.dumps(data.get('payload')))
 
                                 # ALWAYS Trigger Web Push for calls to ensure background delivery
                                 from ws_manager import trigger_web_push
@@ -260,27 +265,24 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                     
                             elif data.get('signal_type') == 'request_offer':
                                 # Receiver is asking for the cached offer (after waking up from push)
-                                call_key = f"{target_id}_{user_id}" # caller is target_id, receiver is user_id
-                                if call_key in pending_rtc_calls:
-                                    cached_offer = pending_rtc_calls[call_key].get('offer')
-                                    if cached_offer:
-                                        offer_msg = {
-                                            "type": "rtc_signal",
-                                            "sender_id": target_id,
-                                            "signal_type": "offer",
-                                            "payload": cached_offer
-                                        }
-                                        await manager.send_personal_message(offer_msg, user_id)
+                                call_key = f"rtc_offer:{target_id}:{user_id}" # caller is target_id, receiver is user_id
+                                cached_offer_raw = await redis_client.get(call_key)
+                                if cached_offer_raw:
+                                    import json
+                                    offer_msg = {
+                                        "type": "rtc_signal",
+                                        "sender_id": target_id,
+                                        "signal_type": "offer",
+                                        "payload": json.loads(cached_offer_raw)
+                                    }
+                                    await manager.send_personal_message(offer_msg, user_id)
                                         
                             elif data.get('signal_type') in ['answer', 'end', 'reject']:
-                                call_key = f"{target_id}_{user_id}"
-                                if call_key in pending_rtc_calls:
-                                    pending_rtc_calls[call_key]["task"].cancel()
-                                    del pending_rtc_calls[call_key]
-                                call_key_self = f"{user_id}_{target_id}"
-                                if call_key_self in pending_rtc_calls:
-                                    pending_rtc_calls[call_key_self]["task"].cancel()
-                                    del pending_rtc_calls[call_key_self]
+                                call_key = f"rtc_offer:{target_id}:{user_id}"
+                                await redis_client.delete(call_key)
+                                
+                                call_key_self = f"rtc_offer:{user_id}:{target_id}"
+                                await redis_client.delete(call_key_self)
                     elif data.get('type') == 'typing_indicator':
                         target_id = data.get('target')
                         if target_id:
