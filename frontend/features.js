@@ -279,6 +279,14 @@
             loadMarket();
         });
     }
+
+    const eventSearchInput = document.getElementById('event-search');
+    if (eventSearchInput) {
+        eventSearchInput.addEventListener('input', debounce((e) => {
+            window.eventState.search = e.target.value;
+            loadEvents();
+        }, 300));
+    }
     const marketFilterLoc = document.getElementById('market-filter-loc');
     if (marketFilterLoc) {
         marketFilterLoc.addEventListener('change', (e) => {
@@ -1023,49 +1031,125 @@
     }
 
 
-    // --- MODULE: EVENTS ---
+        // --- MODULE: EVENTS ---
+    window.eventState = {
+        filter: 'all', // 'all', 'upcoming', 'past'
+        search: ''
+    };
+
+    window.setEventFilter = function(filter, btn) {
+        window.eventState.filter = filter;
+        document.querySelectorAll('.event-toolbar .cyber-btn-small').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        loadEvents();
+    };
+
+    function formatEventDate(isoDate) {
+        const d = new Date(isoDate);
+        return d.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function getEventCountdown(isoDate) {
+        const now = new Date().getTime();
+        const eventDate = new Date(isoDate).getTime();
+        const diff = eventDate - now;
+
+        if (diff <= 0) return 'ЗАВЕРШЕНО';
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        let res = 'через ';
+        if (days > 0) res += `${days} д. `;
+        if (hours > 0 || days > 0) res += `${hours} ч. `;
+        res += `${minutes} мин.`;
+        return res;
+    }
+
     async function loadEvents() {
         const container = document.getElementById('events-list');
         if (!container) return;
         try {
-            const events = await apiRequest('/events');
+            let events = await apiRequest('/events');
             container.innerHTML = '';
-            if (!events || events.length === 0) {
-                container.innerHTML = '<div class="system-msg">Нет активных событий.</div>';
+
+            if (!events || !Array.isArray(events)) {
+                container.innerHTML = '<div class="system-msg">Событий не найдено.</div>';
                 return;
             }
-            events.forEach(/** @param {any} e */ e => {
-                const eventCard = document.createElement('div');
-                eventCard.className = 'event-card interactive';
-                // @ts-ignore
-                const safeDate = e.date ? new Date(e.date).toLocaleDateString() : 'Unknown';
-                const dateDiv = document.createElement('div');
-                dateDiv.className = 'event-date';
-                dateDiv.textContent = safeDate;
 
-                const contentDiv = document.createElement('div');
-                contentDiv.className = 'event-content';
+            // Apply filters
+            const now = new Date();
+            events = events.filter(e => {
+                const eventDateStr = e.date || e.event_date;
+                if (!eventDateStr) return false;
+
+                const eventDate = new Date(eventDateStr);
+                const isUpcoming = eventDate > now;
+                const matchesSearch = e.title.toLowerCase().includes(window.eventState.search.toLowerCase());
+
+                let matchesFilter = true;
+                if (window.eventState.filter === 'upcoming') matchesFilter = isUpcoming;
+                if (window.eventState.filter === 'past') matchesFilter = !isUpcoming;
+
+                return matchesSearch && matchesFilter;
+            });
+
+            if (!events || events.length === 0) {
+                container.innerHTML = '<div class="system-msg">Событий не найдено.</div>';
+                return;
+            }
+
+            events.forEach(e => {
+                const eventDateStr = e.date || e.event_date;
+                const eventDate = new Date(eventDateStr);
+                const isUpcoming = eventDate > now;
+
+                const eventCard = document.createElement('div');
+                eventCard.className = `event-card interactive ${isUpcoming ? 'upcoming' : 'past'}`;
+
+                const dateBadge = document.createElement('div');
+                dateBadge.className = 'event-date-badge';
+                dateBadge.innerHTML = `
+                    <span class="day">${eventDate.getDate()}</span>
+                    <span class="month">${eventDate.toLocaleString('ru-RU', { month: 'short' }).replace('.', '')}</span>
+                `;
+
+                const mainContent = document.createElement('div');
+                mainContent.className = 'event-card-main';
 
                 const h4 = document.createElement('h4');
                 h4.textContent = e.title;
 
-                const p = document.createElement('p');
-                p.textContent = `📍 ${e.location || 'Секретная локация'}`;
+                const loc = document.createElement('div');
+                loc.className = 'location';
+                loc.textContent = `📍 ${e.location || 'Секретная локация'}`;
 
-                contentDiv.appendChild(h4);
-                contentDiv.appendChild(p);
+                const countdown = document.createElement('div');
+                countdown.className = `event-countdown ${isUpcoming ? 'upcoming' : 'past'}`;
+                countdown.textContent = getEventCountdown(eventDateStr);
 
-                const actionDiv = document.createElement('div');
-                actionDiv.className = 'event-action';
-                actionDiv.textContent = '> ДЕТАЛИ';
+                mainContent.appendChild(h4);
+                mainContent.appendChild(loc);
+                mainContent.appendChild(countdown);
 
-                eventCard.appendChild(dateDiv);
-                eventCard.appendChild(contentDiv);
-                eventCard.appendChild(actionDiv);
-            eventCard.addEventListener('click', () => showEventDetails(e));
-            container.appendChild(eventCard);
-        });
-        } catch (e) { container.innerHTML = '<div class="system-msg">ERROR: Events sync failed.</div>'; }
+                eventCard.appendChild(dateBadge);
+                eventCard.appendChild(mainContent);
+
+                eventCard.addEventListener('click', () => showEventDetails(e));
+                container.appendChild(eventCard);
+            });
+        } catch (e) {
+            console.error(e);
+            container.innerHTML = '<div class="system-msg">ERROR: Events sync failed.</div>';
+        }
     }
 
     // @ts-ignore
@@ -1081,7 +1165,7 @@
         const locElem = document.getElementById('event-location');
         const descElem = document.getElementById('event-desc');
         if (!titleElem || !dateElem || !locElem || !descElem) return;
-        
+
         // @ts-ignore
         const title = titleElem.value;
         // @ts-ignore
@@ -1090,9 +1174,9 @@
         const location = locElem.value;
         // @ts-ignore
         const description = descElem.value;
-        
+
         if (!title) { addLog('Validation Error: Укажите название', 'error'); return; }
-        
+
         try {
             await apiRequest('/events', 'POST', { title, event_date, location, description });
             addLog('Событие анонсировано', 'success');
@@ -1112,16 +1196,27 @@
 
     function showEventDetails(event) {
         addLog(`Accessing mission data: ${event.title}`, 'info');
-        const details = `
-            ЦЕЛЬ: ${event.title}
-            ДАТА: ${new Date(event.event_date).toLocaleString()}
-            ЛОКАЦИЯ: ${event.location}
-            ОПИСАНИЕ: ${event.description || 'Данные засекречены'}
-        `;
-        alert(details);
+
+        const modal = document.getElementById('event-detail-modal');
+        if (!modal) return;
+
+        const eventDateStr = event.date || event.event_date;
+
+        document.getElementById('event-detail-title').textContent = event.title;
+        document.getElementById('event-detail-date').textContent = `📅 ${formatEventDate(eventDateStr)}`;
+        document.getElementById('event-detail-location').textContent = `📍 ${event.location || 'Секретная локация'}`;
+
+        const countdownElem = document.getElementById('event-detail-countdown');
+        const isUpcoming = new Date(eventDateStr) > new Date();
+        countdownElem.className = `event-countdown detailed ${isUpcoming ? 'upcoming' : 'past'}`;
+        countdownElem.textContent = getEventCountdown(eventDateStr);
+
+        document.getElementById('event-detail-desc').textContent = event.description || 'Данные засекречены';
+
+        modal.style.display = 'flex';
     }
 
-    // --- MODULE: DASHBOARD & AVATAR ---
+// --- MODULE: DASHBOARD & AVATAR ---
     async function loadDashboard() {
         try {
             const data = await apiRequest('/me');

@@ -703,9 +703,20 @@
                 <!-- EVENTS VIEW -->
                 <div class="view" id="view-events">
                     <h2 class="view-title">📅 КАЛЕНДАРЬ СОБЫТИЙ</h2>
-                    <div class="action-bar">
-                        <button class="btn-primary" id="btn-events-new" onclick="toggleEventForm()">+ НОВОЕ СОБЫТИЕ</button>
+
+                    <div class="event-toolbar glass-panel" style="display: flex; gap: 15px; padding: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;">
+                        <div class="search-box" style="flex: 1; min-width: 200px; position: relative;">
+                            <input type="text" id="event-search" class="cyber-input" placeholder="Поиск событий..." style="width: 100%; margin: 0; padding-left: 35px;">
+                            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5;">🔍</span>
+                        </div>
+                        <div class="filter-group" style="display: flex; gap: 8px;">
+                            <button class="cyber-btn-small active" onclick="window.setEventFilter('all', this)">Все</button>
+                            <button class="cyber-btn-small" onclick="window.setEventFilter('upcoming', this)">Предстоящие</button>
+                            <button class="cyber-btn-small" onclick="window.setEventFilter('past', this)">Прошедшие</button>
+                        </div>
+                        <button class="btn-primary" id="btn-events-new" onclick="toggleEventForm()" style="margin-left: auto;">+ СОЗДАТЬ</button>
                     </div>
+
                     <div class="form-panel" id="event-form-panel" style="display: none;">
                         <input type="text" id="event-title" class="input-text" placeholder="Название события (Например: Скуф-мит 2026)" />
                         <input type="datetime-local" id="event-date" class="input-text" />
@@ -998,5 +1009,31 @@
     <script defer src="features.js?v=50"></script>
     <script defer src="chat_core.js?v=56"></script>
     <script defer src="app.js?v=50"></script>
+
+    <!-- Event Detail Modal -->
+    <div id="event-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content glass-panel event-detail-modal" style="max-width: 500px; width: 90%;">
+            <div class="modal-header">
+                <h2 id="event-detail-title" class="glitch-text">ДЕТАЛИ СОБЫТИЯ</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('event-detail-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="event-detail-body premium-scroll" style="padding: 20px 0;">
+                <div class="event-detail-info">
+                    <div id="event-detail-date" class="info-item">📅 --.--.----</div>
+                    <div id="event-detail-location" class="info-item">📍 Локация</div>
+                    <div id="event-detail-countdown" class="event-countdown detailed">Ожидание...</div>
+                </div>
+                <div class="event-detail-description">
+                    <label>ОПИСАНИЕ:</label>
+                    <p id="event-detail-desc">Данные загружаются...</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                <button class="cyber-btn primary-btn" onclick="document.getElementById('event-detail-modal').style.display='none'">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
