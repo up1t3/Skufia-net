@@ -71,7 +71,10 @@ window.initChatCore = function() {
                         // No session key at all — show as encrypted
                         msg.content = '🔒 Зашифрованное сообщение';
                         msg.text = msg.content;
+                        msg.is_secure = false;
                     }
+                } else {
+                    msg.is_secure = false;
                 }
                 // If msg.iv is empty/null, content is plaintext — show as-is
                 if (!msg.text) msg.text = msg.content;
@@ -738,7 +741,10 @@ window.initChatCore = function() {
                         } else {
                             // No key — show friendly placeholder
                             m.text = '🔒 Зашифрованное сообщение';
+                            m.is_secure = false;
                         }
+                    } else {
+                        m.is_secure = false;
                     }
                     // If iv is empty/null, m.text is plaintext — render as-is
                     renderChatMessage(m);
@@ -944,7 +950,7 @@ window.initChatCore = function() {
         timeSpan.className = 'msg-time';
         // Only show 🔒 if the message was successfully decrypted (is_secure: true)
         // NOT when it failed decryption (text === placeholder string)
-        const lockHtml = msg.is_secure ? ' <span style="font-size:10px;opacity:0.7;">🔒</span>' : '';
+        const lockHtml = msg.is_secure ? ' <span style="font-size:10px;opacity:0.7;" title="End-to-End Encrypted (E2EE)">🔒</span>' : ' <span style="font-size:10px;opacity:0.7;color:var(--error-red);" title="Message is unencrypted (Plaintext)">🔓</span>';
         if (msg.is_edited) {
             timeSpan.innerHTML = `${timeStr}${lockHtml} <span class="is-edited">(изм.)</span> `;
         } else {
