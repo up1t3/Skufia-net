@@ -1,1 +1,2 @@
-TRUNCATE TABLE room_key_bundles;
+-- Очистка невосстановимых key bundles
+DELETE FROM room_key_bundles;

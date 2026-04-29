@@ -1,17 +1,29 @@
 import os
-import sqlalchemy
+import sys
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./backend/data/skufia.db")
-engine = sqlalchemy.create_engine(DATABASE_URL)
+# Add backend directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
+
+try:
+    from database import SessionLocal, RoomKeyBundle
+except ImportError:
+    # Fallback for different execution environments
+    sys.path.append(os.getcwd())
+    sys.path.append(os.path.join(os.getcwd(), 'backend'))
+    from database import SessionLocal, RoomKeyBundle
 
 def main():
-    with engine.connect() as conn:
-        if "sqlite" in DATABASE_URL:
-            conn.execute(sqlalchemy.text("DELETE FROM room_key_bundles;"))
-        else:
-            conn.execute(sqlalchemy.text("TRUNCATE TABLE room_key_bundles RESTART IDENTITY CASCADE;"))
-        conn.commit()
-    print("All keys reset.")
+    db = SessionLocal()
+    try:
+        count = db.query(RoomKeyBundle).delete()
+        db.commit()
+        print(f"Successfully reset all keys. Deleted {count} bundles.")
+    except Exception as e:
+        db.rollback()
+        print(f"An error occurred: {e}")
+        sys.exit(1)
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     main()
