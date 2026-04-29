@@ -158,11 +158,11 @@ def link_telegram(data: TelegramLink, current_user: User = Depends(get_current_u
     user = db.query(User).filter(User.id == current_user.id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     user.telegram_id = data.telegram_id
     db.commit()
     return {"status": f"Account successfully linked to Telegram ID: {data.telegram_id}"}
-    
+
 @router.get('/users/list')
 def list_users(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Returns a list of all operators for the Secure Channel"""
@@ -175,7 +175,7 @@ def get_user_key(user_id: int, current_user: User = Depends(get_current_user), d
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Operative not found in the archives")
-    
+
     result = {"id": user.id, "public_key": user.public_key}
     if user_id == current_user.id:
         result["encrypted_private_key"] = user.encrypted_private_key
@@ -238,19 +238,19 @@ def store_room_keys(
             uid = int(uid_str)
         except ValueError:
             continue
-            
+
         # Deactivate previous active keys for this user in this room
         db.query(RoomKeyBundle).filter(
             RoomKeyBundle.room_id == room_id,
             RoomKeyBundle.user_id == uid,
             RoomKeyBundle.is_active == True
         ).update({"is_active": False})
-        
+
         # Insert new key
         db.add(RoomKeyBundle(room_id=room_id, user_id=uid, wrapped_key=wrapped_key, key_version=new_version, is_active=True))
 
     db.commit()
-    
+
     # Broadcast room key rotation to all members
     members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
     user_ids = [m.user_id for m in members]
@@ -284,7 +284,7 @@ def get_room_key(
         RoomKeyBundle.room_id == room_id,
         RoomKeyBundle.user_id == current_user.id
     ).order_by(RoomKeyBundle.key_version.desc()).all()
-    
+
     if not bundles:
         raise HTTPException(status_code=404, detail="No key bundle found for this room")
 
@@ -292,6 +292,18 @@ def get_room_key(
         "keys": [{"key_version": b.key_version, "wrapped_key": b.wrapped_key, "is_active": b.is_active}
                  for b in bundles]
     }
+
+@router.post('/chat/rooms/{room_id}/key/reset')
+def reset_room_keys(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Сброс всех ключей комнаты (только для админа/владельца)"""
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+    if room.owner_id != current_user.id and not current_user.is_superadmin:
+        raise HTTPException(status_code=403, detail="Only room owner can reset keys")
+    db.query(RoomKeyBundle).filter(RoomKeyBundle.room_id == room_id).delete()
+    db.commit()
+    return {"status": "Keys reset", "room_id": room_id}
 
 # --- SECURE CHANNEL (Private Messaging) ---
 
@@ -301,12 +313,12 @@ def get_room_key(
 def list_rooms(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Lists all rooms the current operator is part of"""
     memberships = db.query(ChatRoomMember).filter(ChatRoomMember.user_id == current_user.id).all()
-    
+
     rooms_data = []
     for m in memberships:
         room = db.query(ChatRoom).filter(ChatRoom.id == m.room_id).first()
         if not room: continue
-        
+
         # Chronological sort logic
         last_msg = db.query(Message).filter(Message.room_id == room.id).order_by(Message.created_at.desc()).first()
         last_activity = last_msg.created_at.timestamp() if last_msg and last_msg.created_at else room.created_at.timestamp()
@@ -326,9 +338,9 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
         ).count()
 
         room_data = {
-            "id": room.id, 
-            "name": room.name, 
-            "type": room.room_type, 
+            "id": room.id,
+            "name": room.name,
+            "type": room.room_type,
             "my_role": m.role,
             "avatar_url": None,
             "other_user_id": None,
@@ -336,14 +348,14 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
             "last_activity": last_activity,
             "unread_count": unread_count
         }
-        
+
         if room.room_type == 'private':
             # Resolve the other user's identity dynamically
             other_m = db.query(ChatRoomMember).filter(
-                ChatRoomMember.room_id == room.id, 
+                ChatRoomMember.room_id == room.id,
                 ChatRoomMember.user_id != current_user.id
             ).first()
-            
+
             if other_m:
                 other_u = db.query(User).filter(User.id == other_m.user_id).first()
                 if other_u:
@@ -353,9 +365,9 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
                         if other_u.profile.avatar_url:
                             room_data["avatar_url"] = other_u.profile.avatar_url
                         room_data["is_online"] = other_u.profile.is_online
-                        
+
         rooms_data.append(room_data)
-        
+
     rooms_data.sort(key=lambda x: x["last_activity"], reverse=True)
     return rooms_data
 
@@ -371,12 +383,12 @@ def create_folder(req: FolderCreate, current_user: User = Depends(get_current_us
     db.add(db_folder)
     db.commit()
     db.refresh(db_folder)
-    
+
     for rid in req.rooms:
         mem = ChatFolderMember(folder_id=db_folder.id, room_id=rid)
         db.add(mem)
     db.commit()
-    
+
     return {"id": db_folder.id, "status": "Folder created"}
 
 @router.get('/chat/folders')
@@ -411,7 +423,7 @@ def add_folder_members(folder_id: int, req: FolderAddMembers, current_user: User
     folder = db.query(ChatFolder).filter(ChatFolder.id == folder_id, ChatFolder.user_id == current_user.id).first()
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
-        
+
     for rid in req.room_ids:
         # Check if already exists
         exists = db.query(ChatFolderMember).filter(ChatFolderMember.folder_id == folder_id, ChatFolderMember.room_id == rid).first()
@@ -426,7 +438,7 @@ def remove_folder_member(folder_id: int, room_id: int, current_user: User = Depe
     folder = db.query(ChatFolder).filter(ChatFolder.id == folder_id, ChatFolder.user_id == current_user.id).first()
     if not folder:
         raise HTTPException(status_code=404, detail="Folder not found")
-        
+
     mem = db.query(ChatFolderMember).filter(ChatFolderMember.folder_id == folder_id, ChatFolderMember.room_id == room_id).first()
     if mem:
         db.delete(mem)
@@ -439,10 +451,10 @@ def create_room(room: RoomCreate, current_user: User = Depends(get_current_user)
     if room.room_type == 'private':
         if not room.target_user_id:
             raise HTTPException(status_code=400, detail="ID собеседника обязателен для личного чата")
-        
+
         if room.target_user_id == current_user.id:
             raise HTTPException(status_code=400, detail="Нельзя создать чат с самим собой")
-            
+
         # Check if they already have a private chat
         existing_rooms_for_user = db.query(ChatRoomMember.room_id).filter(ChatRoomMember.user_id == current_user.id).subquery()
         common_room = db.query(ChatRoomMember).join(ChatRoom).filter(
@@ -454,13 +466,13 @@ def create_room(room: RoomCreate, current_user: User = Depends(get_current_user)
         if common_room:
             # Rehydrate the room
             return {"id": common_room.room_id, "status": "Уже существует", "is_existing": True}
-            
+
         # Name is meaningless for private, but we set it
         db_room = ChatRoom(name="Private Chat", room_type='private')
         db.add(db_room)
         db.commit()
         db.refresh(db_room)
-        
+
         # Add both members
         db.add(ChatRoomMember(room_id=db_room.id, user_id=current_user.id, role='member'))
         db.add(ChatRoomMember(room_id=db_room.id, user_id=room.target_user_id, role='member'))
@@ -1006,60 +1018,60 @@ def transfer_ownership(
 
 @router.get('/chat/rooms/{room_id}/history')
 def get_room_history(
-    room_id: int, 
+    room_id: int,
     before_id: Optional[int] = None,
     limit: int = 50,
-    current_user: User = Depends(get_current_user), 
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Retrieves chat history for a specific room with keyset pagination.
-    
+
     - `before_id`: Return messages with id < before_id (cursor for infinite scroll)
     - `limit`: Max messages per page (default 50, max 100)
-    
+
     Response includes `has_more` flag and `next_cursor` for the frontend.
     """
     # Verify membership
     membership = db.query(ChatRoomMember).filter(
-        ChatRoomMember.room_id == room_id, 
+        ChatRoomMember.room_id == room_id,
         ChatRoomMember.user_id == current_user.id
     ).first()
     if not membership:
         raise HTTPException(status_code=403, detail="Access denied to this sector")
-    
+
     # Clamp limit
     limit = min(max(1, limit), 100)
-    
+
     # Build query with keyset cursor
     query = db.query(Message).filter(
         Message.room_id == room_id,
         Message.is_deleted_for_all == False
     )
-    
+
     if before_id is not None:
         query = query.filter(Message.id < before_id)
-    
+
     # Fetch limit+1 to detect if more pages exist
     messages = query.order_by(Message.id.desc()).limit(limit + 1).all()
-    
+
     has_more = len(messages) > limit
     if has_more:
         messages = messages[:limit]
-    
+
     # Reverse to chronological order for display
     messages.reverse()
-    
+
     next_cursor = messages[0].id if has_more and messages else None
-    
+
     return {
         "messages": [
             {
                 "id": m.id,
-                "sender": get_display_name(m.sender), 
-                "sender_id": m.sender_id, 
+                "sender": get_display_name(m.sender),
+                "sender_id": m.sender_id,
                 "avatar_url": m.sender.profile.avatar_url if m.sender and m.sender.profile else None,
-                "text": m.content, 
+                "text": m.content,
                 "iv": m.encryption_iv,
                 "key_version": getattr(m, 'key_version', 1),
                 "file_url": m.file_url,
@@ -1081,16 +1093,16 @@ def search_users(query: str, current_user: User = Depends(get_current_user), db:
     q = f"%{query}%"
     # Normalize phone: strip spaces/dashes for comparison
     phone_q = ''.join(c for c in query if c.isdigit())
-    
+
     users = db.query(User).outerjoin(Profile, Profile.user_id == User.id).filter(
         (User.username.ilike(q)) |
         (User.handle.ilike(q)) |
         (User.phone_number.ilike(q)) |
         (Profile.nickname.ilike(q))
     ).filter(User.id != current_user.id).limit(20).all()
-    
+
     return [{
-        "id": u.id, 
+        "id": u.id,
         "username": get_display_name(u),
         "handle": u.handle or '',
         "avatar_url": u.profile.avatar_url if u.profile else None,
@@ -1135,10 +1147,10 @@ def validate_magic_bytes(contents: bytes, expected_type: str = "all") -> bool:
             b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1', # Old DOC/XLS
         ]
     }
-    
+
     if len(contents) < 12:
         return False # Too small to have valid magic bytes
-        
+
     def check_group(group_key: str):
         for sig in signatures[group_key]:
             if sig == b'ftyp':
@@ -1186,13 +1198,13 @@ async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: U
 
     safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))
     ext = os.path.splitext(safe_filename)[1] or '.webm'
-    
+
     # Enforce safe audio extensions
     if ext.lower() not in ['.webm', '.ogg', '.mp3', '.wav', '.flac', '.m4a', '.mp4', '.aac']:
         ext = '.webm'
-        
+
     unique_name = f"{uuid.uuid4().hex}{ext}"
-    
+
     # Ensure directory exists
     os.makedirs(os.path.join('uploads', 'voice'), exist_ok=True)
     save_path = os.path.join('uploads', 'voice', unique_name)
@@ -1208,15 +1220,15 @@ async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: Us
     contents = await file.read()
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=413, detail="Файл превышает лимит 20 МБ")
-    
+
     # [SEC-102] Security Check: Magic Bytes Validation
     if not validate_magic_bytes(contents, expected_type="all"):
         print(f"[SECURITY] Upload rejected: Invalid magic bytes. Filename: {file.filename}, Size: {len(contents)}")
         raise HTTPException(status_code=415, detail="Отклонено: Недопустимый или подозрительный тип файла")
-        
+
     safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))
     ext = os.path.splitext(safe_filename)[1].lower() or '.bin'
-    
+
     # Block dangerous extensions regardless of magic bytes
     dangerous_exts = ['.exe', '.sh', '.bat', '.cmd', '.ps1', '.vbs', '.js', '.php', '.py', '.scr']
     if ext in dangerous_exts:
@@ -1225,10 +1237,10 @@ async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: Us
     unique_name = f"{uuid.uuid4().hex}{ext}"
     os.makedirs('uploads', exist_ok=True)
     save_path = os.path.join('uploads', unique_name)
-    
+
     with open(save_path, 'wb') as f:
         f.write(contents)
-    
+
     return {"file_url": f"/api/uploads/{unique_name}", "original_name": safe_filename, "size": len(contents)}
 
 @router.post('/chat/upload_multiple')
@@ -1237,19 +1249,19 @@ async def upload_multiple_chat_files(files: List[UploadFile] = FastAPIFile(...),
     urls = []
     total_size = 0
     os.makedirs('uploads', exist_ok=True)
-    
+
     for file in files:
         contents = await file.read()
         if len(contents) > MAX_FILE_SIZE:
             raise HTTPException(status_code=413, detail=f"File {file.filename} exceeds 5 MB limit")
-        
+
         # [SEC-102] Security Check: Magic Bytes Validation
         if not validate_magic_bytes(contents, expected_type="all"):
             raise HTTPException(status_code=415, detail=f"Spoofing detected in {file.filename}")
-            
+
         safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))
         ext = os.path.splitext(safe_filename)[1].lower() or '.bin'
-        
+
         # Block dangerous extensions regardless of magic bytes
         dangerous_exts = ['.exe', '.sh', '.bat', '.cmd', '.ps1', '.vbs', '.js', '.php', '.py', '.scr']
         if ext in dangerous_exts:
@@ -1257,28 +1269,28 @@ async def upload_multiple_chat_files(files: List[UploadFile] = FastAPIFile(...),
 
         unique_name = f"{uuid.uuid4().hex}{ext}"
         save_path = os.path.join('uploads', unique_name)
-        
+
         with open(save_path, 'wb') as f:
             f.write(contents)
-            
+
         urls.append(f"/api/uploads/{unique_name}")
         total_size += len(contents)
-        
+
     return {"file_urls": urls, "total_size": total_size}
 
 @router.post('/chat/rooms/{room_id}/send')
 async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
     """Enhanced messaging with real-time broadcasting via WebSocket"""
     from main import manager
-    
+
     # SECURITY PATCH: Verify the user is actually a member of this chat room
     membership = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
     if not membership and room_id != 0: # room_id 0 could be a global chat if exists, but assuming all are in DB
         raise HTTPException(status_code=403, detail="Вы не состоите в этой комнате")
-        
+
     if membership and membership.role == 'banned':
         raise HTTPException(status_code=403, detail="Вы заблокированы в этом чате")
-        
+
     # CHANNEL RESTRICTION: Only admins can post
     if room_id != 0:
         room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
@@ -1294,9 +1306,9 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     msg_key_version = active_bundle.key_version if active_bundle else 1
 
     db_msg = Message(
-        sender_id=current_user.id, 
-        receiver_id=None, 
-        room_id=room_id, 
+        sender_id=current_user.id,
+        receiver_id=None,
+        room_id=room_id,
         content=msg.content,
         encryption_iv=msg.encryption_iv,
         key_version=msg_key_version,
@@ -1306,7 +1318,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     db.add(db_msg)
     db.commit()
     db.refresh(db_msg)
-    
+
     # Broadcast to room members or specific recipient
     payload = {
         "type": "new_message",
@@ -1323,13 +1335,13 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "room_id": room_id,
         "avatar_url": current_user.profile.avatar_url if current_user.profile else None
     }
-    
+
     if room_id:
         from ws_manager import trigger_web_push
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
         uids = [m.user_id for m in members]
         await manager.broadcast_msg(payload, user_ids=uids)
-        
+
         # Trigger push notifications for offline members
         for m in members:
             if m.user_id != current_user.id:
@@ -1344,28 +1356,28 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
                     }
                     import asyncio
                     asyncio.create_task(trigger_web_push(m.user_id, push_payload))
-        
+
     # --- Скуф-GPT (Бот "База") Заглушка ---
     if msg.content and msg.content.strip().startswith('@baza '):
         user_query = msg.content.strip()[6:]
         bot_response = f"Ты спросил: '{user_query}', но я сейчас на перекуре. Приходи на Фазе 4, братишка! 🍺"
-        
+
         # Системный пользователь (ID=0 или None, будем использовать None для красоты, либо создадим отдельного юзера)
         # Пока просто отправляем как sender_id=0, но лучше найти юзера 'baza'
         bot_user = db.query(User).filter(User.username == 'baza').first()
         bot_id = bot_user.id if bot_user else 1 # Fallback to user 1 if baza doesn't exist
-        
+
         bot_msg = Message(
-            sender_id=bot_id, 
-            receiver_id=None, 
-            room_id=room_id, 
+            sender_id=bot_id,
+            receiver_id=None,
+            room_id=room_id,
             content=bot_response,
             reply_to_id=db_msg.id
         )
         db.add(bot_msg)
         db.commit()
         db.refresh(bot_msg)
-        
+
         bot_payload = {
             "type": "new_message",
             "message_id": bot_msg.id,
@@ -1381,7 +1393,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         }
         if room_id:
             await manager.broadcast_msg(bot_payload, user_ids=uids)
-    
+
     return {"status": "Message transmitted and broadcasted", "id": db_msg.id}
 
 @router.put('/chat/messages/{message_id}')
@@ -1393,12 +1405,12 @@ async def edit_message(message_id: int, req: dict, current_user: User = Depends(
         raise HTTPException(status_code=404, detail="Message not found")
     if msg.sender_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to edit this message")
-    
+
     msg.content = req.get("content", msg.content)
     msg.encryption_iv = req.get("encryption_iv", msg.encryption_iv)
     msg.is_edited = True
     db.commit()
-    
+
     payload = {
         "type": "edit_message",
         "message_id": msg.id,
@@ -1406,12 +1418,12 @@ async def edit_message(message_id: int, req: dict, current_user: User = Depends(
         "iv": msg.encryption_iv,
         "room_id": msg.room_id
     }
-    
+
     if msg.room_id:
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == msg.room_id).all()
         uids = [m.user_id for m in members]
         await manager.broadcast_msg(payload, user_ids=uids)
-        
+
     return {"status": "success"}
 
 @router.delete('/chat/messages/{message_id}')
@@ -1421,32 +1433,32 @@ async def delete_message(message_id: int, current_user: User = Depends(get_curre
     msg = db.query(Message).filter(Message.id == message_id).first()
     if not msg:
         raise HTTPException(status_code=404, detail="Message not found")
-        
+
     room_id = msg.room_id
-    
+
     # Check ownership
     is_owner = (msg.sender_id == current_user.id)
     # Check if user is group admin
     membership = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
     is_group_admin = (membership and membership.role == 'admin')
-    
+
     if not is_owner and not is_group_admin:
         raise HTTPException(status_code=403, detail="Not authorized to delete this message")
-    
+
     db.delete(msg)
     db.commit()
-    
+
     payload = {
         "type": "delete_message",
         "message_id": message_id,
         "room_id": room_id
     }
-    
+
     if room_id:
         members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
         uids = [m.user_id for m in members]
         await manager.broadcast_msg(payload, user_ids=uids)
-        
+
     return {"status": "success"}
 
 @router.get('/chat/rooms/{room_id}/members')
@@ -1454,19 +1466,19 @@ def get_room_members(room_id: int, current_user: User = Depends(get_current_user
     room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
     if not room:
         raise HTTPException(status_code=404, detail="Room not found")
-        
+
     me = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
     if not me:
         return {"invite_code": None, "my_role": None, "members": []}
-        
+
     members_db = db.query(ChatRoomMember, User).join(User, ChatRoomMember.user_id == User.id).filter(ChatRoomMember.room_id == room_id).all()
-    
+
     return {
         "invite_code": room.invite_code,
         "my_role": me.role,
         "members": [{
-            "user_id": u.id, 
-            "display_name": get_display_name(u), 
+            "user_id": u.id,
+            "display_name": get_display_name(u),
             "username": get_display_name(u),
             "role": m.role,
             "avatar_url": u.profile.avatar_url if u.profile else None
@@ -1483,11 +1495,11 @@ def get_or_create_private_room(req: PrivateChatCreate, current_user: User = Depe
     target_user = db.query(User).filter(User.id == req.target_user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
-        
+
     my_name = get_display_name(current_user)
     target_name = get_display_name(target_user)
     room_name = f"{my_name} & {target_name}"
-    
+
     # Check if a private room already exists with both
     # A robust check would query ChatRoomMember, but for simplicity we rely on a known pattern or query existing private rooms
     # We will query all rooms current user is in
@@ -1505,7 +1517,7 @@ def get_or_create_private_room(req: PrivateChatCreate, current_user: User = Depe
     db.add(db_room)
     db.commit()
     db.refresh(db_room)
-    
+
     db_member1 = ChatRoomMember(room_id=db_room.id, user_id=current_user.id)
     db_member2 = ChatRoomMember(room_id=db_room.id, user_id=req.target_user_id)
     db.add(db_member1)
@@ -1805,5 +1817,3 @@ def use_invite(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Код недействителен")
     invite["uses_left"] -= 1
     return {"status": "used"}
-
-
