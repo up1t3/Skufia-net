@@ -1,107 +1,89 @@
 import pytest
+import os
+import sys
+import uuid
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
-import os
-import sys
+from unittest.mock import MagicMock, AsyncMock
 
 # Add backend to sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend')))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-from database import Base, User, Profile
-from main import app
-import auth
-import routers.wiki as wiki
-import routers.forum as forum
-import routers.events as events
-from unittest.mock import AsyncMock, MagicMock
+# Set DATABASE_URL before importing backend.database
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test_skufia.db"
+os.environ["DATABASE_URL"] = SQLALCHEMY_DATABASE_URL
 
-# Mock broadcast and redis_client before importing main
-import broadcaster
-import redis.asyncio as aioredis
-mock_broadcast_obj = AsyncMock()
-broadcaster.Broadcast = MagicMock(return_value=mock_broadcast_obj)
-aioredis.from_url = MagicMock()
+import main
+from database import Base, User, Profile, engine, SessionLocal
+from auth import get_db, create_access_token, get_password_hash
 
-# SQLite in-memory database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+@pytest.fixture(scope="session", autouse=True)
+def setup_database():
+    # Mock redis and broadcast before importing/running main app
+    main.redis_client = AsyncMock()
+    main.broadcast = AsyncMock()
+    main.broadcast.connect = AsyncMock()
+    main.broadcast.disconnect = AsyncMock()
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-@pytest.fixture(scope="session")
-def db_engine():
     Base.metadata.create_all(bind=engine)
-    yield engine
+    yield
     Base.metadata.drop_all(bind=engine)
+    if os.path.exists("./test_skufia.db"):
+        os.remove("./test_skufia.db")
 
-@pytest.fixture(scope="function")
-def db_session(db_engine):
-    connection = db_engine.connect()
-    transaction = connection.begin()
-    session = TestingSessionLocal(bind=connection)
-
-    # Pre-seed some data if necessary, or just yield
+@pytest.fixture
+def db():
+    session = SessionLocal()
     yield session
-
     session.close()
-    transaction.rollback()
-    connection.close()
 
-@pytest.fixture(scope="function")
-def client(db_session, monkeypatch):
-    # Mock redis_client in main
-    import main
-    monkeypatch.setattr(main, "redis_client", AsyncMock())
-    monkeypatch.setattr(main, "broadcast", AsyncMock())
-    # Mock broadcast in ws_manager
-    import ws_manager
-    monkeypatch.setattr(ws_manager, "broadcast", AsyncMock())
-
+@pytest.fixture
+def client(db):
     def override_get_db():
         try:
-            yield db_session
+            yield db
         finally:
             pass
 
-    # List of modules that have get_db
-    app.dependency_overrides[auth.get_db] = override_get_db
-    app.dependency_overrides[wiki.get_db] = override_get_db
-    app.dependency_overrides[forum.get_db] = override_get_db
-    app.dependency_overrides[events.get_db] = override_get_db
-
-    with TestClient(app) as c:
+    main.app.dependency_overrides[get_db] = override_get_db
+    with TestClient(main.app) as c:
         yield c
+    main.app.dependency_overrides.clear()
 
-    app.dependency_overrides.clear()
+@pytest.fixture
+def test_user(db):
+    uid = str(uuid.uuid4())[:8]
+    username = f"user_{uid}"
+    email = f"{uid}@example.com"
+    password = "testpassword"
+    hashed_password = get_password_hash(password)
 
-@pytest.fixture(scope="function")
-def test_user(db_session):
-    from auth import get_password_hash
     user = User(
-        username="testuser",
-        email="test@example.com",
-        hashed_password=get_password_hash("testpassword"),
+        username=username,
+        email=email,
+        hashed_password=hashed_password,
         accepted_pd=True
     )
-    db_session.add(user)
-    db_session.commit()
-    db_session.refresh(user)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
 
-    profile = Profile(user_id=user.id, nickname="TestSkuf")
-    db_session.add(profile)
-    db_session.commit()
+    # Check if profile already exists
+    profile = db.query(Profile).filter(Profile.user_id == user.id).first()
+    if not profile:
+        profile = Profile(user_id=user.id, nickname=f"Tester_{uid}")
+        db.add(profile)
+        db.commit()
+    else:
+        profile.nickname = f"Tester_{uid}"
+        db.commit()
 
     return user
 
-@pytest.fixture(scope="function")
+@pytest.fixture
 def auth_headers(test_user):
-    from auth import create_access_token
-    from datetime import timedelta
     access_token = create_access_token(
-        data={"sub": test_user.username, "user_id": test_user.id},
-        expires_delta=timedelta(minutes=15)
+        data={"sub": test_user.username, "user_id": test_user.id}
     )
     return {"Authorization": f"Bearer {access_token}"}
