@@ -899,14 +899,13 @@ window.initChatCore = function() {
             `;
         } else if (rawText === '🔒 [Не удалось расшифровать сообщение]') {
             textDiv.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; background: rgba(255, 51, 51, 0.05); border: 1px solid rgba(255, 51, 51, 0.2); border-radius: 8px; text-align: center; margin-top: 4px;">
-                    <div style="color: #ff4444; font-weight: bold; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                        Ошибка расшифровки
+                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-metal); border-radius: 6px; margin-top: 4px;">
+                    <div style="color: var(--text-dim); display: flex; align-items: center; gap: 6px; font-size: 12px; flex: 1;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span style="font-style: italic;">Зашифрованное сообщение</span>
                     </div>
-                    <div style="color: var(--text-dim); font-size: 11px; margin-bottom: 10px; line-height: 1.3;">Сессионный ключ устарел или не совпадает с ключом отправителя.</div>
-                    <button onclick="if(window.resetIdentityKeys) window.resetIdentityKeys()" style="background: rgba(255,51,51,0.1); border: 1px solid rgba(255,51,51,0.3); color: #ff4444; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                        🔄 Сбросить ключи
+                    <button onclick="if(window.resetIdentityKeys) window.resetIdentityKeys()" style="background: none; border: none; color: var(--accent-cyan); font-size: 11px; cursor: pointer; text-decoration: underline; opacity: 0.8;">
+                        Сбросить ключи
                     </button>
                 </div>
             `;

@@ -182,11 +182,12 @@
         
         threadView.style.display = 'flex';
         threadView.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px; border-bottom: 1px solid var(--border-metal); padding-bottom: 15px;">
-                <button class="cyber-btn-small" onclick="window.history.back()" style="display: flex; align-items: center; gap: 5px;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> НАЗАД
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--border-metal); padding-bottom: 15px;">
+                <button onclick="window.history.back()" style="background: var(--bg-surface); border: 1px solid var(--border-metal); color: var(--text-dim); border-radius: 6px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> Вернуться к Форуму
                 </button>
-                <h3 style="margin: 0; color: var(--accent-cyan);">${title}</h3>
+                <span style="color: var(--text-dim); font-size: 14px;">/</span>
+                <h3 style="margin: 0; color: var(--text-main); font-size: 1.1em; font-weight: 500;">${title}</h3>
             </div>
             <div id="thread-posts-container" style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="system-msg" style="animation: pulse 1.5s infinite;">Дешифровка ответов...</div>
@@ -771,7 +772,7 @@
             if (!modal) {
                 modal = document.createElement('div');
                 modal.id = 'wiki-modal';
-                modal.className = 'modal-overlay';
+                modal.className = 'modal';
                 modal.style.zIndex = '9999';
                 modal.innerHTML = `
                     <div class="modal-content glass-panel" style="max-width: 800px; width: 90%; background: var(--bg-panel); border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
