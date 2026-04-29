@@ -163,7 +163,8 @@
         }
     }
 
-    async function loadTopicPosts(topicId, title) {
+    async function loadTopicPosts(topicId, title, pushState = true) {
+        if (pushState) history.pushState({ topicId: topicId, title: title }, '', '#forum-topic-' + topicId);
         const forumView = document.getElementById('view-forum');
         const listContainer = document.getElementById('forum-list');
         listContainer.style.display = 'none'; // Hide the list
@@ -182,7 +183,7 @@
         threadView.style.display = 'flex';
         threadView.innerHTML = `
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px; border-bottom: 1px solid var(--border-metal); padding-bottom: 15px;">
-                <button class="cyber-btn-small" onclick="document.getElementById('forum-thread-view').style.display='none'; document.getElementById('forum-list').style.display='flex';" style="display: flex; align-items: center; gap: 5px;">
+                <button class="cyber-btn-small" onclick="window.history.back()" style="display: flex; align-items: center; gap: 5px;">
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> НАЗАД
                 </button>
                 <h3 style="margin: 0; color: var(--accent-cyan);">${title}</h3>
@@ -762,7 +763,8 @@
         }
     }
 
-    window.loadWikiArticle = async function(artId) {
+    window.loadWikiArticle = async function(artId, pushState = true) {
+        if (pushState) history.pushState({ wikiId: artId }, '', '#wiki-article-' + artId);
         try {
             const art = await apiRequest(`/wiki/${artId}`);
             let modal = document.getElementById('wiki-modal');
@@ -775,13 +777,13 @@
                     <div class="modal-content glass-panel" style="max-width: 800px; width: 90%; background: var(--bg-panel); border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
                         <div class="modal-header" style="border-bottom: 1px solid var(--border-metal); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
                             <h2 id="wiki-modal-title" style="margin: 0; color: var(--accent-cyan); font-family: 'Orbitron', sans-serif;">TITLE</h2>
-                            <button class="icon-btn" onclick="document.getElementById('wiki-modal').style.display='none'" style="color: var(--text-dim);">✕</button>
+                            <button class="icon-btn" onclick="window.history.back()" style="color: var(--text-dim);">✕</button>
                         </div>
                         <div id="wiki-modal-body" class="premium-scroll" style="max-height: 65vh; overflow-y: auto; text-align: left; padding-right: 15px; font-size: 1.05em; line-height: 1.7; white-space: pre-wrap; color: var(--text-main);">
                             CONTENT
                         </div>
                         <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
-                            <button class="cyber-btn" onclick="document.getElementById('wiki-modal').style.display='none'">ЗАКРЫТЬ БАЗУ</button>
+                            <button class="cyber-btn" onclick="window.history.back()">ЗАКРЫТЬ БАЗУ</button>
                         </div>
                     </div>
                 `;

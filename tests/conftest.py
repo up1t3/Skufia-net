@@ -29,8 +29,12 @@ def setup_database():
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+    engine.dispose()
     if os.path.exists("./test_skufia.db"):
-        os.remove("./test_skufia.db")
+        try:
+            os.remove("./test_skufia.db")
+        except PermissionError:
+            pass
 
 @pytest.fixture
 def db():

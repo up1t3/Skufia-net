@@ -74,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Navigation Logic ---
-    function switchView(viewId) {
+    function switchView(viewId, pushState = true) {
         views.forEach(v => v.classList.remove('active'));
         navBtns.forEach(b => b.classList.remove('active'));
 
@@ -86,6 +86,22 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activeBtn) activeBtn.classList.add('active');
             addLog(`Switching to sector: ${viewId.toUpperCase().replace('_', ' ')}`);
 
+            if (pushState) {
+                history.pushState({ view: viewId }, '', '#' + viewId);
+            }
+
+            // Hide inner modals/views if returning to main section
+            if (viewId === 'wiki') {
+                const modal = document.getElementById('wiki-modal');
+                if (modal) modal.style.display = 'none';
+            }
+            if (viewId === 'forum') {
+                const threadView = document.getElementById('forum-thread-view');
+                if (threadView) threadView.style.display = 'none';
+                const list = document.getElementById('forum-list');
+                if (list) list.style.display = 'flex';
+            }
+
             // Trigger data loads based on view
             if (viewId === 'forum') loadForum();
             if (viewId === 'wiki') loadWiki();
@@ -96,6 +112,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewId === 'dashboard') loadDashboard();
         }
     }
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.view) {
+            switchView(e.state.view, false);
+        } else if (e.state && e.state.topicId) {
+            if (window.loadTopicPosts) window.loadTopicPosts(e.state.topicId, e.state.title, false);
+        } else if (e.state && e.state.wikiId) {
+            if (window.loadWikiArticle) window.loadWikiArticle(e.state.wikiId, false);
+        } else if (window.location.hash) {
+            const hash = window.location.hash.substring(1);
+            if (hash.startsWith('forum-topic-')) {
+                const id = hash.replace('forum-topic-', '');
+                if (window.loadTopicPosts) window.loadTopicPosts(id, 'Тема форума', false);
+            } else if (hash.startsWith('wiki-article-')) {
+                const id = hash.replace('wiki-article-', '');
+                if (window.loadWikiArticle) window.loadWikiArticle(id, false);
+            } else {
+                switchView(hash, false);
+            }
+        } else {
+            // Default to home/chat
+            switchView('messages', false);
+        }
+    });
 
 
     // Chat logic extracted to chat_core.js
