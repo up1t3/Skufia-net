@@ -1,4 +1,17 @@
+require('dotenv').config();
 const { Client } = require('ssh2');
+
+const config = {
+    host: process.env.SERVER_IP,
+    port: 22,
+    username: process.env.SERVER_USER || 'root',
+    password: process.env.SERVER_PASSWORD
+};
+
+if (!config.password) {
+    console.error('ERROR: SERVER_PASSWORD not set');
+    process.exit(1);
+}
 
 const conn = new Client();
 conn.on('ready', () => {
@@ -14,9 +27,4 @@ conn.on('ready', () => {
       console.log('STDERR: ' + data);
     });
   });
-}).connect({
-  host: '147.45.245.133',
-  port: 22,
-  username: 'root',
-  password: 'y38N*dQM.X33k?'
-});
+}).connect(config);
