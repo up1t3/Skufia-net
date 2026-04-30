@@ -453,6 +453,7 @@ class RTCManager {
     async acceptCall() {
         if(!this.incomingOffer) return;
         this.stopRingtone();
+        this._stopTitleBlink();
         this._callWasAnswered = true;
         // Clear any missed-call timeout (we are answering!)
         if (this._missedCallTimeout) {
@@ -726,6 +727,7 @@ class RTCManager {
         
         this.modal.style.display = 'none';
         this.floatingBar.style.display = 'none';
+        this._stopTitleBlink();
         
         if(window.addLog) window.addLog('Звонок завершён', 'info');
     }
@@ -738,13 +740,39 @@ class RTCManager {
         if (isIncoming) {
             document.getElementById('rtc-actions-incoming').style.display = 'flex';
             document.getElementById('rtc-actions-audio').style.display = 'none';
+
+            // Force window to front when tab is backgrounded
+            try { window.focus(); } catch(e) {}
+
+            // Blink tab title to attract attention
+            if (!this._titleBlinkInterval) {
+                const originalTitle = document.title;
+                let blink = false;
+                this._titleBlinkInterval = setInterval(() => {
+                    document.title = blink ? originalTitle : `📞 ВХОДЯЩИЙ ВЫЗОВ — ${name}`;
+                    blink = !blink;
+                }, 1000);
+                this._originalTitle = originalTitle;
+            }
         } else {
             document.getElementById('rtc-actions-incoming').style.display = 'none';
             document.getElementById('rtc-actions-audio').style.display = 'flex';
+            this._stopTitleBlink();
         }
         
         this.modal.style.display = 'flex';
         this.floatingBar.style.display = 'none';
+    }
+
+    _stopTitleBlink() {
+        if (this._titleBlinkInterval) {
+            clearInterval(this._titleBlinkInterval);
+            this._titleBlinkInterval = null;
+            if (this._originalTitle) {
+                document.title = this._originalTitle;
+                this._originalTitle = null;
+            }
+        }
     }
 }
 

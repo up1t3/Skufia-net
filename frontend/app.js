@@ -169,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Initialize Phase 2 Engines
         new VoiceRecorderService();
+        new VideoCircleService();
         new EmojiPickerEngine();
 
         addLog('Initializing Skufia Enterprise OS...', 'info');
@@ -266,6 +267,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 });
+            });
+
+            // Listen for SW_UPDATED message — auto-reload page to apply new version
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SW_UPDATED') {
+                    console.log('[app.js] New version detected:', event.data.version);
+                    // Auto-reload after 2 seconds to apply the new SW cache
+                    setTimeout(() => {
+                        if (!window._swReloading) {
+                            window._swReloading = true;
+                            window.location.reload();
+                        }
+                    }, 2000);
+                }
             });
         }
     }
@@ -770,14 +785,30 @@ const handleInput = document.getElementById('settings-handle');
             if (typeof showToast === 'function') showToast('Сначала выберите контакт для звонка');
             return;
         }
-        // FIX: was currentReceiverId (typo), correct field is receiverId
         const targetId = state.chat.receiverId || state.chat.currentRoomId;
         if (!window.RTCManagerInstance) {
             if (typeof showToast === 'function') showToast('⚠️ RTC модуль не инициализирован');
             return;
         }
+
+        // Resolve caller name and avatar from rooms list
+        let targetName = 'User ' + targetId;
+        let targetAvatar = '<div class="avatar-placeholder" style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#555;font-size:40px;">?</div>';
+
+        if (state.chat && state.chat.rooms) {
+            const room = state.chat.rooms.find(r => r.id == targetId || r.other_user_id == targetId);
+            if (room) {
+                targetName = room.name || room.id;
+                if (room.avatar_url) {
+                    targetAvatar = `<img src="${room.avatar_url}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" onerror="this.outerHTML='<div class=\\'avatar-placeholder\\' style=\\'width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#555;font-size:40px;\\'>&quest;</div>'">`;
+                } else {
+                    targetAvatar = `<div class="avatar-placeholder" style="width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent-cyan);color:#000;font-size:40px;font-weight:bold;">${targetName.charAt(0).toUpperCase()}</div>`;
+                }
+            }
+        }
+
         if (typeof showToast === 'function') showToast(`📞 Инициация ${isVideo ? 'видео' : 'аудио'} звонка...`);
-        window.RTCManagerInstance.startCall(targetId, isVideo);
+        window.RTCManagerInstance.startCall(targetId, targetName, targetAvatar, isVideo);
     };
 
     // --- CHAT OPTIONS DROPDOWN ---

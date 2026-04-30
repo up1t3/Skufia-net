@@ -240,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             try {
                 if (typeof VoiceRecorderService !== 'undefined') new VoiceRecorderService();
+                if (typeof VideoCircleService !== 'undefined') new VideoCircleService();
                 if (typeof EmojiPickerEngine !== 'undefined') new EmojiPickerEngine();
             } catch (e) {
                 console.error('Subsystem init failed:', e);

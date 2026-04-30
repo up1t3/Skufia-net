@@ -1219,6 +1219,32 @@ async def upload_audio_file(file: UploadFile = FastAPIFile(...), current_user: U
 
     return {"audio_url": f"/api/uploads/voice/{unique_name}"}
 
+@router.post('/chat/upload_video')
+async def upload_video_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), idem_key: str = Depends(validate_idempotency)):
+    """Upload a video message file (circle video) (max 15 MB)"""
+    contents = await file.read()
+    if len(contents) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Файл превышает лимит 15 МБ")
+
+    if not validate_magic_bytes(contents, expected_type="video"):
+        raise HTTPException(status_code=415, detail="Недопустимый формат видео файла (Spoofing detected)")
+
+    safe_filename = os.path.basename((file.filename or '').replace('\\', '/'))
+    ext = os.path.splitext(safe_filename)[1] or '.webm'
+
+    if ext.lower() not in ['.webm', '.mp4']:
+        ext = '.webm'
+
+    unique_name = f"{uuid.uuid4().hex}{ext}"
+
+    os.makedirs(os.path.join('uploads', 'video'), exist_ok=True)
+    save_path = os.path.join('uploads', 'video', unique_name)
+
+    with open(save_path, 'wb') as f:
+        f.write(contents)
+
+    return {"video_url": f"/api/uploads/video/{unique_name}"}
+
 @router.post('/chat/upload')
 async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), idem_key: str = Depends(validate_idempotency)):
     """Upload a file attachment for chat (max 20 MB)"""

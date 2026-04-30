@@ -23,8 +23,23 @@ window.initChatCore = function() {
         state.chat.socket.onmessage = async (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'rtc_signal') {
+                console.log('[WS] rtc_signal received:', data.signal_type, 'from:', data.sender_id, 'RTCManagerInstance:', !!window.RTCManagerInstance);
                 if(window.RTCManagerInstance) {
                     window.RTCManagerInstance.handleIncomingSignal(data.signal_type, data.payload, data.sender_id);
+                } else {
+                    // RTCManager not yet initialized — retry for up to 5 seconds
+                    console.warn('[WS] RTCManagerInstance not ready, queuing rtc_signal...');
+                    let retries = 0;
+                    const retryInterval = setInterval(() => {
+                        if (window.RTCManagerInstance) {
+                            clearInterval(retryInterval);
+                            console.log('[WS] RTCManagerInstance became available, delivering queued signal');
+                            window.RTCManagerInstance.handleIncomingSignal(data.signal_type, data.payload, data.sender_id);
+                        } else if (++retries >= 10) {
+                            clearInterval(retryInterval);
+                            console.error('[WS] RTCManagerInstance never initialized — rtc_signal LOST');
+                        }
+                    }, 500);
                 }
             } else if (data.type === 'new_message') {
                 const msg = data;
@@ -592,11 +607,13 @@ window.initChatCore = function() {
         state.chat.currentRoomId = roomId;
         state.chat.currentRoomType = type;
         state.chat.receiverId = receiverId;
+        state.chat.currentMyRole = myRole;
 
         if (chatInput) {
             const draft = localStorage.getItem(`skuf_draft_${roomId}`);
             chatInput.value = draft || '';
         }
+
 
         const chatHistoryEl = document.getElementById('chat-history');
         const header = document.getElementById('chat-header');
@@ -710,9 +727,10 @@ window.initChatCore = function() {
                 const messages = response.messages || response; // backward compat
                 state.chat.hasMore = response.has_more || false;
                 state.chat.nextCursor = response.next_cursor || null;
-                // @ts-ignore
-                for (const m of messages) {
-                    // Try decrypting history if we have the key
+
+                // Phase 1: Batch-decrypt all messages BEFORE rendering
+                // This prevents the visual "scrolling staircase" effect
+                await Promise.all(messages.map(async (m) => {
                     if (m.iv && m.iv.length > 0) {
                         if (state.chat.sessionKeys[roomId]) {
                             try {
@@ -739,24 +757,89 @@ window.initChatCore = function() {
                                 }
                             }
                         } else {
-                            // No key — show friendly placeholder
                             m.text = '🔒 Зашифрованное сообщение';
                             m.is_secure = false;
                         }
                     } else {
                         m.is_secure = false;
                     }
-                    // If iv is empty/null, m.text is plaintext — render as-is
+                }));
+
+                // Phase 2: Render all messages synchronously in one pass
+                for (const m of messages) {
                     renderChatMessage(m);
                 }
                 chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+
+                // Attach scroll listener for infinite loading
+                chatHistoryEl.onscroll = async () => {
+                    if (chatHistoryEl.scrollTop === 0 && state.chat.hasMore && state.chat.nextCursor) {
+                        // Show loading indicator
+                        const loader = document.createElement('div');
+                        loader.id = 'history-loader';
+                        loader.style.textAlign = 'center';
+                        loader.style.padding = '10px';
+                        loader.style.color = 'var(--text-dim)';
+                        loader.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><style>.spinner_P7sC{transform-origin:center;animation:spinner_svv2 .75s infinite linear}@keyframes spinner_svv2{100%{transform:rotate(360deg)}}</style><path d="M10.14,1.16a11,11,0,0,0-9,8.92A1.59,1.59,0,0,0,2.46,12,1.52,1.52,0,0,0,4.11,10.7a8,8,0,0,1,6.66-6.61A1.42,1.42,0,0,0,12,2.69h0A1.57,1.57,0,0,0,10.14,1.16Z" class="spinner_P7sC" fill="currentColor"/></svg>';
+                        chatHistoryEl.insertBefore(loader, chatHistoryEl.firstChild);
+
+                        const previousScrollHeight = chatHistoryEl.scrollHeight;
+
+                        try {
+                            const res = await apiRequest(`/chat/rooms/${roomId}/history?limit=30&before_id=${state.chat.nextCursor}`);
+                            const moreMessages = res.messages || res;
+                            state.chat.hasMore = res.has_more || false;
+                            state.chat.nextCursor = res.next_cursor || null;
+
+                            if (loader.parentNode) loader.remove();
+
+                            // Reverse to prepend in correct order (since API returns chronologically)
+                            // Wait, API returns chronologically, meaning oldest is first.
+                            // We need to prepend from last to first so that the oldest is at the top.
+                            for (let i = moreMessages.length - 1; i >= 0; i--) {
+                                const m = moreMessages[i];
+                                if (m.iv && m.iv.length > 0) {
+                                    if (state.chat.sessionKeys[roomId]) {
+                                        try {
+                                            m.text = await window.CryptoManager.decryptWithKeyHistory(state.chat.sessionKeys[roomId], m.text, m.iv, m.key_version);
+                                            m.is_secure = true;
+                                        } catch(e) {
+                                            try {
+                                                const newKey = await getOrEstablishSessionKey(roomId, m.sender_id, true);
+                                                m.text = await window.CryptoManager.decryptWithKeyHistory(newKey, m.text, m.iv, m.key_version);
+                                                m.is_secure = true;
+                                            } catch(e2) {
+                                                m.text = '🔒 [Не удалось расшифровать сообщение]';
+                                                m.is_secure = false;
+                                            }
+                                        }
+                                    } else {
+                                        m.text = '🔒 Зашифрованное сообщение';
+                                        m.is_secure = false;
+                                    }
+                                } else {
+                                    m.is_secure = false;
+                                }
+                                renderChatMessage(m, true);
+                            }
+
+                            // Restore scroll position so it doesn't jump
+                            chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight - previousScrollHeight;
+                        } catch (e) {
+                            console.error('[InfiniteScroll] Error loading history:', e);
+                            if (loader.parentNode) loader.remove();
+                        }
+                    }
+                };
+
             } catch (e) { chatHistoryEl.innerHTML = '<div class="chat-placeholder">ERROR: HISTORY UNAVAILABLE</div>'; }
 
         }
     }
 
-    /** @param {any} msg */
-    function renderChatMessage(msg) {
+    /** @param {any} msg 
+     *  @param {boolean} prepend */
+    function renderChatMessage(msg, prepend = false) {
         const history = document.getElementById('chat-history');
         if (!history) {
             console.error('[renderChatMessage] #chat-history NOT FOUND in DOM!');
@@ -789,8 +872,12 @@ window.initChatCore = function() {
             bubble.innerHTML = svgIcon;
             bubble.appendChild(textSpan);
             rowDiv.appendChild(bubble);
-            history.appendChild(rowDiv);
-            history.scrollTop = history.scrollHeight;
+            if (prepend) {
+                history.insertBefore(rowDiv, history.firstChild);
+            } else {
+                history.appendChild(rowDiv);
+                history.scrollTop = history.scrollHeight;
+            }
             return;
         }
 
@@ -805,9 +892,28 @@ window.initChatCore = function() {
         if (fileUrl) {
             const BASE_URL = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : '';
             const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
-            const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|mp4|opus)(\?.*)?$/i.test(fileUrl);
+            const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|opus)(\?.*)?$/i.test(fileUrl);
+            const isVideo = /\.(mp4)$/i.test(fileUrl) || msg.file_type === 'video_circle' || (msg.file_url && msg.file_url.includes('/video/'));
+            
             if (isImage) {
                 fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
+            } else if (isVideo && (msg.file_type === 'video_circle' || fileUrl.includes('/video/'))) {
+                // Circle video ("кружочки")
+                fileHtml = `<div class="msg-video-circle">
+                    <video autoplay loop muted playsinline style="width: 240px; height: 240px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan);">
+                        <source src="${BASE_URL}${fileUrl}" type="video/webm">
+                        <source src="${BASE_URL}${fileUrl}" type="video/mp4">
+                    </video>
+                    <!-- Click to unmute/pause overlay could be added here -->
+                </div>`;
+                // To enable audio, we can remove 'muted' and let users click to play, or keep it muted with controls. Let's make it have controls or click-to-play.
+                fileHtml = `<div class="msg-video-circle" style="position: relative; width: 240px; height: 240px; border-radius: 50%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan); cursor: pointer;" onclick="const v = this.querySelector('video'); if(v.paused){v.play();}else{v.pause();}">
+                    <video loop playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                        <source src="${BASE_URL}${fileUrl}" type="video/webm">
+                        <source src="${BASE_URL}${fileUrl}" type="video/mp4">
+                    </video>
+                    <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.5); border-radius: 50%; padding: 4px; display: flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                </div>`;
             } else if (isAudio) {
                 const audioId = `audio-${msg.id || Date.now()}`;
                 fileHtml = `<div class="msg-audio-player">
@@ -1008,8 +1114,12 @@ window.initChatCore = function() {
         };
 
         rowDiv.appendChild(bubble);
-        history.appendChild(rowDiv);
-        history.scrollTop = history.scrollHeight;
+        if (prepend) {
+            history.insertBefore(rowDiv, history.firstChild);
+        } else {
+            history.appendChild(rowDiv);
+            history.scrollTop = history.scrollHeight;
+        }
     }
 
     window.sendChatMsg = async function(directCaption = null) {
@@ -2309,6 +2419,214 @@ window.initChatCore = function() {
         }
     }
 
+    // [VIDEO-CIRCLE] Video Circle Recorder Service
+    class VideoCircleService {
+        constructor() {
+            this.btn = document.getElementById('video-record-btn');
+            this.mediaRecorder = null;
+            this.videoChunks = [];
+            this.isRecording = false;
+            
+            this.timerInterval = null;
+            this.startTime = null;
+            this.isCancelled = false;
+            this.previewVideo = null;
+            this.previewContainer = null;
+            
+            if(this.btn) {
+                // Remove old event listeners
+                const newBtn = this.btn.cloneNode(true);
+                this.btn.parentNode.replaceChild(newBtn, this.btn);
+                this.btn = newBtn;
+                
+                this.btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if(this.isRecording) {
+                        this.stopAndSend();
+                    } else {
+                        this.start();
+                    }
+                });
+            }
+        }
+        
+        async start() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 480 } }, audio: true });
+                this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8,opus' });
+                this.videoChunks = [];
+                this.isCancelled = false;
+                
+                this.mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) this.videoChunks.push(event.data);
+                };
+                
+                this.mediaRecorder.onstop = async () => {
+                    const videoBlob = new Blob(this.videoChunks, { type: 'video/webm;codecs=vp8,opus' });
+                    this.videoChunks = [];
+                    stream.getTracks().forEach(t => t.stop());
+                    
+                    this.cleanupUI();
+                    
+                    if (!this.isCancelled && videoBlob.size > 1000) { 
+                        this.uploadVideo(videoBlob);
+                    }
+                };
+                
+                this.mediaRecorder.start();
+                this.isRecording = true;
+                
+                this.setupUI(stream);
+                
+                addLog('Запись видеосообщения...', 'info');
+            } catch(e) {
+                addLog('Камера/Микрофон недоступны: ' + e.message, 'error');
+            }
+        }
+        
+        stopAndSend() {
+            if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                this.isCancelled = false;
+                this.mediaRecorder.stop();
+                this.isRecording = false;
+            }
+        }
+        
+        cancel() {
+            if(this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                this.isCancelled = true;
+                this.mediaRecorder.stop();
+                this.isRecording = false;
+                addLog('Запись видео отменена', 'info');
+            }
+        }
+        
+        setupUI(stream) {
+            // UI Overlay for Video
+            this.previewContainer = document.createElement('div');
+            this.previewContainer.style.position = 'absolute';
+            this.previewContainer.style.bottom = '80px';
+            this.previewContainer.style.right = '20px';
+            this.previewContainer.style.width = '200px';
+            this.previewContainer.style.height = '200px';
+            this.previewContainer.style.borderRadius = '50%';
+            this.previewContainer.style.overflow = 'hidden';
+            this.previewContainer.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+            this.previewContainer.style.border = '3px solid var(--accent-cyan)';
+            this.previewContainer.style.zIndex = '1000';
+            this.previewContainer.style.display = 'flex';
+            this.previewContainer.style.flexDirection = 'column';
+            this.previewContainer.style.justifyContent = 'center';
+            this.previewContainer.style.alignItems = 'center';
+            this.previewContainer.style.background = '#000';
+
+            this.previewVideo = document.createElement('video');
+            this.previewVideo.srcObject = stream;
+            this.previewVideo.autoplay = true;
+            this.previewVideo.muted = true;
+            this.previewVideo.playsInline = true;
+            this.previewVideo.style.width = '100%';
+            this.previewVideo.style.height = '100%';
+            this.previewVideo.style.objectFit = 'cover';
+            this.previewContainer.appendChild(this.previewVideo);
+
+            // Controls overlay inside video
+            const controls = document.createElement('div');
+            controls.style.position = 'absolute';
+            controls.style.bottom = '10px';
+            controls.style.display = 'flex';
+            controls.style.gap = '15px';
+            controls.style.alignItems = 'center';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" stroke="white" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            cancelBtn.style.background = 'rgba(239, 68, 68, 0.8)';
+            cancelBtn.style.border = 'none';
+            cancelBtn.style.borderRadius = '50%';
+            cancelBtn.style.width = '36px';
+            cancelBtn.style.height = '36px';
+            cancelBtn.style.cursor = 'pointer';
+            cancelBtn.onclick = (e) => { e.stopPropagation(); this.cancel(); };
+            controls.appendChild(cancelBtn);
+
+            const timerEl = document.createElement('span');
+            timerEl.style.color = 'white';
+            timerEl.style.fontWeight = 'bold';
+            timerEl.style.textShadow = '0 1px 3px rgba(0,0,0,0.8)';
+            timerEl.textContent = '0:00';
+            controls.appendChild(timerEl);
+
+            const sendBtn = document.createElement('button');
+            sendBtn.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
+            sendBtn.style.background = 'rgba(0, 242, 255, 0.8)';
+            sendBtn.style.border = 'none';
+            sendBtn.style.borderRadius = '50%';
+            sendBtn.style.width = '36px';
+            sendBtn.style.height = '36px';
+            sendBtn.style.cursor = 'pointer';
+            sendBtn.onclick = (e) => { e.stopPropagation(); this.stopAndSend(); };
+            controls.appendChild(sendBtn);
+
+            this.previewContainer.appendChild(controls);
+
+            const chatLayout = document.querySelector('.chat-layout');
+            if(chatLayout) chatLayout.appendChild(this.previewContainer);
+            
+            if(this.btn) {
+                this.btn.classList.add('recording');
+                this.btn.style.color = 'var(--accent-cyan, #00f2ff)';
+            }
+            
+            this.startTime = Date.now();
+            this.timerInterval = setInterval(() => {
+                if(!timerEl) return;
+                const diff = Math.floor((Date.now() - this.startTime) / 1000);
+                const m = Math.floor(diff / 60);
+                const s = diff % 60;
+                timerEl.textContent = `${m}:${s < 10 ? '0' + s : s}`;
+            }, 1000);
+        }
+        
+        cleanupUI() {
+            if(this.timerInterval) clearInterval(this.timerInterval);
+            if(this.btn) {
+                this.btn.classList.remove('recording');
+                this.btn.style.color = '';
+            }
+            if(this.previewContainer) {
+                this.previewContainer.remove();
+                this.previewContainer = null;
+            }
+        }
+        
+        async uploadVideo(blob) {
+            const formData = new FormData();
+            formData.append('file', blob, 'video_circle.webm');
+            try {
+                const headers = {};
+                if (state.user.token) headers['Authorization'] = `Bearer ${state.user.token}`;
+                headers['X-Idempotency-Key'] = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
+                const resp = await fetch(`${API_BASE_URL}/chat/upload_video`, {
+                    method: 'POST',
+                    headers,
+                    body: formData
+                });
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({detail:'Upload failed'}));
+                    throw new Error(err.detail || 'Upload failed');
+                }
+                const data = await resp.json();
+                
+                const msgInput = document.getElementById('chat-input');
+                const captionToSend = msgInput ? msgInput.value.trim() : '';
+                state.pendingFile = { url: data.video_url, name: 'Video Message', file_type: 'video_circle' };
+                await window.sendChatMsg(captionToSend || null);
+            } catch(e) {
+                addLog('Ошибка отправки видеосообщения', 'error');
+            }
+        }
+    }
+
     // [UX-201] Emoji Picker Engine
     class EmojiPickerEngine {
         constructor() {
@@ -2404,6 +2722,7 @@ window.initChatCore = function() {
     window.clearChatFile = clearChatFile;
     window.renderFabContacts = renderFabContacts;
     window.VoiceRecorderService = VoiceRecorderService;
+    window.VideoCircleService = VideoCircleService;
     window.EmojiPickerEngine = EmojiPickerEngine;
 
 };
