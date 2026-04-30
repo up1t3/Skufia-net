@@ -187,6 +187,34 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
     await manager.connect(user_id, websocket)
 
+    # Check for pending incoming calls
+    try:
+        from database import redis_client
+        import json
+        if redis_client:
+            # redis_client is async
+            keys = await redis_client.keys(f"rtc_offer:*:{user_id}")
+            for key in keys:
+                try:
+                    # key might be bytes
+                    key_str = key.decode('utf-8') if isinstance(key, bytes) else key
+                    parts = key_str.split(":")
+                    if len(parts) >= 3:
+                        caller_id_str = parts[1]
+                        offer_payload = await redis_client.get(key)
+                        if offer_payload:
+                            offer_msg = {
+                                "type": "rtc_signal",
+                                "sender_id": int(caller_id_str),
+                                "signal_type": "offer",
+                                "payload": json.loads(offer_payload)
+                            }
+                            await websocket.send_text(json.dumps(offer_msg))
+                except Exception as e:
+                    print(f"Failed to process pending call {key}: {e}")
+    except Exception as e:
+        print(f"Error fetching pending calls: {e}")
+
     async def receiver():
         try:
             while True:
