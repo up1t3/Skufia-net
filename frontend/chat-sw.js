@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v2.1.6_30_04_22_50'; // Bumped for robust cache-busting during install
+const CACHE_NAME = 'skufenger-chat-v2.1.7'; // Bumped for robust cache-busting during install
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -126,6 +126,8 @@ self.addEventListener('push', function(event) {
         renotify: true
     };
 
+    let isCall = false;
+
     if (event.data) {
         try {
             const data = event.data.json();
@@ -137,6 +139,7 @@ self.addEventListener('push', function(event) {
                 options.data = data.data;
                 // For calls - use different tag and vibration
                 if (data.data.action === 'call') {
+                    isCall = true;
                     options.tag = 'skufia-call';
                     // Имитация длинного звонка (вибрация 1 сек, пауза 1 сек - 15 раз = 30 секунд звонка)
                     options.vibrate = Array(15).fill([1000, 1000]).flat();
@@ -155,7 +158,19 @@ self.addEventListener('push', function(event) {
         }
     }
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    // Don't show message notifications if app is in focus (calls always show)
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            if (!isCall) {
+                const hasFocused = clientList.some(c => c.focused);
+                if (hasFocused) {
+                    console.log('[SW] App is focused, skipping message notification.');
+                    return; // App is open and active — WS will handle it
+                }
+            }
+            return self.registration.showNotification(title, options);
+        })
+    );
 });
 
 self.addEventListener('notificationclick', function(event) {

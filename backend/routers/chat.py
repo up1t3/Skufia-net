@@ -1374,20 +1374,16 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         uids = [m.user_id for m in members]
         await manager.broadcast_msg(payload, user_ids=uids)
 
-        # Trigger push notifications for offline members
+        # Trigger push notifications for ALL other members (mobile WS unreliable)
         for m in members:
             if m.user_id != current_user.id:
-                profile = m.user.profile if m.user else None
-                # Check if offline OR not in active_connections
-                is_connected = m.user_id in manager.active_connections
-                if not is_connected:
-                    push_payload = {
-                        "title": f"Новое сообщение от {get_display_name(current_user)}",
-                        "body": "Зашифрованное сообщение" if msg.encryption_iv else msg.content[:50] + ("..." if len(msg.content) > 50 else ""),
-                        "data": {"roomId": room_id}
-                    }
-                    import asyncio
-                    asyncio.create_task(trigger_web_push(m.user_id, push_payload))
+                push_payload = {
+                    "title": f"Новое сообщение от {get_display_name(current_user)}",
+                    "body": "Зашифрованное сообщение" if msg.encryption_iv else msg.content[:50] + ("..." if len(msg.content) > 50 else ""),
+                    "data": {"roomId": room_id}
+                }
+                import asyncio
+                asyncio.create_task(trigger_web_push(m.user_id, push_payload, ttl=86400, urgency="high"))
 
     # --- Скуф-GPT (Бот "База") Заглушка ---
     if msg.content and msg.content.strip().startswith('@baza '):

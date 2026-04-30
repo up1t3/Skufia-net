@@ -433,6 +433,87 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ── App Installation (PWA) ──────────────────────────────────────────────
+    
+    // Android Install Prompt
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent Chrome 67 and earlier from automatically showing the prompt
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        // Optionally, show a custom install button/banner here if needed
+        console.log('[PWA] beforeinstallprompt event captured');
+    });
+
+    // iOS Install Banner
+    function checkAndShowIOSInstallBanner() {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isStandalone = window.navigator.standalone === true;
+        const dismissed = localStorage.getItem('skufia_ios_install_dismissed') === 'true';
+
+        if (isIOS && !isStandalone && !dismissed) {
+            const banner = document.createElement('div');
+            banner.id = 'ios-install-banner';
+            banner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--surface-2);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 16px;
+                width: 90%;
+                max-width: 400px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                z-index: 10000;
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                color: var(--text-primary);
+                font-family: var(--font-primary);
+                animation: slideUp 0.5s ease-out forwards;
+            `;
+            banner.innerHTML = \`
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Установите приложение</h3>
+                    <button id="close-ios-banner" style="background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 0;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: var(--text-secondary); line-height: 1.4;">
+                    Для работы <b>push-уведомлений</b> и работы в фоне, установите SKUFenger на домашний экран.
+                </p>
+                <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; font-size: 14px;">
+                    1. Нажмите иконку <b>Поделиться</b> <span style="font-size: 18px; vertical-align: middle;">&#8681;</span><br>
+                    2. Выберите <b>На экран «Домой»</b> <span style="font-size: 18px; vertical-align: middle;">&#8862;</span>
+                </div>
+            \`;
+
+            // Keyframe animation needs to be injected if it doesn't exist
+            if (!document.getElementById('ios-banner-keyframes')) {
+                const style = document.createElement('style');
+                style.id = 'ios-banner-keyframes';
+                style.innerHTML = \`
+                    @keyframes slideUp {
+                        from { transform: translate(-50%, 100%); opacity: 0; }
+                        to { transform: translate(-50%, 0); opacity: 1; }
+                    }
+                \`;
+                document.head.appendChild(style);
+            }
+
+            document.body.appendChild(banner);
+
+            document.getElementById('close-ios-banner').addEventListener('click', () => {
+                banner.style.display = 'none';
+                localStorage.setItem('skufia_ios_install_dismissed', 'true');
+            });
+        }
+    }
+    
+    // Check after a short delay so it doesn't interrupt immediate rendering
+    setTimeout(checkAndShowIOSInstallBanner, 2000);
+
     // ── Push Notifications ──────────────────────────────────────────────────
     /**
      * Convert a base64 URL-safe string to a Uint8Array (required for VAPID key).

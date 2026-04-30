@@ -85,10 +85,14 @@ async def notify_profile_update(user_id: int, user_data: dict):
     finally:
         db.close()
 
-async def trigger_web_push(user_id: int, payload: dict, ttl: int = 0, urgency: str = "normal"):
+async def trigger_web_push(user_id: int, payload: dict, ttl: int = 0, urgency: str = "normal", topic: str = None):
     from database import SessionLocal, PushSubscription
     import json
     from webpush_utils import send_web_push
+    
+    # Auto-generate topic from payload room if not specified
+    if not topic and payload.get("data", {}).get("roomId"):
+        topic = f"room-{payload['data']['roomId']}"
     
     db = SessionLocal()
     try:
@@ -102,7 +106,7 @@ async def trigger_web_push(user_id: int, payload: dict, ttl: int = 0, urgency: s
                 }
             }
             try:
-                success = send_web_push(sub_info, json.dumps(payload), ttl=ttl, urgency=urgency)
+                success = send_web_push(sub_info, json.dumps(payload), ttl=ttl, urgency=urgency, topic=topic)
                 if not success:
                     db.delete(sub)
             except Exception as e:
