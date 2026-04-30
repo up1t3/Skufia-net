@@ -43,6 +43,7 @@ window.initChatCore = function() {
                 }
             } else if (data.type === 'new_message') {
                 const msg = data;
+                if (msg.message_id && !msg.id) msg.id = msg.message_id;
 
                 // --- E2EE DECRYPTION (graceful) ---
                 if (msg.iv && msg.iv.length > 0) {
