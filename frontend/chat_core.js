@@ -1201,6 +1201,8 @@ window.initChatCore = function() {
             savedContent = content;
             savedFile = state.pendingFile ? { ...state.pendingFile } : null;
             savedReplyId = state.chat.replyToId;
+            // [FIX] Save editingId BEFORE cancelReply() clears it
+            const currentEditingId = state.chat.editingId;
             // --- OPTIMISTIC RENDER ---
             // Clear input immediately (optimistic) before API call
             if (input) input.value = '';
@@ -1209,7 +1211,7 @@ window.initChatCore = function() {
             clearChatFile();
 
             optimisticId = Date.now();
-            if (!state.chat.editingId) {
+            if (!currentEditingId) {
                 const optimisticMsg = {
                     id: optimisticId,
                     sender: state.user?.username || state.user?.display_name || 'Я',
@@ -1233,11 +1235,20 @@ window.initChatCore = function() {
             }
 
             // --- API REQUEST ---
-            console.log('[sendChatMsg] Calling API, roomId:', roomId, 'encrypted:', !!payload.encryption_iv);
+            console.log('[sendChatMsg] Calling API, roomId:', roomId, 'editing:', currentEditingId, 'encrypted:', !!payload.encryption_iv);
             let response;
-            if (state.chat.editingId) {
-                response = await apiRequest(`/chat/messages/${state.chat.editingId}`, 'PUT', payload);
-                state.chat.editingId = null;
+            if (currentEditingId) {
+                response = await apiRequest(`/chat/messages/${currentEditingId}`, 'PUT', payload);
+                // Update existing message in DOM immediately
+                const existingMsgEl = document.getElementById(`msg-${currentEditingId}`);
+                if (existingMsgEl) {
+                    const txtEl = existingMsgEl.querySelector('.msg-text');
+                    if (txtEl) txtEl.innerText = savedContent;
+                    if (!existingMsgEl.querySelector('.is-edited')) {
+                        const mheader = existingMsgEl.querySelector('.msg-header');
+                        if (mheader) mheader.insertAdjacentHTML('beforeend', '<span class="is-edited">(изм.)</span>');
+                    }
+                }
             } else {
                 response = await apiRequest(`/chat/rooms/${roomId}/send`, 'POST', payload);
                 console.log('[sendChatMsg] API response:', response ? 'ok, id='+response.id : 'null/empty');
