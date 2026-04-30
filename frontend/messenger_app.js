@@ -414,7 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LISTENERS ---
     const soundToggle = document.getElementById('settings-sound-toggle');
-    const pushToggle = document.getElementById('settings-push-toggle');
+    const pushToggle = document.getElementById('push-notifications-toggle');
     const enterToggle = document.getElementById('settings-enter-toggle');
     const syncBtn = document.getElementById('sync-contacts-btn');
 
@@ -525,9 +525,24 @@ document.addEventListener('DOMContentLoaded', () => {
         return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
     }
 
+    function isIos() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    function isStandalone() {
+        return ('standalone' in navigator && navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
+    }
+
     async function registerPushSubscription() {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             console.warn('[Push] Browser does not support push notifications.');
+            if (window.showToast) window.showToast('⚠️ Ваш браузер не поддерживает Push-уведомления.');
+            return;
+        }
+
+        if (isIos() && !isStandalone()) {
+            if (window.showToast) window.showToast('⚠️ На iPhone/iPad уведомления работают только при установке на экран "Домой" (Share -> На экран "Домой")');
+            alert('Для включения уведомлений на iPhone/iPad:\n1. Нажмите иконку "Поделиться" (квадрат со стрелкой)\n2. Выберите "На экран «Домой»" (Add to Home Screen)\n3. Откройте добавленное приложение и включите уведомления там.');
+            if (pushToggle) pushToggle.checked = false;
             return;
         }
         try {
@@ -550,10 +565,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Subscribe via pushManager
             const reg = await navigator.serviceWorker.ready;
-            const subscription = await reg.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey
-            });
+            let subscription;
+            try {
+                subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey
+                });
+            } catch (subscribeError) {
+                console.warn('[Push] Subscribe failed, possibly due to old VAPID key. Unsubscribing and retrying...', subscribeError);
+                try {
+                    const existingSub = await reg.pushManager.getSubscription();
+                    if (existingSub) {
+                        await existingSub.unsubscribe();
+                    }
+                    subscription = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey
+                    });
+                } catch (retryError) {
+                    throw retryError;
+                }
+            }
 
             // 4. Send subscription to backend
             const subJson = subscription.toJSON();

@@ -337,8 +337,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    function isIos() {
+        return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    function isStandalone() {
+        return ('standalone' in navigator && navigator.standalone) || window.matchMedia('(display-mode: standalone)').matches;
+    }
+
     window.togglePushNotifications = async function(checkbox) {
         if (checkbox.checked) {
+            if (isIos() && !isStandalone()) {
+                if (window.showToast) window.showToast('⚠️ На iPhone/iPad уведомления работают только при установке на экран "Домой" (Share -> На экран "Домой")');
+                alert('Для включения уведомлений на iPhone/iPad:\n1. Нажмите иконку "Поделиться" (квадрат со стрелкой)\n2. Выберите "На экран «Домой»" (Add to Home Screen)\n3. Откройте добавленное приложение и включите уведомления там.');
+                checkbox.checked = false;
+                return;
+            }
+
             const permission = await Notification.requestPermission();
             if (permission === 'granted') {
                 await window.subscribeToPushNotifications();

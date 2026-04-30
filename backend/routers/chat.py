@@ -67,6 +67,7 @@ class MessageCreate(BaseModel):
     encryption_iv: Optional[str] = "" # Default to empty string for E2EE
     file_url: Optional[str] = None
     reply_to_id: Optional[int] = None
+    client_id: Optional[int] = None
 
 class RoomCreate(BaseModel):
     name: str
@@ -1355,6 +1356,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "type": "new_message",
         "id": db_msg.id,
         "message_id": db_msg.id,
+        "client_id": msg.client_id,
         "sender": get_display_name(current_user),
         "sender_id": current_user.id,
         "content": msg.content,

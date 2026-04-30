@@ -106,7 +106,9 @@ async def trigger_web_push(user_id: int, payload: dict, ttl: int = 0, urgency: s
                 }
             }
             try:
-                success = send_web_push(sub_info, json.dumps(payload), ttl=ttl, urgency=urgency, topic=topic)
+                import asyncio
+                loop = asyncio.get_event_loop()
+                success = await loop.run_in_executor(None, send_web_push, sub_info, json.dumps(payload), ttl, urgency, topic)
                 if not success:
                     db.delete(sub)
             except Exception as e:

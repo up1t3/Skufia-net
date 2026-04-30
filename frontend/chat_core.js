@@ -858,6 +858,18 @@ window.initChatCore = function() {
             return;
         }
 
+        // [DEDUP] Check if we have an optimistic element for this exact client_id
+        if (msg.client_id && document.getElementById(`msg-${msg.client_id}`)) {
+            const tempMsgEl = document.getElementById(`msg-${msg.client_id}`);
+            if (tempMsgEl) {
+                // The WS arrived before API response! Rename the optimistic element to the real ID.
+                tempMsgEl.id = `msg-${msg.id}`;
+                tempMsgEl.classList.remove('msg-optimistic');
+                console.warn('[renderChatMessage] DEDUP: Renamed optimistic msg-' + msg.client_id + ' to msg-' + msg.id + ' via WS');
+                return; // Element is already in the DOM and updated, no need to render again
+            }
+        }
+
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
 
@@ -1198,7 +1210,8 @@ window.initChatCore = function() {
             content,
             encryption_iv: '',
             file_url: state.pendingFile ? state.pendingFile.url : null,
-            reply_to_id: state.chat.replyToId
+            reply_to_id: state.chat.replyToId,
+            client_id: null
         };
 
         let sendSucceeded = false;
@@ -1245,6 +1258,7 @@ window.initChatCore = function() {
             clearChatFile();
 
             optimisticId = Date.now();
+            payload.client_id = optimisticId; // Add client_id for WS deduplication
             if (!currentEditingId) {
                 const optimisticMsg = {
                     id: optimisticId,
