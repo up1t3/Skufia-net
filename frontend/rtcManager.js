@@ -463,6 +463,8 @@ class RTCManager {
         this.statusText.textContent = 'Соединение...';
         document.getElementById('rtc-actions-incoming').style.display = 'none';
         document.getElementById('rtc-actions-audio').style.display = 'flex';
+        this.modal.style.display = 'flex';
+        this.floatingBar.style.display = 'none';
         
         await this.initiatePeerConnection(this.currentCallTarget, false);
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(this.incomingOffer));

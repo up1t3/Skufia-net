@@ -839,7 +839,7 @@ window.initChatCore = function() {
 
     /** @param {any} msg 
      *  @param {boolean} prepend */
-    function renderChatMessage(msg, prepend = false) {
+    function renderChatMessage(msg, prepend = false, skipScroll = false) {
         const history = document.getElementById('chat-history');
         if (!history) {
             console.error('[renderChatMessage] #chat-history NOT FOUND in DOM!');
@@ -876,7 +876,7 @@ window.initChatCore = function() {
                 history.insertBefore(rowDiv, history.firstChild);
             } else {
                 history.appendChild(rowDiv);
-                history.scrollTop = history.scrollHeight;
+            if (!skipScroll) history.scrollTop = history.scrollHeight;
             }
             return;
         }
@@ -1118,11 +1118,17 @@ window.initChatCore = function() {
             history.insertBefore(rowDiv, history.firstChild);
         } else {
             history.appendChild(rowDiv);
-            history.scrollTop = history.scrollHeight;
+            if (!skipScroll) history.scrollTop = history.scrollHeight;
         }
     }
 
+    let _lastSendTime = 0;
     window.sendChatMsg = async function(directCaption = null) {
+        if (Date.now() - _lastSendTime < 500) {
+            console.warn('[sendChatMsg] SKIP: debounce guard (500ms)');
+            return;
+        }
+        
         console.log('[sendChatMsg] >>> ENTER, directCaption type:', typeof directCaption, 'val:', typeof directCaption === 'string' ? directCaption.substring(0,20) : String(directCaption).substring(0,20));
         const input = /** @type {HTMLInputElement|null} */ (document.getElementById('chat-input'));
         
@@ -1143,10 +1149,12 @@ window.initChatCore = function() {
         if (typeof directCaption === 'object' && directCaption instanceof Event) {
              directCaption = null; // ignore event objects passed via inline onclick
         }
+        
+        _lastSendTime = Date.now();
         if (input) {
             input.dataset.sending = 'true';
             // Safety: force-reset sending after 15s in case of stuck state
-            setTimeout(() => { if (input.dataset.sending === 'true') { input.dataset.sending = 'false'; console.warn('[sendChatMsg] Safety reset of sending flag after 15s'); } }, 15000);
+            setTimeout(() => { if (input && input.dataset.sending === 'true') { input.dataset.sending = 'false'; console.warn('[sendChatMsg] Safety reset of sending flag after 15s'); } }, 15000);
         }
         console.log('[sendChatMsg] Proceeding: roomId=', state.chat.currentRoomId, 'content=', content.substring(0,30));
 
@@ -1201,13 +1209,12 @@ window.initChatCore = function() {
             savedContent = content;
             savedFile = state.pendingFile ? { ...state.pendingFile } : null;
             savedReplyId = state.chat.replyToId;
-            // [FIX] Save editingId BEFORE cancelReply() clears it
+            // [FIX] Save editingId to use in API call
             const currentEditingId = state.chat.editingId;
             // --- OPTIMISTIC RENDER ---
             // Clear input immediately (optimistic) before API call
             if (input) input.value = '';
             localStorage.removeItem(`skuf_draft_${roomId}`);
-            if (window.cancelReply) window.cancelReply();
             clearChatFile();
 
             optimisticId = Date.now();
@@ -1299,6 +1306,7 @@ window.initChatCore = function() {
                 if (sendSucceeded) {
                     input.value = '';
                     localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
+                    if (window.cancelReply) window.cancelReply();
                 }
                 input.focus();
             }
