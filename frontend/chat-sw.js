@@ -138,8 +138,10 @@ self.addEventListener('push', function(event) {
                 // For calls - use different tag and vibration
                 if (data.data.action === 'call') {
                     options.tag = 'skufia-call';
-                    options.vibrate = [500, 100, 500, 100, 500];
+                    // Имитация длинного звонка (вибрация 1 сек, пауза 1 сек - 15 раз = 30 секунд звонка)
+                    options.vibrate = Array(15).fill([1000, 1000]).flat();
                     options.requireInteraction = true; // Keep visible until user acts
+                    options.silent = false; // Убеждаемся, что звук не заглушен
                     options.actions = [
                         { action: 'accept', title: '✅ Ответить' },
                         { action: 'decline', title: '❌ Отклонить' }

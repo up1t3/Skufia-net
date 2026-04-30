@@ -51,7 +51,7 @@ def get_vapid_public_key():
     import base64
     return base64.urlsafe_b64encode(uncompressed_pub_key).decode('utf-8').rstrip('=')
 
-def send_web_push(subscription_info: dict, payload: str):
+def send_web_push(subscription_info: dict, payload: str, ttl: int = 0, urgency: str = "normal"):
     """
     subscription_info format:
     {
@@ -69,7 +69,9 @@ def send_web_push(subscription_info: dict, payload: str):
             subscription_info=subscription_info,
             data=payload,
             vapid_private_key=VAPID_PRIVATE_KEY_PATH,
-            vapid_claims=VAPID_CLAIMS
+            vapid_claims=VAPID_CLAIMS,
+            ttl=ttl,
+            headers={"Urgency": urgency}
         )
         return True
     except WebPushException as ex:

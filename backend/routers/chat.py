@@ -81,6 +81,11 @@ class GroupCreate(BaseModel):
     is_public: bool = False   # False = invite-only (private)
     initial_members: List[int] = []  # User IDs to add immediately
 
+class RoomUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    avatar_url: Optional[str] = None
+
 class InviteCreate(BaseModel):
     max_uses: Optional[int] = None     # None = unlimited
     expires_hours: Optional[int] = None  # None = no expiry
@@ -1587,12 +1592,13 @@ def add_members(room_id: int, req: RoomMembersAdd, current_user: User = Depends(
 
     caller_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
     is_global_admin = current_user.profile and current_user.profile.rank == 'admin'
+    is_room_owner = room.owner_id == current_user.id
 
     if not caller_member and not is_global_admin:
         raise HTTPException(status_code=403, detail="Not a member of this room")
 
     if not room.is_public:
-        if not is_global_admin and (not caller_member or caller_member.role != 'admin'):
+        if not is_global_admin and not is_room_owner and (not caller_member or caller_member.role != 'admin'):
             raise HTTPException(status_code=403, detail="Only admins can add to private rooms")
 
     added_count = 0
@@ -1607,25 +1613,88 @@ def add_members(room_id: int, req: RoomMembersAdd, current_user: User = Depends(
 
 @router.delete('/chat/rooms/{room_id}/members/{target_user_id}')
 def kick_member(room_id: int, target_user_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db), idem_key: str = Depends(validate_idempotency)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
     # Check if current user is authorized to kick the member
     admin_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
     is_room_admin = admin_member and admin_member.role == 'admin'
+    is_room_owner = room.owner_id == current_user.id
     is_global_admin = current_user.profile and current_user.profile.rank == 'admin'
 
-    if not is_room_admin and not is_global_admin:
+    if not is_room_admin and not is_room_owner and not is_global_admin:
         raise HTTPException(status_code=403, detail="Not authorized")
+
+    if target_user_id == room.owner_id and target_user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot kick the room owner")
 
     target_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == target_user_id).first()
     if not target_member:
         raise HTTPException(status_code=404, detail="Member not found")
 
-    if target_member.role == 'admin' and target_user_id != current_user.id and not is_global_admin:
-        raise HTTPException(status_code=403, detail="Cannot kick another admin")
+    if target_member.role == 'admin' and target_user_id != current_user.id and not is_global_admin and not is_room_owner:
+        raise HTTPException(status_code=403, detail="Cannot kick another admin unless you are the owner")
 
     db.delete(target_member)
     db.commit()
 
     return {"status": "success"}
+
+@router.put('/chat/rooms/{room_id}/members/{target_user_id}/role')
+def update_member_role(room_id: int, target_user_id: int, data: MemberRoleUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    caller_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    is_global_admin = current_user.profile and current_user.profile.rank == 'admin'
+    is_room_owner = room.owner_id == current_user.id
+    is_room_admin = caller_member and caller_member.role == 'admin'
+
+    if not is_global_admin and not is_room_owner and not is_room_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if target_user_id == room.owner_id:
+        raise HTTPException(status_code=403, detail="Cannot change the role of the room owner")
+
+    target_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == target_user_id).first()
+    if not target_member:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    if target_member.role == 'admin' and not is_global_admin and not is_room_owner:
+         raise HTTPException(status_code=403, detail="Only the owner can demote an admin")
+
+    if data.role not in ('admin', 'member'):
+        raise HTTPException(status_code=400, detail="Invalid role specified")
+
+    target_member.role = data.role
+    db.commit()
+    return {"status": "success", "role": data.role}
+
+@router.put('/chat/rooms/{room_id}')
+def update_room(room_id: int, data: RoomUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
+    if not room:
+        raise HTTPException(status_code=404, detail="Room not found")
+
+    caller_member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
+    is_global_admin = current_user.profile and current_user.profile.rank == 'admin'
+    is_room_owner = room.owner_id == current_user.id
+    is_room_admin = caller_member and caller_member.role == 'admin'
+
+    if not is_global_admin and not is_room_owner and not is_room_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to edit this room")
+
+    if data.name is not None:
+        room.name = data.name
+    if data.description is not None:
+        room.description = data.description
+    if data.avatar_url is not None:
+        room.avatar_url = data.avatar_url
+
+    db.commit()
+    return {"status": "success", "room": {"name": room.name, "description": room.description, "avatar_url": room.avatar_url}}
 
 @router.delete('/chat/rooms/{room_id}')
 def leave_or_delete_room(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

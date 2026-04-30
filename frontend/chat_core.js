@@ -1618,6 +1618,17 @@ window.initChatCore = function() {
             ${isAdmin ? `
             <div style="padding:16px 20px;border-top:1px solid var(--border-metal);">
                 <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:10px;">⚙️ НАСТРОЙКИ</div>
+                
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size:11px;color:var(--text-dim);">Название</label>
+                    <input type="text" id="group-edit-name" value="${roomInfo.name}" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:13px;margin-top:4px;">
+                </div>
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size:11px;color:var(--text-dim);">Описание</label>
+                    <textarea id="group-edit-desc" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:13px;margin-top:4px;resize:vertical;min-height:40px;">${roomInfo.description || ''}</textarea>
+                </div>
+
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
                     <span style="font-size:13px;">Публичный доступ</span>
                     <label style="position:relative;display:inline-block;width:44px;height:22px;">
@@ -1628,6 +1639,10 @@ window.initChatCore = function() {
                         <span style="position:absolute;content:'';height:16px;width:16px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;transform:${roomInfo.is_public ? 'translateX(22px)' : 'none'};"></span>
                     </label>
                 </div>
+                
+                <button onclick="window.updateGroupSettings(${roomId})" style="width:100%;background:var(--accent-cyan);color:#000;border:none;border-radius:6px;padding:8px;font-weight:bold;cursor:pointer;">
+                    Сохранить изменения
+                </button>
             </div>` : ''}
 
             <!-- Danger zone / Leave -->
@@ -1688,6 +1703,36 @@ window.initChatCore = function() {
             await apiRequest(`/chat/rooms/${roomId}/settings`, 'PUT', { is_public: isPublic });
             addLog(`✅ Доступ: ${isPublic ? 'публичный' : 'приватный'}`, 'success');
         } catch (e) { addLog('Ошибка изменения настроек', 'error'); }
+    };
+
+    window.updateGroupSettings = async function(roomId) {
+        const nameInput = document.getElementById('group-edit-name');
+        const descInput = document.getElementById('group-edit-desc');
+        
+        const name = nameInput ? nameInput.value.trim() : null;
+        const desc = descInput ? descInput.value.trim() : null;
+        
+        if (!name) {
+            addLog('Имя группы не может быть пустым', 'error');
+            return;
+        }
+
+        try {
+            await apiRequest(`/chat/rooms/${roomId}`, 'PUT', { name: name, description: desc });
+            addLog('✅ Настройки группы сохранены', 'success');
+            
+            // Update the room name in the header if it changed
+            if (state.chat.currentRoomId === roomId) {
+                const headerTitle = document.getElementById('chat-header-title');
+                if (headerTitle) headerTitle.textContent = name;
+            }
+            
+            // Refresh modal
+            window.openGroupSettings();
+        } catch (e) {
+            console.error('Update group error:', e);
+            addLog('Ошибка сохранения настроек', 'error');
+        }
     };
 
     window.confirmDeleteRoom = async function(roomId, name) {

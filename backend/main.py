@@ -261,7 +261,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                     "body": f"Вам звонит {sender_name}. Нажмите, чтобы ответить.",
                                     "data": {"action": "call", "sender_id": user_id}
                                 }
-                                asyncio.create_task(trigger_web_push(target_id, push_payload))
+                                asyncio.create_task(trigger_web_push(target_id, push_payload, ttl=45, urgency="high"))
                                     
                             elif data.get('signal_type') == 'request_offer':
                                 # Receiver is asking for the cached offer (after waking up from push)

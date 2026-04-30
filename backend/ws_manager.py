@@ -85,7 +85,7 @@ async def notify_profile_update(user_id: int, user_data: dict):
     finally:
         db.close()
 
-async def trigger_web_push(user_id: int, payload: dict):
+async def trigger_web_push(user_id: int, payload: dict, ttl: int = 0, urgency: str = "normal"):
     from database import SessionLocal, PushSubscription
     import json
     from webpush_utils import send_web_push
@@ -102,7 +102,7 @@ async def trigger_web_push(user_id: int, payload: dict):
                 }
             }
             try:
-                success = send_web_push(sub_info, json.dumps(payload))
+                success = send_web_push(sub_info, json.dumps(payload), ttl=ttl, urgency=urgency)
                 if not success:
                     db.delete(sub)
             except Exception as e:
