@@ -160,7 +160,7 @@ def get_wiki(current_user: User = Depends(get_current_user), db: Session = Depen
     return articles_data
 
 @router.get('/wiki/{article_id}', response_model=WikiArticleResponse)
-def get_wiki_detail(article_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_wiki_detail(article_id: int, db: Session = Depends(get_db)):
     """Fetches full article data from the Cyber-Industrial archives."""
     article = db.query(WikiArticle).filter(WikiArticle.id == article_id).first()
     if not article:

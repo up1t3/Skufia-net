@@ -182,12 +182,12 @@
         
         threadView.style.display = 'flex';
         threadView.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--border-metal); padding-bottom: 15px;">
-                <button onclick="window.history.back()" style="background: var(--bg-surface); border: 1px solid var(--border-metal); color: var(--text-dim); border-radius: 6px; padding: 6px 12px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s;">
-                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> Вернуться к Форуму
-                </button>
-                <span style="color: var(--text-dim); font-size: 14px;">/</span>
-                <h3 style="margin: 0; color: var(--text-main); font-size: 1.1em; font-weight: 500;">${title}</h3>
+            <div class="thread-header" style="background: var(--bg-panel); border: 1px solid var(--border-metal); border-radius: var(--chat-bubble-radius); padding: 16px; margin-bottom: 20px; box-shadow: var(--panel-shadow);">
+                <div style="display: flex; align-items: center; gap: 10px; color: var(--text-dim); font-size: 13px; cursor: pointer; width: fit-content; margin-bottom: 12px;" onclick="window.history.back()">
+                    <span style="font-size: 16px; font-family: monospace;">←</span> 
+                    <span style="text-decoration: underline; text-underline-offset: 3px;">Назад к темам</span>
+                </div>
+                <h2 style="margin: 0 0 10px 0; color: var(--accent-cyan); font-family: 'Orbitron', sans-serif; font-size: 1.4em;">${title}</h2>
             </div>
             <div id="thread-posts-container" style="display: flex; flex-direction: column; gap: 15px;">
                 <div class="system-msg" style="animation: pulse 1.5s infinite;">Дешифровка ответов...</div>
@@ -203,34 +203,60 @@
                 const div = document.createElement('div');
                 div.className = 'post-item glass-panel';
                 div.style.padding = '20px';
-                div.style.borderRadius = '12px';
-                div.style.background = 'var(--bg-surface)';
-                div.style.border = '1px solid var(--border-metal)';
+                div.style.borderRadius = '16px';
+                div.style.background = 'linear-gradient(145deg, rgba(30, 34, 45, 0.6) 0%, rgba(20, 24, 32, 0.8) 100%)';
+                div.style.border = '1px solid rgba(0, 242, 255, 0.15)';
+                div.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.2)';
+                div.style.display = 'flex';
+                div.style.gap = '15px';
+                
+                // Avatar Column
+                const avatarCol = document.createElement('div');
+                avatarCol.style.display = 'flex';
+                avatarCol.style.flexDirection = 'column';
+                avatarCol.style.alignItems = 'center';
+                avatarCol.style.minWidth = '50px';
+                
+                const avatarUrl = post.avatar_url || `https://ui-avatars.com/api/?name=${post.author}&background=0d1117&color=00f2ff&bold=true`;
+                avatarCol.innerHTML = `
+                    <img src="${avatarUrl}" alt="${post.author}" style="width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--accent-cyan); object-fit: cover; box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);">
+                `;
+                
+                // Content Column
+                const contentCol = document.createElement('div');
+                contentCol.style.flex = '1';
+                contentCol.style.display = 'flex';
+                contentCol.style.flexDirection = 'column';
                 
                 const metaDiv = document.createElement('div');
                 metaDiv.style.display = 'flex';
                 metaDiv.style.justifyContent = 'space-between';
                 metaDiv.style.alignItems = 'center';
-                metaDiv.style.borderBottom = '1px dashed var(--border-metal)';
-                metaDiv.style.paddingBottom = '10px';
-                metaDiv.style.marginBottom = '15px';
+                metaDiv.style.marginBottom = '12px';
                 
                 const authorSpan = document.createElement('div');
-                authorSpan.innerHTML = `<strong style="color: var(--neon-cyan);">@${post.author}</strong> <span style="font-size: 0.85em; color: var(--text-dim); margin-left: 10px;">ID: ${String(post.id).substring(0,6)}</span>`;
+                const dateStr = new Date(post.created_at).toLocaleString('ru-RU', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+                authorSpan.innerHTML = `<strong style="color: var(--neon-cyan); font-size: 1.1em; letter-spacing: 0.5px;">@${post.author}</strong> <span style="font-size: 0.8em; color: var(--text-dim); margin-left: 10px; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 10px;">${dateStr}</span>`;
                 
                 const actionsDiv = document.createElement('div');
                 actionsDiv.style.display = 'flex';
                 actionsDiv.style.alignItems = 'center';
-                actionsDiv.style.gap = '10px';
+                actionsDiv.style.gap = '12px';
                 
                 const likesSpan = document.createElement('span');
                 likesSpan.id = `likes-${post.id}`;
                 likesSpan.style.color = 'var(--accent-green)';
                 likesSpan.style.fontWeight = 'bold';
+                likesSpan.style.fontSize = '1.1em';
                 likesSpan.textContent = post.likes;
                 
                 const btn = document.createElement('button');
                 btn.className = 'cyber-btn-small';
+                btn.style.padding = '4px 10px';
+                btn.style.borderRadius = '6px';
+                btn.style.background = 'rgba(0, 255, 170, 0.1)';
+                btn.style.borderColor = 'rgba(0, 255, 170, 0.3)';
+                btn.style.color = 'var(--accent-green)';
                 btn.innerHTML = '👍 +1';
                 btn.onclick = () => likePost(post.id);
                 
@@ -242,12 +268,21 @@
                 
                 const contentDiv = document.createElement('div');
                 contentDiv.className = 'post-content';
-                contentDiv.style.lineHeight = '1.6';
+                contentDiv.style.lineHeight = '1.7';
+                contentDiv.style.fontSize = '1.05em';
+                contentDiv.style.color = 'var(--text-main)';
                 contentDiv.style.whiteSpace = 'pre-wrap';
+                contentDiv.style.background = 'rgba(0, 0, 0, 0.2)';
+                contentDiv.style.padding = '15px';
+                contentDiv.style.borderRadius = '8px';
+                contentDiv.style.borderLeft = '3px solid var(--accent-cyan)';
                 contentDiv.textContent = post.content;
                 
-                div.appendChild(metaDiv);
-                div.appendChild(contentDiv);
+                contentCol.appendChild(metaDiv);
+                contentCol.appendChild(contentDiv);
+                
+                div.appendChild(avatarCol);
+                div.appendChild(contentCol);
                 postsContainer.appendChild(div);
             });
         } catch (e) { document.getElementById('thread-posts-container').innerHTML = '<div class="system-msg">ERROR: Connection lost to this thread.</div>'; }
@@ -765,38 +800,52 @@
     }
 
     window.loadWikiArticle = async function(artId, pushState = true) {
-        if (pushState) history.pushState({ wikiId: artId }, '', '#wiki-article-' + artId);
         try {
-            const art = await apiRequest(`/wiki/${artId}`);
-            let modal = document.getElementById('wiki-modal');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'wiki-modal';
-                modal.className = 'modal';
-                modal.style.zIndex = '9999';
-                modal.innerHTML = `
-                    <div class="modal-content glass-panel" style="max-width: 800px; width: 90%; background: var(--bg-panel); border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
-                        <div class="modal-header" style="border-bottom: 1px solid var(--border-metal); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                            <h2 id="wiki-modal-title" style="margin: 0; color: var(--accent-cyan); font-family: 'Orbitron', sans-serif;">TITLE</h2>
-                            <button class="icon-btn" onclick="window.history.back()" style="color: var(--text-dim);">✕</button>
-                        </div>
-                        <div id="wiki-modal-body" class="premium-scroll" style="max-height: 65vh; overflow-y: auto; text-align: left; padding-right: 15px; font-size: 1.05em; line-height: 1.7; white-space: pre-wrap; color: var(--text-main);">
-                            CONTENT
-                        </div>
-                        <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
-                            <button class="cyber-btn" onclick="window.history.back()">ЗАКРЫТЬ БАЗУ</button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modal);
-                
-                // Add fade-in animation
-                modal.style.animation = 'fadeIn 0.3s ease';
+            if (pushState) {
+                try {
+                    history.pushState({ wikiId: artId }, '', '#wiki-article-' + artId);
+                } catch(e) { console.warn('pushState not supported', e); }
             }
-            document.getElementById('wiki-modal-title').textContent = "📜 " + art.title.toUpperCase();
-            document.getElementById('wiki-modal-body').textContent = art.content;
+            const art = await apiRequest(`/wiki/${artId}`);
+            
+            // Remove old modal to reset CSS animations and DOM state
+            let oldModal = document.getElementById('wiki-modal');
+            if (oldModal) {
+                oldModal.remove();
+            }
+            
+            let modal = document.createElement('div');
+            modal.id = 'wiki-modal';
+            modal.className = 'modal';
+            modal.style.zIndex = '9999';
             modal.style.display = 'flex';
-        } catch (e) { addLog('Article data corrupted', 'error'); }
+            
+            // Format title safely
+            const titleText = "📜 " + (art.title ? art.title.toUpperCase() : "БЕЗ НАЗВАНИЯ");
+            const contentText = art.content || "Содержимое отсутствует.";
+            
+            modal.innerHTML = `
+                <div class="modal-content glass-panel" style="max-width: 800px; width: 90%; background: var(--bg-panel); border: 1px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 242, 255, 0.2);">
+                    <div class="modal-header" style="border-bottom: 1px solid var(--border-metal); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 id="wiki-modal-title" style="margin: 0; color: var(--accent-cyan); font-family: 'Orbitron', sans-serif;"></h2>
+                        <button class="icon-btn" onclick="window.history.back()" style="color: var(--text-dim); font-size: 24px; background: none; border: none; cursor: pointer; line-height: 1;">✕</button>
+                    </div>
+                    <div id="wiki-modal-body" class="premium-scroll" style="max-height: 65vh; overflow-y: auto; text-align: left; padding-right: 15px; font-size: 1.05em; line-height: 1.7; white-space: pre-wrap; color: var(--text-main);"></div>
+                    <div style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="cyber-btn" onclick="window.history.back()">ЗАКРЫТЬ БАЗУ</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+            
+            // Prevent XSS and load content
+            document.getElementById('wiki-modal-title').textContent = titleText;
+            document.getElementById('wiki-modal-body').textContent = contentText;
+            
+        } catch (e) { 
+            console.error('[Wiki] Error loading article:', e);
+            if (window.showToast) window.showToast('Ошибка базы знаний: ' + e.message, 5000);
+            if (window.addLog) addLog('Ошибка при загрузке статьи: ' + e.message, 'error'); 
+        }
     }
     
     // @ts-ignore

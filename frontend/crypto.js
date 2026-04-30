@@ -422,7 +422,7 @@
                             addLog('✅ Ключи восстановлены из облака', 'success');
                             return;
                         } catch (decryptErr) {
-                            addLog('❌ Ошибка расшифровки облачного ключа. Неверный пароль?', 'error');
+                            addLog('⚠️ Введен некорректный пароль для ключа E2EE.', 'warning');
                             // Clear bad password
                             state.user.password = null;
                             sessionStorage.removeItem('skuf_session_pw');

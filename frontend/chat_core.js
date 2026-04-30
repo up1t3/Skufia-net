@@ -899,27 +899,16 @@ window.initChatCore = function() {
             `;
         } else if (rawText === '🔒 [Не удалось расшифровать сообщение]') {
             textDiv.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-metal); border-radius: 6px; margin-top: 4px;">
-                    <div style="color: var(--text-dim); display: flex; align-items: center; gap: 6px; font-size: 12px; flex: 1;">
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        <span style="font-style: italic;">Зашифрованное сообщение</span>
-                    </div>
-                    <button onclick="if(window.resetIdentityKeys) window.resetIdentityKeys()" style="background: none; border: none; color: var(--accent-cyan); font-size: 11px; cursor: pointer; text-decoration: underline; opacity: 0.8;">
-                        Сбросить ключи
-                    </button>
+                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; margin-top: 2px;">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--text-dim)" stroke-width="2" fill="none" style="opacity: 0.7"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span style="font-style: italic; color: var(--text-dim); font-size: 12px; opacity: 0.7;">Сообщение зашифровано и недоступно.</span>
                 </div>
             `;
         } else if (rawText === '🔒 Зашифрованное сообщение') {
             textDiv.innerHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; background: rgba(255, 193, 7, 0.05); border: 1px solid rgba(255, 193, 7, 0.2); border-radius: 8px; text-align: center; margin-top: 4px;">
-                    <div style="color: #ffc107; font-weight: bold; font-size: 13px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        Зашифровано (E2EE)
-                    </div>
-                    <div style="color: var(--text-dim); font-size: 11px; margin-bottom: 10px; line-height: 1.3;">Для расшифровки сообщения требуется ваш приватный ключ.</div>
-                    <button onclick="document.getElementById('settings-modal').style.display='flex';" style="background: rgba(255,193,7,0.1); border: 1px solid rgba(255,193,7,0.3); color: #ffc107; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
-                        ⚙️ Управление ключами
-                    </button>
+                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; margin-top: 2px; cursor: pointer;" onclick="document.getElementById('settings-modal').style.display='flex';">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--text-dim)" stroke-width="2" fill="none" style="opacity: 0.7"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    <span style="font-style: italic; color: var(--text-dim); font-size: 12px; opacity: 0.7;">Ожидание ключей шифрования...</span>
                 </div>
             `;
         } else {

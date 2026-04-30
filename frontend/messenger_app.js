@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 await window.ensureKeys();
                 if (!state.chat.keys.publicKey || !state.chat.keys.privateKey) {
-                    throw new Error('Неверный пароль. Хранилище не расшифровано.');
+                    throw new Error('Введен неверный пароль. Доступ к сообщениям приостановлен.');
                 }
                 
                 document.getElementById('auth-overlay').style.display = 'none';

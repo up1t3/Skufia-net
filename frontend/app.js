@@ -110,6 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (viewId === 'messages') { if(window.loadChatRooms) window.loadChatRooms(); }
             if (viewId === 'events') loadEvents();
             if (viewId === 'dashboard') loadDashboard();
+        } else if (viewId === 'messages') {
+            window.location.href = 'messenger.html';
         }
     }
 
@@ -493,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Resume boot process
                 bootSystem();
             } catch (err) {
-                document.getElementById('unlock-error').textContent = err.message || 'Ошибка расшифровки';
+                document.getElementById('unlock-error').textContent = err.message || 'Неверный пароль';
             } finally {
                 if (btn) btn.textContent = 'РАЗБЛОКИРОВАТЬ ВАЛТ';
             }
