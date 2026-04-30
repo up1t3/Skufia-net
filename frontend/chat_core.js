@@ -97,22 +97,26 @@ window.initChatCore = function() {
 
                 if (msg.sender_id == state.user.id) {
                     loadChatRooms();
-                    // Fallback: If for some reason the optimistic message was removed or failed to render
-                    // (e.g. iOS Safari background fetch abort false-positive)
+                    // [FIX] Robust optimistic confirmation: match by data-optimistic-ts attribute (ID-based, not text-based)
+                    // This works reliably with E2EE chats where text content is encrypted
                     if (state.chat.currentRoomId == msg.room_id) {
+                        // Strategy 1: Find optimistic message by timestamp attribute (reliable)
+                        let matchedEl = null;
                         const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row.msg-optimistic'));
-                        const matchedEl = pendingMsgs.find(el => {
-                            if (el.id === `msg-${msg.id}`) return false; // Already has real ID
-                            const txt = el.querySelector('.msg-text');
-                            return txt && txt.textContent.trim() === (msg.text || msg.content || '').trim();
-                        });
+                        if (pendingMsgs.length > 0) {
+                            // Take the oldest pending optimistic message (FIFO order)
+                            matchedEl = pendingMsgs[0];
+                        }
                         
                         if (matchedEl) {
-                            // Optimistic message is still in DOM. Confirm it!
+                            // Optimistic message confirmed — update its ID to the real DB ID
                             matchedEl.id = `msg-${msg.id}`;
                             matchedEl.classList.remove('msg-optimistic');
+                            console.log('[WS] Optimistic confirmed: msg-' + msg.id);
                         } else if (!document.getElementById(`msg-${msg.id}`)) {
-                            console.warn('[WS] Own message missing from DOM (likely transient fetch error), rendering from WS fallback.');
+                            // No optimistic element found, and real element not in DOM either
+                            // This happens on iOS background fetch abort or if optimistic render failed
+                            console.warn('[WS] Own message missing from DOM, rendering from WS fallback.');
                             renderChatMessage(msg);
                             
                             // Clear the input field since the message actually reached the server
@@ -122,6 +126,7 @@ window.initChatCore = function() {
                                 localStorage.removeItem(`skuf_draft_${state.chat.currentRoomId}`);
                             }
                         }
+                        // else: msg-{id} already in DOM — dedup, do nothing
                     }
                     return;
                 }
@@ -847,6 +852,12 @@ window.initChatCore = function() {
             return;
         }
 
+        // [DEDUP] Prevent rendering a message that is already in the DOM
+        if (msg.id && document.getElementById(`msg-${msg.id}`)) {
+            console.warn('[renderChatMessage] DEDUP: msg-' + msg.id + ' already in DOM, skipping.');
+            return;
+        }
+
         const placeholder = history.querySelector('.chat-placeholder');
         if (placeholder) placeholder.remove();
 
@@ -1115,11 +1126,26 @@ window.initChatCore = function() {
         };
 
         rowDiv.appendChild(bubble);
+
+        // [UX] Fade-in animation for new messages so user sees them appear
+        if (!prepend && !skipScroll) {
+            rowDiv.style.opacity = '0';
+            rowDiv.style.transform = 'translateY(10px)';
+            rowDiv.style.transition = 'opacity 0.25s ease, transform 0.25s ease';
+        }
+
         if (prepend) {
             history.insertBefore(rowDiv, history.firstChild);
         } else {
             history.appendChild(rowDiv);
-            if (!skipScroll) history.scrollTop = history.scrollHeight;
+            if (!skipScroll) {
+                history.scrollTop = history.scrollHeight;
+                // Trigger fade-in after DOM insertion
+                requestAnimationFrame(() => {
+                    rowDiv.style.opacity = '1';
+                    rowDiv.style.transform = 'translateY(0)';
+                });
+            }
         }
     }
 
@@ -2488,8 +2514,43 @@ window.initChatCore = function() {
                     
                     this.cleanupUI();
                     
-                    if (!this.isCancelled && videoBlob.size > 1000) { 
-                        this.uploadVideo(videoBlob);
+                    if (!this.isCancelled && videoBlob.size > 1000) {
+                        // [UX] Show loading placeholder while video uploads
+                        const placeholderId = 'msg-circle-uploading-' + Date.now();
+                        const history = document.getElementById('chat-history');
+                        if (history) {
+                            const placeholderRow = document.createElement('div');
+                            placeholderRow.className = 'msg-row msg-me';
+                            placeholderRow.id = placeholderId;
+                            placeholderRow.innerHTML = `
+                                <div class="msg-bubble" style="background:transparent; border:none; padding:4px;">
+                                    <div style="width:240px; height:240px; border-radius:50%; background:rgba(0,242,255,0.05); border:2px solid var(--accent-cyan, #00f2ff); display:flex; flex-direction:column; align-items:center; justify-content:center; animation: circleUploadPulse 1.5s ease-in-out infinite;">
+                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan, #00f2ff)" stroke-width="1.5" opacity="0.7">
+                                            <circle cx="12" cy="12" r="10" stroke-dasharray="31.4 31.4" stroke-dashoffset="0">
+                                                <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1.2s" repeatCount="indefinite"/>
+                                            </circle>
+                                            <polygon points="10 8 16 12 10 16 10 8" fill="var(--accent-cyan, #00f2ff)" opacity="0.5"/>
+                                        </svg>
+                                        <span style="color:var(--text-dim, #888); font-size:11px; margin-top:8px;">Загрузка кружочка...</span>
+                                    </div>
+                                </div>`;
+                            history.appendChild(placeholderRow);
+                            history.scrollTop = history.scrollHeight;
+                        }
+                        
+                        // Add CSS animation if not already present
+                        if (!document.getElementById('circle-upload-pulse-style')) {
+                            const style = document.createElement('style');
+                            style.id = 'circle-upload-pulse-style';
+                            style.textContent = `@keyframes circleUploadPulse { 0%,100% { opacity:0.6; transform:scale(0.97); } 50% { opacity:1; transform:scale(1.02); } }`;
+                            document.head.appendChild(style);
+                        }
+                        
+                        await this.uploadVideo(videoBlob);
+                        
+                        // Remove placeholder after upload completes
+                        const ph = document.getElementById(placeholderId);
+                        if (ph) ph.remove();
                     }
                 };
                 

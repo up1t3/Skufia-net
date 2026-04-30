@@ -1353,6 +1353,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
     # Broadcast to room members or specific recipient
     payload = {
         "type": "new_message",
+        "id": db_msg.id,
         "message_id": db_msg.id,
         "sender": get_display_name(current_user),
         "sender_id": current_user.id,
