@@ -503,6 +503,7 @@ class RTCManager {
                 document.getElementById('rtc-profile-info').style.display = 'none';
                 document.getElementById('rtc-modal-bg').style.display = 'none';
                 document.getElementById('rtc-video-cross').style.display = 'none';
+                document.getElementById('rtc-switch-cam-col').style.display = 'flex';
             }
             
             this.peerConnection = new RTCPeerConnection(this.iceServers);
@@ -526,22 +527,21 @@ class RTCManager {
                 // Pipe Audio Track
                 if (event.track.kind === 'audio') {
                     const remoteAud = document.getElementById('rtc-remote-audio');
-                    if (remoteAud.srcObject !== stream) {
-                        remoteAud.srcObject = stream;
-                    }
+                    // Force refresh to attach new track if needed
+                    remoteAud.srcObject = stream;
                     remoteAud.play().then(() => console.log('[RTC] Remote audio is playing')).catch(e => console.error('[RTC] Remote audio play error:', e));
                 }
 
                 // Pipe Video Track
                 if (event.track.kind === 'video' || this.isVideoCall) {
                     const remoteVid = document.getElementById('rtc-remote-video');
-                    if (remoteVid.srcObject !== stream) {
-                        remoteVid.srcObject = stream;
-                    }
+                    // Force refresh stream to ensure video renderer picks up the new track
+                    remoteVid.srcObject = stream;
                     remoteVid.play().then(() => console.log('[RTC] Remote video is playing')).catch(e => console.error('[RTC] Remote video play error:', e));
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
+                    document.getElementById('rtc-switch-cam-col').style.display = 'flex';
                 }
             };
 

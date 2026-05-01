@@ -238,8 +238,6 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 "signal_type": signal_type,
                                 "payload": data.get('payload')
                             }
-                            await manager.send_personal_message(relay_msg, target_id)
-                            
                             if signal_type == 'offer':
                                 db = SessionLocal()
                                 try:
@@ -251,6 +249,10 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 finally:
                                     db.close()
 
+                            # NOW send the message with all metadata included
+                            await manager.send_personal_message(relay_msg, target_id)
+
+                            if signal_type == 'offer':
                                 # Detect audio vs video from SDP
                                 payload_str = data.get('payload', '')
                                 if isinstance(payload_str, str):
