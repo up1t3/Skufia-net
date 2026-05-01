@@ -1029,7 +1029,8 @@ window.initChatCore = function() {
         }
 
         // Text (skip for pure circle videos — no text bubble needed)
-        if (!isVideoCircle || rawText.trim()) {
+        const isCircleOnly = isVideoCircle && (!rawText.trim() || rawText.trim() === '📹');
+        if (!isCircleOnly) {
             const textDiv = document.createElement('div');
             textDiv.className = 'msg-text';
             
@@ -1235,7 +1236,7 @@ window.initChatCore = function() {
         let optimisticId = Date.now();
 
         let payload = {
-            content,
+            content: content || (state.pendingFile ? '📹' : ''),
             encryption_iv: '',
             file_url: state.pendingFile ? state.pendingFile.url : null,
             reply_to_id: state.chat.replyToId,
@@ -1292,11 +1293,12 @@ window.initChatCore = function() {
                     id: optimisticId,
                     sender: state.user?.username || state.user?.display_name || 'Я',
                     sender_id: state.user?.id,
-                    text: savedContent,
-                    content: savedContent,
+                    text: payload.content,
+                    content: payload.content,
                     iv: isEncrypted ? payload.encryption_iv : null,
                     is_secure: isEncrypted,
                     file_url: savedFile ? savedFile.url : null,
+                    file_type: savedFile ? savedFile.file_type : null,
                     reply_to_id: savedReplyId,
                     is_edited: false,
                     is_read: false,
