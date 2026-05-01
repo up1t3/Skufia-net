@@ -47,7 +47,7 @@ class RTCManager {
                 </div>
                 
                 <div class="rtc-video-container" id="rtc-video-container" style="display:none;">
-                    <video id="rtc-remote-video" autoplay playsinline></video>
+                    <video id="rtc-remote-video" autoplay playsinline muted></video>
                     <video id="rtc-local-video" autoplay playsinline muted></video>
                     <audio id="rtc-remote-audio" autoplay></audio>
                 </div>
@@ -73,6 +73,10 @@ class RTCManager {
                     <div class="rtc-btn-col">
                         <button id="rtc-video-start-btn" class="rtc-btn-circle"><span class="icon">📹<div class="cross-line" id="rtc-video-cross"></div></span></button>
                         <span>Вкл. видео</span>
+                    </div>
+                    <div class="rtc-btn-col" id="rtc-switch-cam-col" style="display:none;">
+                        <button id="rtc-switch-cam-btn" class="rtc-btn-circle"><span class="icon" style="font-size:24px;">🔄</span></button>
+                        <span>Камера</span>
                     </div>
                     <div class="rtc-btn-col">
                         <button id="rtc-toggle-mute-btn" class="rtc-btn-circle"><span class="icon">🎤<div class="cross-line" id="rtc-mute-cross" style="display:none;"></div></span></button>
@@ -245,6 +249,7 @@ class RTCManager {
         document.getElementById('rtc-reject-btn-inc').addEventListener('click', () => this.endCall());
         document.getElementById('rtc-toggle-mute-btn').addEventListener('click', () => this.toggleMute());
         document.getElementById('rtc-video-start-btn').addEventListener('click', () => this.showVideoPreview());
+        document.getElementById('rtc-switch-cam-btn').addEventListener('click', () => this.switchActiveCamera());
         document.getElementById('rtc-minimize-btn').addEventListener('click', () => this.minimizeCall());
         this.floatingBar.addEventListener('click', () => this.maximizeCall());
         
@@ -345,7 +350,7 @@ class RTCManager {
         }
     }
 
-    handleIncomingSignal(type, payload, senderId) {
+    handleIncomingSignal(type, payload, senderId, callerName, callerAvatar) {
         let parsedPayload = payload;
         try {
             if (typeof payload === 'string') parsedPayload = JSON.parse(payload);
@@ -390,16 +395,23 @@ class RTCManager {
             }
             
             // Try to resolve name and avatar
-            let name = 'User ' + senderId;
+            let name = callerName || ('User ' + senderId);
             let avatarHtml = '<div style="width:100%;height:100%;background:#555;display:flex;align-items:center;justify-content:center;font-size:40px;">?</div>';
-            if (window.state && window.state.chat && window.state.chat.rooms) {
+            
+            if (callerAvatar) {
+                avatarHtml = `<img src="${callerAvatar}" style="width:100%;height:100%;object-fit:cover;">`;
+            } else if (window.state && window.state.chat && window.state.chat.rooms) {
                 const room = window.state.chat.rooms.find(r => r.id == senderId || r.other_user_id == senderId);
                 if (room) {
-                    name = room.name || room.id;
+                    name = callerName || room.name || room.id;
                     if (room.avatar_url) {
                         avatarHtml = `<img src="${room.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`;
                     }
                 }
+            }
+            
+            if (name === 'Unknown' && callerName) {
+                name = callerName;
             }
             
             this.startRingtone();
@@ -602,6 +614,39 @@ class RTCManager {
         }
     }
 
+    async switchActiveCamera() {
+        if (!this.localStream) return;
+        const videoTrack = this.localStream.getVideoTracks()[0];
+        if (!videoTrack) return;
+        
+        this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
+        try {
+            const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.currentFacingMode } });
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            
+            // Replace track in peer connection
+            if (this.peerConnection) {
+                const sender = this.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+                if (sender) {
+                    sender.replaceTrack(newVideoTrack);
+                }
+            }
+            
+            // Replace track in local stream
+            this.localStream.removeTrack(videoTrack);
+            this.localStream.addTrack(newVideoTrack);
+            videoTrack.stop();
+            
+            // Update local video element
+            const localVid = document.getElementById('rtc-local-video');
+            localVid.srcObject = this.localStream;
+            localVid.play().catch(e => console.error('[RTC] Switch cam local play error:', e));
+        } catch (e) {
+            console.error('[RTC] Error switching camera:', e);
+            if(window.addLog) window.addLog('Ошибка при смене камеры', 'error');
+        }
+    }
+
     async switchPreviewSource(sourceType, element) {
         // Update active tab
         document.querySelectorAll('.rtc-src-btn').forEach(b => b.classList.remove('active'));
@@ -628,23 +673,47 @@ class RTCManager {
     }
 
     async startBroadcast() {
-        if (!this.previewStream || !this.peerConnection) return;
+        if (!this.previewStream) return;
         
         document.getElementById('rtc-video-options').style.display = 'none';
         document.getElementById('rtc-actions-audio').style.display = 'flex';
         document.getElementById('rtc-video-cross').style.display = 'none';
+        document.getElementById('rtc-switch-cam-col').style.display = 'flex';
+        
+        this.isVideoCall = true;
+
+        if (!this.peerConnection) {
+            // New Video Call initiated
+            if (this.previewStream) {
+                this.previewStream.getTracks().forEach(t => t.stop());
+                this.previewStream = null;
+            }
+            try {
+                this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: this.currentFacingMode } });
+                await this.initiatePeerConnection(this.currentCallTarget, true);
+            } catch (e) {
+                console.error("Media access denied", e);
+                this.endCall();
+            }
+            return;
+        }
         
         const videoTrack = this.previewStream.getVideoTracks()[0];
         this.localStream.addTrack(videoTrack);
-        this.peerConnection.addTrack(videoTrack, this.localStream);
-        this.isVideoCall = true;
+        
+        const sender = this.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) {
+            sender.replaceTrack(videoTrack);
+        } else {
+            this.peerConnection.addTrack(videoTrack, this.localStream);
+        }
         
         // Move preview to local mini video
         const localVid = document.getElementById('rtc-local-video');
-        localVid.srcObject = this.previewStream;
+        localVid.srcObject = this.previewStream; // Keep preview stream for local display until renegotiation is complete
         localVid.play().catch(e => console.error("Local play error:", e));
         
-        // The remote video will be set when we receive the remote track, currently keep it empty or show what we have
+        // The remote video will be set when we receive the remote track
         const remoteVid = document.getElementById('rtc-remote-video');
         remoteVid.srcObject = this.remoteStream || null;
         if (this.remoteStream) {

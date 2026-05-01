@@ -241,6 +241,16 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                             await manager.send_personal_message(relay_msg, target_id)
                             
                             if signal_type == 'offer':
+                                db = SessionLocal()
+                                try:
+                                    from database import User
+                                    sender_user = db.query(User).filter(User.id == user_id).first()
+                                    if sender_user:
+                                        relay_msg['caller_name'] = sender_user.profile.nickname if sender_user.profile else sender_user.username
+                                        relay_msg['caller_avatar'] = sender_user.profile.avatar_url if sender_user.profile else None
+                                finally:
+                                    db.close()
+
                                 # Detect audio vs video from SDP
                                 payload_str = data.get('payload', '')
                                 if isinstance(payload_str, str):
@@ -248,7 +258,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 else:
                                     is_video = 'm=video' in json.dumps(payload_str)
                                 call_type_label = "видеозвонок" if is_video else "аудиозвонок"
-                                print(f"[RTC] OFFER type={call_type_label} from={user_id} to={target_id}")
+                                print(f"[RTC] OFFER type={call_type_label} from={user_id} to={target_id} name={relay_msg.get('caller_name')}")
 
                                 # Start 45s timeout for missed calls
                                 call_key = f"{user_id}_{target_id}"

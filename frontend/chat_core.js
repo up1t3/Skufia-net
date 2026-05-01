@@ -25,7 +25,7 @@ window.initChatCore = function() {
             if (data.type === 'rtc_signal') {
                 console.log('[WS] rtc_signal received:', data.signal_type, 'from:', data.sender_id, 'RTCManagerInstance:', !!window.RTCManagerInstance);
                 if(window.RTCManagerInstance) {
-                    window.RTCManagerInstance.handleIncomingSignal(data.signal_type, data.payload, data.sender_id);
+                    window.RTCManagerInstance.handleIncomingSignal(data.signal_type, data.payload, data.sender_id, data.caller_name, data.caller_avatar);
                 } else {
                     // RTCManager not yet initialized — retry for up to 5 seconds
                     console.warn('[WS] RTCManagerInstance not ready, queuing rtc_signal...');
@@ -34,7 +34,7 @@ window.initChatCore = function() {
                         if (window.RTCManagerInstance) {
                             clearInterval(retryInterval);
                             console.log('[WS] RTCManagerInstance became available, delivering queued signal');
-                            window.RTCManagerInstance.handleIncomingSignal(data.signal_type, data.payload, data.sender_id);
+                            window.RTCManagerInstance.handleIncomingSignal(data.signal_type, data.payload, data.sender_id, data.caller_name, data.caller_avatar);
                         } else if (++retries >= 10) {
                             clearInterval(retryInterval);
                             console.error('[WS] RTCManagerInstance never initialized — rtc_signal LOST');
