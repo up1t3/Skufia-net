@@ -439,13 +439,27 @@ class RTCManager {
             this.showModal(incomingTitle, name, avatarHtml, true);
         } else if(type === 'answer') {
             if(this.peerConnection) {
-                this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload));
+                this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload)).then(() => {
+                    if (this.pendingCandidates) {
+                        this.pendingCandidates.forEach(c => this.peerConnection.addIceCandidate(c).catch(e => console.warn(e)));
+                        this.pendingCandidates = [];
+                    }
+                }).catch(e => console.error('[RTC] Error setting answer:', e));
+                
                 this.statusText.textContent = 'Звонок активен';
+                this._callWasAnswered = true;
+                if (this._missedCallTimeout) {
+                    clearTimeout(this._missedCallTimeout);
+                    this._missedCallTimeout = null;
+                }
                 this.startTimer();
             }
         } else if(type === 'candidate') {
-            if(this.peerConnection) {
-                this.peerConnection.addIceCandidate(new RTCIceCandidate(parsedPayload));
+            if (this.peerConnection && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
+                this.peerConnection.addIceCandidate(new RTCIceCandidate(parsedPayload)).catch(e => console.warn(e));
+            } else {
+                if (!this.pendingCandidates) this.pendingCandidates = [];
+                this.pendingCandidates.push(new RTCIceCandidate(parsedPayload));
             }
         } else if(type === 'end') {
             if (this.currentCallTarget == senderId || this.incomingOffer) {
@@ -483,6 +497,10 @@ class RTCManager {
         
         await this.initiatePeerConnection(this.currentCallTarget, false);
         await this.peerConnection.setRemoteDescription(new RTCSessionDescription(this.incomingOffer));
+        if (this.pendingCandidates) {
+            this.pendingCandidates.forEach(c => this.peerConnection.addIceCandidate(c).catch(e => console.warn(e)));
+            this.pendingCandidates = [];
+        }
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
         
@@ -839,6 +857,7 @@ class RTCManager {
         this.isVideoCall = false;
         this.isMinimized = false;
         this.peerConnection = null;
+        this.pendingCandidates = [];
         this.localStream = null;
         this.previewStream = null;
         this.remoteStream = null;
