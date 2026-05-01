@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v2.2.0_01.05_14:48'; // Bumped for robust cache-busting during install
+const CACHE_NAME = 'skufia-chat-v2.2.0_01.05_11:49'; // Bumped for robust cache-busting during install
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
