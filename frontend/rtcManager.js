@@ -3,6 +3,106 @@
  * Handles P2P audio/video calls, signaling via WebSocket, and UI modal controls.
  */
 
+/**
+ * CallState — централизованное перечисление всех состояний звонка.
+ * Единственный источник правды для UI-статуса.
+ */
+const CallState = Object.freeze({
+    IDLE:           'idle',
+    WAITING:        'waiting',           // Caller ожидает ответа
+    INCOMING:       'incoming',          // Callee получил входящий
+    CONNECTING:     'connecting',        // Установка соединения
+    ACTIVE:         'active',            // Звонок активен
+    AUTOPLAY_BLOCKED: 'autoplay_blocked', // Браузер заблокировал автоплей
+    ENDED:          'ended',             // Звонок завершён
+});
+
+/**
+ * CallStateManager — конечный автомат для управления состоянием звонка.
+ * Гарантирует: 1) единственную точку обновления UI, 2) логирование переходов,
+ * 3) защиту от дублирующих/некорректных переходов.
+ */
+class CallStateManager {
+    constructor(statusTextEl, timerEl) {
+        this._state = CallState.IDLE;
+        this._statusTextEl = statusTextEl;
+        this._timerEl = timerEl;
+        this._listeners = [];
+
+        // Валидные переходы: из какого состояния в какое можно перейти
+        this._transitions = {
+            [CallState.IDLE]:             [CallState.WAITING, CallState.INCOMING],
+            [CallState.WAITING]:          [CallState.ACTIVE, CallState.ENDED, CallState.CONNECTING],
+            [CallState.INCOMING]:         [CallState.CONNECTING, CallState.ENDED],
+            [CallState.CONNECTING]:       [CallState.ACTIVE, CallState.AUTOPLAY_BLOCKED, CallState.ENDED],
+            [CallState.ACTIVE]:           [CallState.ENDED],
+            [CallState.AUTOPLAY_BLOCKED]: [CallState.ACTIVE, CallState.ENDED],
+            [CallState.ENDED]:            [CallState.IDLE, CallState.WAITING, CallState.INCOMING],
+        };
+
+        // Маппинг состояния → текст для UI
+        this._labels = {
+            [CallState.IDLE]:             '',
+            [CallState.WAITING]:          'Ожидание...',
+            [CallState.INCOMING]:         'Входящий вызов...',
+            [CallState.CONNECTING]:       'Соединение...',
+            [CallState.ACTIVE]:           'Звонок активен',
+            [CallState.AUTOPLAY_BLOCKED]: 'Нажмите, чтобы включить звук',
+            [CallState.ENDED]:            '',
+        };
+    }
+
+    /** Текущее состояние */
+    get state() { return this._state; }
+
+    /** Является ли звонок активным (не idle/ended) */
+    get isInCall() {
+        return this._state !== CallState.IDLE && this._state !== CallState.ENDED;
+    }
+
+    /** Попытка перехода в новое состояние. Возвращает true при успехе. */
+    transition(newState, customLabel) {
+        const allowed = this._transitions[this._state];
+        if (!allowed || !allowed.includes(newState)) {
+            console.warn(`[CallState] Invalid transition: ${this._state} → ${newState}`);
+            return false;
+        }
+
+        const prevState = this._state;
+        this._state = newState;
+
+        const label = customLabel || this._labels[newState];
+        if (this._statusTextEl && label) {
+            this._statusTextEl.textContent = label;
+        }
+
+        console.log(`[CallState] ${prevState} → ${newState}${customLabel ? ` ("${customLabel}")` : ''}`);
+
+        // Уведомить слушателей
+        this._listeners.forEach(fn => {
+            try { fn(newState, prevState); } catch(e) { console.error('[CallState] Listener error:', e); }
+        });
+
+        return true;
+    }
+
+    /** Принудительный сброс в IDLE (для endCall) */
+    reset() {
+        this._state = CallState.IDLE;
+    }
+
+    /** Подписка на изменения состояния */
+    onChange(fn) {
+        this._listeners.push(fn);
+        return () => { this._listeners = this._listeners.filter(l => l !== fn); };
+    }
+
+    /** Установить кастомный label для входящего вызова (видео/аудио) */
+    setIncomingLabel(isVideo) {
+        this._labels[CallState.INCOMING] = isVideo ? 'Входящий видеовызов...' : 'Входящий вызов...';
+    }
+}
+
 class RTCManager {
     constructor() {
         this.peerConnection = null;
@@ -18,6 +118,7 @@ class RTCManager {
         this._ringtoneAudio = new Audio('assets/sounds/system_alert.mp3');
         this._ringtoneAudio.loop = true;
         this._vibrateInterval = null;
+        this.callState = null; // initialized after DOM elements are cached
         
         // Ice Servers - Google STUN as fallback and local Coturn server
         this.iceServers = {
@@ -242,6 +343,9 @@ class RTCManager {
         this.isMinimized = false;
         this.autoAcceptCallerId = null;
         
+        // Инициализация централизованного менеджера состояний
+        this.callState = new CallStateManager(this.statusText, this.timerEl);
+        
         // Buttons
         document.getElementById('rtc-accept-btn').addEventListener('click', () => this.acceptCall());
         document.getElementById('rtc-reject-btn').addEventListener('click', () => this.endCall());
@@ -267,6 +371,7 @@ class RTCManager {
         this.isCalling = true;
         this.isVideoCall = isVideo;
         this.showModal('Ожидание...', targetName, targetAvatarHtml, false);
+        this.callState.transition(CallState.WAITING);
         this.initiatePeerConnection(targetUserId, true);
 
         // 45-second no-answer timeout
@@ -436,7 +541,9 @@ class RTCManager {
             }
             
             const incomingTitle = this.isVideoCall ? 'Входящий видеовызов...' : 'Входящий вызов...';
+            this.callState.setIncomingLabel(this.isVideoCall);
             this.showModal(incomingTitle, name, avatarHtml, true);
+            this.callState.transition(CallState.INCOMING);
         } else if(type === 'answer') {
             if(window.addLog) window.addLog('Received answer from ' + senderId, 'info');
             console.log('[RTC] Received answer, peerConnection exists:', !!this.peerConnection, 'signalingState:', this.peerConnection?.signalingState);
@@ -452,7 +559,7 @@ class RTCManager {
                         
                         // IMPORTANT: Update UI *after* successful SDP negotiation
                         console.log('[RTC] CALLER: Setting statusText to Звонок активен. statusText element:', !!this.statusText, 'current text:', this.statusText?.textContent);
-                        this.statusText.textContent = 'Звонок активен';
+                        this.callState.transition(CallState.ACTIVE);
                         this._callWasAnswered = true;
                         if (this._missedCallTimeout) {
                             clearTimeout(this._missedCallTimeout);
@@ -504,7 +611,7 @@ class RTCManager {
             clearTimeout(this._missedCallTimeout);
             this._missedCallTimeout = null;
         }
-        this.statusText.textContent = 'Соединение...';
+        this.callState.transition(CallState.CONNECTING);
         document.getElementById('rtc-actions-incoming').style.display = 'none';
         document.getElementById('rtc-actions-audio').style.display = 'flex';
         this.modal.style.display = 'flex';
@@ -522,7 +629,7 @@ class RTCManager {
             if(window.sendSocketEvent) {
                 window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'answer', payload: JSON.stringify(answer) });
             }
-            this.statusText.textContent = 'Звонок активен';
+            this.callState.transition(CallState.ACTIVE);
             this.startTimer();
             if (window.addLog) window.addLog('Ответ отправлен', 'success');
         } catch (e) {
@@ -586,10 +693,10 @@ class RTCManager {
                 }).catch(e => {
                     console.error('[RTC] Remote play error (autoplay blocked?):', e);
                     // Add tap-to-play overlay if blocked
-                    this.statusText.textContent = 'Нажмите, чтобы включить звук';
+                    this.callState.transition(CallState.AUTOPLAY_BLOCKED);
                     const handleTap = () => {
                         remoteVid.play();
-                        this.statusText.textContent = 'Звонок активен';
+                        this.callState.transition(CallState.ACTIVE);
                         document.removeEventListener('click', handleTap);
                     };
                     document.addEventListener('click', handleTap);
@@ -621,7 +728,7 @@ class RTCManager {
                 console.log('[RTC] Connection State Changed:', st);
                 if (st === 'connected') {
                     console.log('[RTC] CONNECTION ESTABLISHED — updating UI to Звонок активен');
-                    this.statusText.textContent = 'Звонок активен';
+                    this.callState.transition(CallState.ACTIVE);
                     this._callWasAnswered = true;
                     this.startTimer();
                 } else if (st === 'disconnected' || st === 'failed') {
@@ -921,6 +1028,8 @@ class RTCManager {
     }
 
     showModal(status, name, avatarHtml, isIncoming = false) {
+        // UI текст статуса теперь управляется через CallStateManager
+        // showModal только устанавливает начальный текст напрямую
         this.statusText.textContent = status;
         this.callerName.textContent = name;
         this.avatarInner.innerHTML = avatarHtml;
