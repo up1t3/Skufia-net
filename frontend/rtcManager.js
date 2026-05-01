@@ -527,17 +527,19 @@ class RTCManager {
                 // Pipe Audio Track
                 if (event.track.kind === 'audio') {
                     const remoteAud = document.getElementById('rtc-remote-audio');
-                    // Force refresh to attach new track if needed
-                    remoteAud.srcObject = stream;
-                    remoteAud.play().then(() => console.log('[RTC] Remote audio is playing')).catch(e => console.error('[RTC] Remote audio play error:', e));
+                    if (remoteAud.srcObject !== stream) {
+                        remoteAud.srcObject = stream;
+                    }
+                    remoteAud.play().catch(e => console.error('[RTC] Remote audio play error:', e));
                 }
 
                 // Pipe Video Track
-                if (event.track.kind === 'video' || this.isVideoCall) {
+                if (event.track.kind === 'video') {
                     const remoteVid = document.getElementById('rtc-remote-video');
-                    // Force refresh stream to ensure video renderer picks up the new track
-                    remoteVid.srcObject = stream;
-                    remoteVid.play().then(() => console.log('[RTC] Remote video is playing')).catch(e => console.error('[RTC] Remote video play error:', e));
+                    if (remoteVid.srcObject !== stream) {
+                        remoteVid.srcObject = stream;
+                    }
+                    remoteVid.play().catch(e => console.error('[RTC] Remote video play error:', e));
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
@@ -621,7 +623,15 @@ class RTCManager {
         
         this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
         try {
-            const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.currentFacingMode } });
+            let newStream;
+            try {
+                // Force specific camera on mobile
+                newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: this.currentFacingMode } } });
+            } catch (e) {
+                // Fallback for desktops/tablets without specific facingMode support
+                newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.currentFacingMode } });
+            }
+            
             const newVideoTrack = newStream.getVideoTracks()[0];
             
             // Replace track in peer connection
@@ -639,11 +649,12 @@ class RTCManager {
             
             // Update local video element
             const localVid = document.getElementById('rtc-local-video');
+            localVid.srcObject = null;
             localVid.srcObject = this.localStream;
             localVid.play().catch(e => console.error('[RTC] Switch cam local play error:', e));
         } catch (e) {
             console.error('[RTC] Error switching camera:', e);
-            if(window.addLog) window.addLog('Ошибка при смене камеры', 'error');
+            if(window.addLog) window.addLog('Ошибка при смене камеры: ' + e.message, 'error');
         }
     }
 
