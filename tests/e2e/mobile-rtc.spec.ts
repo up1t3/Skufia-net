@@ -35,7 +35,10 @@ test.describe('Mobile WebRTC Stability & UI Transitions', () => {
   let pageCaller: Page;
   let pageCallee: Page;
 
+  // Increase beforeAll timeout to handle slow network/registration
   test.beforeAll(async ({ browser }) => {
+    test.setTimeout(90_000);
+    
     // Both contexts need camera & mic permissions and fake media streams
     // This is already configured in playwright.config.ts but we create isolated contexts here
     contextCaller = await browser.newContext();
@@ -68,9 +71,9 @@ test.describe('Mobile WebRTC Stability & UI Transitions', () => {
     await searchResult.click({ force: true });
     await pageCaller.waitForTimeout(1000);
     
-    // Callee refeshes to see the newly created chat
+    // Callee refreshes to see the newly created chat — wait for sidebar to hydrate
     await pageCallee.reload();
-    await pageCallee.waitForTimeout(2000);
+    await pageCallee.waitForSelector('.sidebar-item', { state: 'visible', timeout: 15_000 });
     
     const calleeChatItem = pageCallee.locator('.sidebar-item').first();
     await calleeChatItem.click();
