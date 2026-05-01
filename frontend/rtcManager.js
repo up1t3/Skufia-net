@@ -47,8 +47,9 @@ class RTCManager {
                 </div>
                 
                 <div class="rtc-video-container" id="rtc-video-container" style="display:none;">
-                    <video id="rtc-remote-video" autoplay playsinline></video>
+                    <video id="rtc-remote-video" autoplay playsinline muted></video>
                     <video id="rtc-local-video" autoplay playsinline muted></video>
+                    <audio id="rtc-remote-audio" autoplay></audio>
                 </div>
                 
                 <div class="rtc-modal-content">
@@ -415,9 +416,9 @@ class RTCManager {
             
             this.startRingtone();
             
+            const callType = this.isVideoCall ? 'Видеозвонок' : 'Аудиозвонок';
             if (window.Notification && Notification.permission === "granted") {
                 try {
-                    const callType = this.isVideoCall ? 'Видеозвонок' : 'Аудиозвонок';
                     const notification = new Notification("Входящий вызов", {
                         body: `Вам звонит ${name} (${callType})`,
                         icon: '/pwa/icon-192.png',
@@ -434,7 +435,8 @@ class RTCManager {
                 Notification.requestPermission();
             }
             
-            this.showModal('Входящий вызов...', name, avatarHtml, true);
+            const incomingTitle = this.isVideoCall ? 'Входящий видеовызов...' : 'Входящий вызов...';
+            this.showModal(incomingTitle, name, avatarHtml, true);
         } else if(type === 'answer') {
             if(this.peerConnection) {
                 this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload));
@@ -446,14 +448,16 @@ class RTCManager {
                 this.peerConnection.addIceCandidate(new RTCIceCandidate(parsedPayload));
             }
         } else if(type === 'end') {
-            this.endCall(false);
+            if (this.currentCallTarget == senderId || this.incomingOffer) {
+                this.endCall(false);
+            }
         } else if(type === 'reject') {
             if (this.isCalling && this.currentCallTarget == senderId) {
                 this.endCall(false);
                 if(window.addLog) window.addLog('Вызов отклонен', 'warning');
             }
         } else if(type === 'request_offer') {
-            if (this.isCalling && this.currentCallTarget === senderId && this.peerConnection && this.peerConnection.localDescription) {
+            if (this.isCalling && this.currentCallTarget == senderId && this.peerConnection && this.peerConnection.localDescription) {
                 if(window.sendSocketEvent) {
                     window.sendSocketEvent('rtc_signal', { target: senderId, signal_type: 'offer', payload: JSON.stringify(this.peerConnection.localDescription) });
                 }
@@ -523,15 +527,19 @@ class RTCManager {
                     stream.addTrack(event.track);
                 }
 
-                // Pipe ALL tracks (Audio & Video) to the single rtc-remote-video element
-                const remoteVid = document.getElementById('rtc-remote-video');
-                if (remoteVid.srcObject !== stream) {
-                    remoteVid.srcObject = stream;
+                if (event.track.kind === 'audio') {
+                    const audioEl = document.getElementById('rtc-remote-audio');
+                    if (audioEl.srcObject !== stream) audioEl.srcObject = stream;
+                    audioEl.play().catch(e => console.error('[RTC] Remote audio play error:', e));
                 }
-                remoteVid.play().catch(e => console.error('[RTC] Remote media play error:', e));
 
-                // If it's a video track, show the UI layout for video calls
                 if (event.track.kind === 'video') {
+                    const remoteVid = document.getElementById('rtc-remote-video');
+                    if (remoteVid.srcObject !== stream) {
+                        remoteVid.srcObject = stream;
+                    }
+                    remoteVid.play().catch(e => console.error('[RTC] Remote video play error:', e));
+                    
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
@@ -613,16 +621,32 @@ class RTCManager {
         const videoTrack = this.localStream.getVideoTracks()[0];
         if (!videoTrack) return;
         
-        this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
         try {
-            let newStream;
-            try {
-                // Force specific camera on mobile
-                newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: this.currentFacingMode } } });
-            } catch (e) {
-                // Fallback for desktops/tablets without specific facingMode support
-                newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: this.currentFacingMode } });
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            
+            if (videoDevices.length < 2) {
+                if(window.addLog) window.addLog('Доступна только одна камера', 'warning');
+                return;
             }
+            
+            // Find current device index
+            const currentSettings = videoTrack.getSettings();
+            const currentDeviceId = currentSettings.deviceId;
+            
+            let nextIndex = 0;
+            if (currentDeviceId) {
+                const currentIndex = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
+                if (currentIndex !== -1) {
+                    nextIndex = (currentIndex + 1) % videoDevices.length;
+                }
+            }
+            
+            const nextDevice = videoDevices[nextIndex];
+            
+            const newStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { deviceId: { exact: nextDevice.deviceId } } 
+            });
             
             const newVideoTrack = newStream.getVideoTracks()[0];
             
@@ -630,7 +654,7 @@ class RTCManager {
             if (this.peerConnection) {
                 const sender = this.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
                 if (sender) {
-                    sender.replaceTrack(newVideoTrack);
+                    await sender.replaceTrack(newVideoTrack);
                 }
             }
             
