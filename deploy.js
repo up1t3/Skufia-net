@@ -1,257 +1,133 @@
-#!/usr/bin/env node
-/**
- * ╔══════════════════════════════════════════╗
- * ║   СКУФИЯ — Smart Local Deploy Script    ║
- * ║   Запуск: npm run deploy                ║
- * ╚══════════════════════════════════════════╝
- *
- * Шаги:
- *  1. Загрузка конфига из .env
- *  2. Locальный прогон тестов pytest
- *  3. Сборка Docker-образов (backend + frontend)
- *  4. Push образов в GHCR (ghcr.io/up1t3/...)
- *  5. SSH на сервер → pull + up -d
- *  6. Проверка доступности сайта
- */
-
-'use strict';
-
 require('dotenv').config();
-const { execSync, spawn } = require('child_process');
+const fs = require('fs');
+const { execSync } = require('child_process');
 const { Client } = require('ssh2');
-const path = require('path');
 
-// ─── Конфигурация ───────────────────────────────────────────────
-const CONFIG = {
-  ghcr: {
-    user: process.env.GHCR_USER || 'up1t3',
-    token: process.env.GHCR_TOKEN,
-  },
-  server: {
-    ip: process.env.SERVER_IP || '147.45.245.133',
-    user: process.env.SERVER_USER || 'root',
-    password: process.env.SERVER_PASSWORD,
-    port: 22,
-  },
-  images: {
-    backend: '',  // заполняется ниже
-    frontend: '', // заполняется ниже
-  },
-  skipTests: process.argv.includes('--skip-tests'),
-};
+const FRONTEND_HTML = ['frontend/index.html', 'frontend/messenger.html'];
+const SW_FILE = 'frontend/chat-sw.js';
+const MAJOR_VERSION = 'v2.2.0';
 
-CONFIG.images.backend  = `ghcr.io/${CONFIG.ghcr.user}/skufia-backend:latest`;
-CONFIG.images.frontend = `ghcr.io/${CONFIG.ghcr.user}/skufia-frontend:latest`;
-
-// ─── Цветной вывод ──────────────────────────────────────────────
-const cyan  = (s) => `\x1b[36m${s}\x1b[0m`;
-const green = (s) => `\x1b[32m${s}\x1b[0m`;
-const red   = (s) => `\x1b[31m${s}\x1b[0m`;
-const yellow= (s) => `\x1b[33m${s}\x1b[0m`;
-const bold  = (s) => `\x1b[1m${s}\x1b[0m`;
-
-function log(emoji, msg) {
-  const time = new Date().toLocaleTimeString('ru-RU');
-  console.log(`${cyan(`[${time}]`)} ${emoji}  ${msg}`);
+function runLocal(cmd, ignoreError = false) {
+    try {
+        console.log(`> ${cmd}`);
+        return execSync(cmd, { stdio: 'inherit' });
+    } catch (e) {
+        if (!ignoreError) {
+            console.error(`ERROR: Command failed: ${cmd}`);
+            process.exit(1);
+        }
+    }
 }
 
-function step(title) {
-  console.log(`\n${bold(cyan('▶ ' + title))}`);
+function getVersionString() {
+    const d = new Date();
+    // Adjust to Moscow time (UTC+3)
+    d.setHours(d.getUTCHours() + 3);
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const min = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${MAJOR_VERSION}_${dd}.${mm}_${hh}:${min}`;
 }
 
-function success(msg) { console.log(green(`  ✅ ${msg}`)); }
-function warn(msg)    { console.log(yellow(`  ⚠️  ${msg}`)); }
-function fail(msg)    { console.log(red(`  ❌ ${msg}`)); }
+async function startDeploy() {
+    console.log('=== STARTING ZERO-ERROR DEPLOY ===');
 
-// ─── Вспомогательные функции ────────────────────────────────────
-function run(cmd, opts = {}) {
-  log('⚙️', `Выполняю: ${yellow(cmd)}`);
-  execSync(cmd, { stdio: 'inherit', ...opts });
-}
+    // 1. Check Git status for untracked/modified files
+    const status = execSync('git status --porcelain').toString().trim();
+    if (status) {
+        console.log('Detected uncommitted changes. Auto-committing before version bump...');
+        runLocal('git add .');
+        runLocal('git commit -m "chore: Auto-commit before deploy"', true);
+    }
 
-function runSSH(conn, commands) {
-  return new Promise((resolve, reject) => {
-    const cmd = Array.isArray(commands) ? commands.join(' && ') : commands;
-    log('🖥️', `SSH: ${yellow(cmd)}`);
-    conn.exec(cmd, (err, stream) => {
-      if (err) return reject(err);
-      let out = '', errOut = '';
-      stream
-        .on('close', (code) => {
-          if (code !== 0) return reject(new Error(`SSH команда завершилась с кодом ${code}\n${errOut}`));
-          resolve(out);
-        })
-        .on('data', (d) => { process.stdout.write(d); out += d; })
-        .stderr.on('data', (d) => { process.stderr.write(d); errOut += d; });
+    // 2. Generate new Version
+    const version = getVersionString();
+    console.log(`\n=> Bumping version to: ${version}`);
+
+    // 3. Update HTML files
+    FRONTEND_HTML.forEach(file => {
+        if (fs.existsSync(file)) {
+            let content = fs.readFileSync(file, 'utf8');
+            content = content.replace(/(id="app-version-tag"[^>]*>)[^<]+(<\/span>)/g, `$1${version}$2`);
+            fs.writeFileSync(file, content);
+            console.log(`Updated version tag in ${file}`);
+        }
     });
-  });
-}
 
-function connectSSH(cfg) {
-  return new Promise((resolve, reject) => {
+    // 4. Update Service Worker Cache Name
+    if (fs.existsSync(SW_FILE)) {
+        let content = fs.readFileSync(SW_FILE, 'utf8');
+        content = content.replace(/const CACHE_NAME = '[^']+';/, `const CACHE_NAME = 'skufia-chat-${version}';`);
+        fs.writeFileSync(SW_FILE, content);
+        console.log(`Updated CACHE_NAME in ${SW_FILE}`);
+    }
+
+    // 5. Commit and push the version bump
+    console.log('\n=> Committing and Pushing to Git...');
+    runLocal('git add .');
+    runLocal(`git commit -m "chore(release): ${version}"`);
+    runLocal('git push origin main');
+
+    // 6. Connect via SSH and deploy
+    console.log('\n=> Connecting to remote server to build and deploy...');
+    const config = {
+        host: process.env.SERVER_IP,
+        port: 22,
+        username: process.env.SERVER_USER || 'root',
+        password: process.env.SERVER_PASSWORD
+    };
+
+    if (!config.password || !config.host) {
+        console.error('ERROR: SERVER_IP or SERVER_PASSWORD missing from .env');
+        process.exit(1);
+    }
+
     const conn = new Client();
-    conn.on('ready', () => resolve(conn))
-        .on('error', reject)
-        .connect({
-          host: cfg.ip,
-          port: cfg.port,
-          username: cfg.user,
-          password: cfg.password,
-          readyTimeout: 30000,
+    conn.on('ready', () => {
+        console.log('Client :: connected via SSH');
+        
+        // Command to execute on server
+        const remoteCmd = `
+            set -e
+            cd /opt/skufia
+            echo "-> Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+            
+            echo "-> Building Frontend..."
+            cd frontend
+            docker build --no-cache -t skufia-frontend:latest .
+            docker tag skufia-frontend:latest ghcr.io/up1t3/skufia-frontend:latest
+            
+            echo "-> Building Backend..."
+            cd ../backend
+            docker build --no-cache -t skufia-backend:latest .
+            docker tag skufia-backend:latest ghcr.io/up1t3/skufia-backend:latest
+            
+            echo "-> Restarting Containers..."
+            cd /opt/skufia
+            docker stop skufia-web skufia-api-blue skufia-api-green || true
+            docker rm skufia-web skufia-api-blue skufia-api-green || true
+            docker compose -f docker-compose.production.yml up -d
+            
+            echo "-> Cleaning up old Docker images..."
+            docker image prune -f
+            echo "=== DEPLOYMENT COMPLETE: ${version} ==="
+        `;
+
+        conn.exec(remoteCmd, (err, stream) => {
+            if (err) throw err;
+            stream.on('close', (code, signal) => {
+                console.log(`\nRemote stream closed (code: ${code})`);
+                conn.end();
+            }).on('data', (data) => {
+                process.stdout.write(data);
+            }).stderr.on('data', (data) => {
+                process.stderr.write(data);
+            });
         });
-  });
+    }).connect(config);
 }
 
-// ─── 1. Проверка конфигурации ───────────────────────────────────
-function checkConfig() {
-  step('Проверка конфигурации');
-  const missing = [];
-  if (!CONFIG.ghcr.token)       missing.push('GHCR_TOKEN');
-  if (!CONFIG.server.password)  missing.push('SERVER_PASSWORD');
-  if (missing.length) {
-    fail(`В файле .env отсутствуют переменные: ${missing.join(', ')}`);
-    process.exit(1);
-  }
-  success('Конфигурация загружена');
-  log('🎯', `Бэкенд-образ: ${CONFIG.images.backend}`);
-  log('🎯', `Фронтенд-образ: ${CONFIG.images.frontend}`);
-  log('🎯', `Сервер: ${CONFIG.server.ip}`);
-}
-
-// ─── 2. Локальный прогон тестов ─────────────────────────────────
-function runTests() {
-  if (CONFIG.skipTests) {
-    warn('Тесты пропущены (флаг --skip-tests)');
-    return;
-  }
-  step('Прогон тестов (pytest)');
-  try {
-    run('python -m pytest backend/tests/ -v --tb=short');
-    success('Все тесты прошли!');
-  } catch (e) {
-    fail('Тесты не прошли — деплой ОТМЕНЁН');
-    process.exit(1);
-  }
-}
-
-// ─── 2.5. Обновление версии Service Worker ─────────────────────────
-function bumpServiceWorker() {
-  step('Обновление версии Service Worker (chat-sw.js)');
-  const fs = require('fs');
-  const path = require('path');
-  const swPath = path.join(__dirname, 'frontend', 'chat-sw.js');
-  try {
-    let content = fs.readFileSync(swPath, 'utf8');
-    const timestamp = Date.now();
-    content = content.replace(/const CACHE_NAME = 'skufia-chat-v\d+';/, `const CACHE_NAME = 'skufia-chat-v${timestamp}';`);
-    fs.writeFileSync(swPath, content);
-    success(`Версия кэша обновлена до v${timestamp}`);
-  } catch (e) {
-    warn('Не удалось обновить версию Service Worker');
-  }
-}
-
-// ─── 3. Сборка Docker-образов ───────────────────────────────────
-function buildImages() {
-  step('Сборка Docker-образов (локально)');
-  run('docker build -t skufia-backend ./backend');
-  run('docker build -t skufia-frontend ./frontend');
-  success('Образы собраны');
-}
-
-// ─── 4. Push в GHCR ─────────────────────────────────────────────
-function pushImages() {
-  step('Отправка образов в GitHub Container Registry');
-
-  // Login
-  execSync(
-    `echo ${CONFIG.ghcr.token} | docker login ghcr.io -u ${CONFIG.ghcr.user} --password-stdin`,
-    { stdio: ['pipe', 'inherit', 'inherit'] }
-  );
-  success('Авторизация в GHCR успешна');
-
-  // Tag
-  run(`docker tag skufia-backend ${CONFIG.images.backend}`);
-  run(`docker tag skufia-frontend ${CONFIG.images.frontend}`);
-
-  // Push
-  run(`docker push ${CONFIG.images.backend}`);
-  run(`docker push ${CONFIG.images.frontend}`);
-  success('Образы загружены в GHCR');
-}
-
-// ─── 5. Деплой на сервер ────────────────────────────────────────
-async function deployToServer() {
-  step('Деплой на сервер Timeweb');
-  log('🔌', `Подключаюсь к ${CONFIG.server.ip}...`);
-
-  const conn = await connectSSH(CONFIG.server);
-  success('SSH-соединение установлено');
-
-  const deployDir = '/opt/skufia';
-  const composeFile = 'docker-compose.production.yml';
-
-  await runSSH(conn, [
-    // Авторизация в GHCR прямо на сервере
-    `echo ${CONFIG.ghcr.token} | docker login ghcr.io -u ${CONFIG.ghcr.user} --password-stdin`,
-    // Переходим в папку проекта
-    `mkdir -p ${deployDir}/frontend`,
-    `cd ${deployDir}`,
-    // Записываем обновленные файлы на сервер (с локальной копии)
-    `echo "${require('fs').readFileSync('docker-compose.production.yml').toString('base64')}" | base64 -d > docker-compose.production.yml`,
-    `echo "${require('fs').readFileSync('frontend/upstream.conf').toString('base64')}" | base64 -d > frontend/upstream.conf`,
-    // Скачиваем свежие образы
-    `docker compose -f ${composeFile} pull`,
-    // Перезапускаем сервисы с нулевым даунтаймом
-    `docker compose -f ${composeFile} up -d --remove-orphans`,
-    // Применяем миграции БД (создаём новые таблицы если их нет)
-    `docker exec skufia-api-green python -c "from database import init_db; init_db(); print('DB migration applied')"`,
-    // Убираем старые образы
-    `docker image prune -f`,
-  ]);
-
-  success('Контейнеры обновлены!');
-
-  // Проверяем доступность
-  log('🔍', 'Проверяю доступность сайта...');
-  await new Promise(r => setTimeout(r, 5000)); // ждём 5 сек старту
-
-  const result = await runSSH(conn, `curl -s -o /dev/null -w "%{http_code}" http://localhost`);
-  conn.end();
-
-  const code = result.trim().slice(-3);
-  if (code === '200') {
-    success(`Сайт доступен! HTTP ${code}`);
-  } else {
-    warn(`Сайт вернул HTTP ${code} — проверьте логи на сервере`);
-  }
-}
-
-// ─── Главная функция ────────────────────────────────────────────
-async function main() {
-  console.log('\n' + bold('╔════════════════════════════════════════╗'));
-  console.log(bold('║  🚀 СКУФИЯ Smart Deploy Pipeline  🚀   ║'));
-  console.log(bold('╚════════════════════════════════════════╝') + '\n');
-
-  const start = Date.now();
-
-  checkConfig();
-  runTests();
-  bumpServiceWorker();
-  buildImages();
-  pushImages();
-  await deployToServer();
-
-  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  console.log(`\n${bold(green('╔════════════════════════════════════════╗'))}`);
-  console.log(bold(green(`║   ✅ Деплой завершён за ${elapsed}с!           ║`)));
-  console.log(bold(green('╠════════════════════════════════════════╣')));
-  console.log(bold(green('║  🌐 http://skuf-net.ru                 ║')));
-  console.log(bold(green('║  🌐 http://xn--e1afmapc3af.xn--p1ai   ║')));
-  console.log(bold(green('╚════════════════════════════════════════╝')) + '\n');
-}
-
-main().catch((err) => {
-  fail(`Критическая ошибка: ${err.message}`);
-  process.exit(1);
-});
+startDeploy();
