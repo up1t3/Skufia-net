@@ -47,9 +47,8 @@ class RTCManager {
                 </div>
                 
                 <div class="rtc-video-container" id="rtc-video-container" style="display:none;">
-                    <video id="rtc-remote-video" autoplay playsinline muted></video>
+                    <video id="rtc-remote-video" autoplay playsinline></video>
                     <video id="rtc-local-video" autoplay playsinline muted></video>
-                    <audio id="rtc-remote-audio" autoplay></audio>
                 </div>
                 
                 <div class="rtc-modal-content">
@@ -449,7 +448,7 @@ class RTCManager {
         } else if(type === 'end') {
             this.endCall(false);
         } else if(type === 'reject') {
-            if (this.isCalling && this.currentCallTarget === senderId) {
+            if (this.isCalling && this.currentCallTarget == senderId) {
                 this.endCall(false);
                 if(window.addLog) window.addLog('Вызов отклонен', 'warning');
             }
@@ -524,22 +523,15 @@ class RTCManager {
                     stream.addTrack(event.track);
                 }
 
-                // Pipe Audio Track
-                if (event.track.kind === 'audio') {
-                    const remoteAud = document.getElementById('rtc-remote-audio');
-                    if (remoteAud.srcObject !== stream) {
-                        remoteAud.srcObject = stream;
-                    }
-                    remoteAud.play().catch(e => console.error('[RTC] Remote audio play error:', e));
+                // Pipe ALL tracks (Audio & Video) to the single rtc-remote-video element
+                const remoteVid = document.getElementById('rtc-remote-video');
+                if (remoteVid.srcObject !== stream) {
+                    remoteVid.srcObject = stream;
                 }
+                remoteVid.play().catch(e => console.error('[RTC] Remote media play error:', e));
 
-                // Pipe Video Track
+                // If it's a video track, show the UI layout for video calls
                 if (event.track.kind === 'video') {
-                    const remoteVid = document.getElementById('rtc-remote-video');
-                    if (remoteVid.srcObject !== stream) {
-                        remoteVid.srcObject = stream;
-                    }
-                    remoteVid.play().catch(e => console.error('[RTC] Remote video play error:', e));
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
@@ -800,8 +792,17 @@ class RTCManager {
         }
         
         // Clean up UI elements
-        document.getElementById('rtc-local-video').srcObject = null;
-        document.getElementById('rtc-remote-video').srcObject = null;
+        const localVidEl = document.getElementById('rtc-local-video');
+        if (localVidEl) {
+            localVidEl.pause();
+            localVidEl.srcObject = null;
+        }
+        const remoteVidEl = document.getElementById('rtc-remote-video');
+        if (remoteVidEl) {
+            remoteVidEl.pause();
+            remoteVidEl.srcObject = null;
+        }
+        
         document.getElementById('rtc-video-container').style.display = 'none';
         document.getElementById('rtc-profile-info').style.display = 'flex';
         document.getElementById('rtc-modal-bg').style.display = 'block';

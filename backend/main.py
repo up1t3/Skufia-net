@@ -238,7 +238,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 "signal_type": signal_type,
                                 "payload": data.get('payload')
                             }
-                            if signal_type == 'offer':
+                            if signal_type in ['offer', 'request_offer']:
                                 db = SessionLocal()
                                 try:
                                     from database import User
