@@ -47,9 +47,8 @@ class RTCManager {
                 </div>
                 
                 <div class="rtc-video-container" id="rtc-video-container" style="display:none;">
-                    <video id="rtc-remote-video" autoplay playsinline muted></video>
+                    <video id="rtc-remote-video" autoplay playsinline></video>
                     <video id="rtc-local-video" autoplay playsinline muted></video>
-                    <audio id="rtc-remote-audio" autoplay></audio>
                 </div>
                 
                 <div class="rtc-modal-content">
@@ -533,31 +532,26 @@ class RTCManager {
             });
 
             this.peerConnection.ontrack = (event) => {
-                console.log('[RTC] ontrack fired, track kind:', event.track.kind, 'streams:', event.streams ? event.streams.length : 0);
+                console.log('[RTC] ontrack fired, track kind:', event.track.kind);
                 
-                // Robustly acquire or create the remote stream
-                let stream = (event.streams && event.streams[0]) || this.remoteStream;
-                if (!stream) {
-                    stream = new MediaStream();
-                    this.remoteStream = stream;
+                const remoteVid = document.getElementById('rtc-remote-video');
+                
+                if (event.streams && event.streams[0]) {
+                    remoteVid.srcObject = event.streams[0];
+                } else {
+                    if (!this.remoteStream) {
+                        this.remoteStream = new MediaStream();
+                    }
+                    if (!this.remoteStream.getTracks().includes(event.track)) {
+                        this.remoteStream.addTrack(event.track);
+                    }
+                    remoteVid.srcObject = this.remoteStream;
                 }
-                if (!stream.getTracks().includes(event.track)) {
-                    stream.addTrack(event.track);
-                }
-
-                if (event.track.kind === 'audio') {
-                    const audioEl = document.getElementById('rtc-remote-audio');
-                    if (audioEl.srcObject !== stream) audioEl.srcObject = stream;
-                    audioEl.play().catch(e => console.error('[RTC] Remote audio play error:', e));
-                }
+                
+                // Play remote media (audio+video handled by the same unmuted element)
+                remoteVid.play().catch(e => console.error('[RTC] Remote play error:', e));
 
                 if (event.track.kind === 'video') {
-                    const remoteVid = document.getElementById('rtc-remote-video');
-                    if (remoteVid.srcObject !== stream) {
-                        remoteVid.srcObject = stream;
-                    }
-                    remoteVid.play().catch(e => console.error('[RTC] Remote video play error:', e));
-                    
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
@@ -648,23 +642,29 @@ class RTCManager {
                 return;
             }
             
-            // Find current device index
             const currentSettings = videoTrack.getSettings();
-            const currentDeviceId = currentSettings.deviceId;
+            const currentFacingMode = currentSettings.facingMode;
             
-            let nextIndex = 0;
-            if (currentDeviceId) {
-                const currentIndex = videoDevices.findIndex(d => d.deviceId === currentDeviceId);
-                if (currentIndex !== -1) {
-                    nextIndex = (currentIndex + 1) % videoDevices.length;
-                }
+            // Toggle facingMode (default to environment if we can't detect)
+            let newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            
+            // Critical for iOS/Android: Stop the existing camera track before requesting the new one
+            videoTrack.stop();
+            this.localStream.removeTrack(videoTrack);
+            
+            let newStream;
+            try {
+                // First try with exact facingMode
+                newStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: { exact: newFacingMode } } 
+                });
+            } catch(fallbackErr) {
+                // If exact fails, fallback to general facingMode preference
+                console.warn("[RTC] facingMode exact failed, falling back", fallbackErr);
+                newStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: newFacingMode } 
+                });
             }
-            
-            const nextDevice = videoDevices[nextIndex];
-            
-            const newStream = await navigator.mediaDevices.getUserMedia({ 
-                video: { deviceId: { exact: nextDevice.deviceId } } 
-            });
             
             const newVideoTrack = newStream.getVideoTracks()[0];
             
@@ -677,9 +677,7 @@ class RTCManager {
             }
             
             // Replace track in local stream
-            this.localStream.removeTrack(videoTrack);
             this.localStream.addTrack(newVideoTrack);
-            videoTrack.stop();
             
             // Update local video element
             const localVid = document.getElementById('rtc-local-video');
