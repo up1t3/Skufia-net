@@ -994,6 +994,7 @@ window.initChatCore = function() {
         // Check for missed call system message
         let rawText = msg.text || msg.content || '';
         const isMissedCall = rawText.includes('Пропущенный') && (rawText.includes('аудиозвонок') || rawText.includes('видеозвонок'));
+        const isVideoCircle = msg.file_type === 'video_circle' || (fileUrl && fileUrl.includes('/video/'));
 
         // Bubble
         const bubble = document.createElement('div');
@@ -1003,6 +1004,9 @@ window.initChatCore = function() {
             if (rowDiv.querySelector('.msg-avatar')) {
                 rowDiv.querySelector('.msg-avatar').style.display = 'none';
             }
+        } else if (isVideoCircle) {
+            // Чистый кружочек — без прямоугольной обёртки bubble
+            bubble.className = `msg-bubble msg-bubble-circle ${isMe ? 'msg-sent' : 'msg-received'}`;
         } else {
             bubble.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
         }
@@ -1024,44 +1028,46 @@ window.initChatCore = function() {
             bubble.appendChild(replyBadge);
         }
 
-        // Text
-        const textDiv = document.createElement('div');
-        textDiv.className = 'msg-text';
-        
-        if (isMissedCall) {
-            const icon = rawText.includes('📹') ? '📹' : '📞';
-            const callType = rawText.includes('видеозвонок') ? 'видеозвонок' : 'аудиозвонок';
-            const name = isMe ? 'вас' : (msg.sender || 'пользователя');
-            textDiv.innerHTML = `
-                <span class="missed-call-icon">${icon}</span>
-                <span class="missed-call-text">Пропущенный ${callType} от <b>${name}</b></span>
-            `;
-        } else if (rawText === '🔒 [Не удалось расшифровать сообщение]') {
-            textDiv.innerHTML = `
-                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; margin-top: 2px;">
-                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--text-dim)" stroke-width="2" fill="none" style="opacity: 0.7"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    <span style="font-style: italic; color: var(--text-dim); font-size: 12px; opacity: 0.7;">Сообщение зашифровано и недоступно.</span>
-                </div>
-            `;
-        } else if (rawText === '🔒 Зашифрованное сообщение') {
-            textDiv.innerHTML = `
-                <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; margin-top: 2px; cursor: pointer;" onclick="document.getElementById('settings-modal').style.display='flex';">
-                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--text-dim)" stroke-width="2" fill="none" style="opacity: 0.7"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                    <span style="font-style: italic; color: var(--text-dim); font-size: 12px; opacity: 0.7;">Ожидание ключей шифрования...</span>
-                </div>
-            `;
-        } else {
-            // Safe escaping then linkify
-            const tempDiv = document.createElement('div');
-            tempDiv.textContent = rawText;
-            let safeText = tempDiv.innerHTML;
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            safeText = safeText.replace(urlRegex, function(url) {
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:underline;">${url}</a>`;
-            });
-            textDiv.innerHTML = safeText;
+        // Text (skip for pure circle videos — no text bubble needed)
+        if (!isVideoCircle || rawText.trim()) {
+            const textDiv = document.createElement('div');
+            textDiv.className = 'msg-text';
+            
+            if (isMissedCall) {
+                const icon = rawText.includes('📹') ? '📹' : '📞';
+                const callType = rawText.includes('видеозвонок') ? 'видеозвонок' : 'аудиозвонок';
+                const name = isMe ? 'вас' : (msg.sender || 'пользователя');
+                textDiv.innerHTML = `
+                    <span class="missed-call-icon">${icon}</span>
+                    <span class="missed-call-text">Пропущенный ${callType} от <b>${name}</b></span>
+                `;
+            } else if (rawText === '🔒 [Не удалось расшифровать сообщение]') {
+                textDiv.innerHTML = `
+                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; margin-top: 2px;">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--text-dim)" stroke-width="2" fill="none" style="opacity: 0.7"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span style="font-style: italic; color: var(--text-dim); font-size: 12px; opacity: 0.7;">Сообщение зашифровано и недоступно.</span>
+                    </div>
+                `;
+            } else if (rawText === '🔒 Зашифрованное сообщение') {
+                textDiv.innerHTML = `
+                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; background: rgba(255, 255, 255, 0.02); border-radius: 6px; margin-top: 2px; cursor: pointer;" onclick="document.getElementById('settings-modal').style.display='flex';">
+                        <svg viewBox="0 0 24 24" width="12" height="12" stroke="var(--text-dim)" stroke-width="2" fill="none" style="opacity: 0.7"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <span style="font-style: italic; color: var(--text-dim); font-size: 12px; opacity: 0.7;">Ожидание ключей шифрования...</span>
+                    </div>
+                `;
+            } else {
+                // Safe escaping then linkify
+                const tempDiv = document.createElement('div');
+                tempDiv.textContent = rawText;
+                let safeText = tempDiv.innerHTML;
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                safeText = safeText.replace(urlRegex, function(url) {
+                    return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:underline;">${url}</a>`;
+                });
+                textDiv.innerHTML = safeText;
+            }
+            bubble.appendChild(textDiv);
         }
-        bubble.appendChild(textDiv);
 
         // File attachment
         if (fileHtml) {
@@ -1099,52 +1105,65 @@ window.initChatCore = function() {
         footerDiv.appendChild(timeSpan);
         bubble.appendChild(footerDiv);
 
-        // Context menu logic
-        bubble.oncontextmenu = (e) => {
+        // Context menu logic — single tap opens menu (no text selection)
+        // Long-press = native copy (handled by browser)
+        bubble.addEventListener('click', (e) => {
+            // Don't trigger on links, videos, audio controls
+            if (e.target.closest('a, video, audio, button, .msg-video-circle')) return;
             e.preventDefault();
+            e.stopPropagation();
             document.querySelectorAll('.msg-context-menu').forEach(m => m.remove());
             const menu = document.createElement('div');
             menu.className = 'msg-context-menu';
             
-            const rect = bubble.getBoundingClientRect();
-            menu.style.top = `${rect.top + window.scrollY}px`;
-            let leftPos = rect.right - 140;
-            if (leftPos < 0) leftPos = rect.right; 
-            menu.style.left = `${Math.min(leftPos, window.innerWidth - 150)}px`;
+            // Position menu near the tap point
+            const chatHistory = document.getElementById('chat-history');
+            const histRect = chatHistory ? chatHistory.getBoundingClientRect() : { top: 0, left: 0 };
+            let menuTop = e.clientY - histRect.top + (chatHistory ? chatHistory.scrollTop : 0);
+            let menuLeft = e.clientX;
+            
+            // Keep menu within viewport
+            menu.style.position = 'fixed';
+            menu.style.top = `${Math.min(e.clientY, window.innerHeight - 200)}px`;
+            menu.style.left = `${Math.min(Math.max(menuLeft - 70, 10), window.innerWidth - 160)}px`;
 
             const cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
             
+            // Переслать
             const forwardDiv = document.createElement('div');
-            forwardDiv.textContent = 'Переслать';
-            forwardDiv.onclick = () => window.showForwardModal(cleanText);
+            forwardDiv.innerHTML = '<span style="margin-right:8px">↗️</span>Переслать';
+            forwardDiv.onclick = (ev) => { ev.stopPropagation(); window.showForwardModal(cleanText); menu.remove(); };
             menu.appendChild(forwardDiv);
 
-            const copyDiv = document.createElement('div');
-            copyDiv.textContent = 'Копировать';
-            copyDiv.onclick = () => {
-                navigator.clipboard.writeText(cleanText).catch(e => console.error('Copy failed', e));
-                menu.remove();
-            };
-            menu.appendChild(copyDiv);
-
+            // Ответить
             const replyDiv = document.createElement('div');
-            replyDiv.textContent = 'Ответить';
-            replyDiv.onclick = () => setReply(msg.id, cleanText);
+            replyDiv.innerHTML = '<span style="margin-right:8px">↩️</span>Ответить';
+            replyDiv.onclick = (ev) => { ev.stopPropagation(); setReply(msg.id, cleanText); menu.remove(); };
             menu.appendChild(replyDiv);
+
             if (isMe) {
+                // Редактировать
                 const editDiv = document.createElement('div');
-                editDiv.textContent = 'Редактировать';
-                editDiv.onclick = () => setEdit(msg.id, cleanText);
+                editDiv.innerHTML = '<span style="margin-right:8px">✏️</span>Редактировать';
+                editDiv.onclick = (ev) => { ev.stopPropagation(); setEdit(msg.id, cleanText); menu.remove(); };
                 menu.appendChild(editDiv);
+                // Удалить
                 const deleteDiv = document.createElement('div');
                 deleteDiv.className = 'delete-ctx';
-                deleteDiv.textContent = 'Удалить';
-                deleteDiv.onclick = () => deleteMessage(msg.id);
+                deleteDiv.innerHTML = '<span style="margin-right:8px">🗑️</span>Удалить';
+                deleteDiv.onclick = (ev) => { ev.stopPropagation(); deleteMessage(msg.id); menu.remove(); };
                 menu.appendChild(deleteDiv);
             }
             document.body.appendChild(menu);
-            setTimeout(() => { document.addEventListener('click', () => menu.remove(), {once: true}); }, 0);
-        };
+            // Animate in
+            requestAnimationFrame(() => menu.classList.add('visible'));
+            // Close on outside tap
+            setTimeout(() => {
+                document.addEventListener('click', () => menu.remove(), { once: true });
+            }, 10);
+        });
+        // Prevent context menu (long-press) from showing our custom menu — let native copy work
+        bubble.addEventListener('contextmenu', (e) => e.preventDefault());
 
         rowDiv.appendChild(bubble);
 
