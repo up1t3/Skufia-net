@@ -499,31 +499,44 @@ class RTCManager {
             });
 
             this.peerConnection.ontrack = (event) => {
-                console.log('[RTC] ontrack fired, track kind:', event.track.kind, 'streams:', event.streams.length);
-                const stream = event.streams[0];
-                if (!stream) return;
-
-                // Always keep remoteStream reference up to date
-                this.remoteStream = stream;
-
-                // Always pipe remote audio
-                const remoteAud = document.getElementById('rtc-remote-audio');
-                if (remoteAud && remoteAud.srcObject !== stream) {
-                    remoteAud.srcObject = stream;
-                    remoteAud.play().catch(e => console.error('[RTC] Remote audio play error:', e));
+                console.log('[RTC] ontrack fired, track kind:', event.track.kind, 'streams:', event.streams ? event.streams.length : 0);
+                
+                // Robustly acquire or create the remote stream
+                let stream = (event.streams && event.streams[0]) || this.remoteStream;
+                if (!stream) {
+                    stream = new MediaStream();
+                    this.remoteStream = stream;
+                }
+                if (!stream.getTracks().includes(event.track)) {
+                    stream.addTrack(event.track);
                 }
 
-                // When a video track arrives, show the video container
-                const hasVideo = stream.getVideoTracks().length > 0;
-                if (hasVideo || this.isVideoCall) {
+                // Pipe Audio Track
+                if (event.track.kind === 'audio') {
+                    const remoteAud = document.getElementById('rtc-remote-audio');
+                    if (remoteAud.srcObject !== stream) {
+                        remoteAud.srcObject = stream;
+                    }
+                    remoteAud.play().then(() => console.log('[RTC] Remote audio is playing')).catch(e => console.error('[RTC] Remote audio play error:', e));
+                }
+
+                // Pipe Video Track
+                if (event.track.kind === 'video' || this.isVideoCall) {
                     const remoteVid = document.getElementById('rtc-remote-video');
                     if (remoteVid.srcObject !== stream) {
                         remoteVid.srcObject = stream;
                     }
-                    remoteVid.play().catch(e => console.error('[RTC] Remote video play error:', e));
+                    remoteVid.play().then(() => console.log('[RTC] Remote video is playing')).catch(e => console.error('[RTC] Remote video play error:', e));
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
+                }
+            };
+
+            this.peerConnection.oniceconnectionstatechange = () => {
+                console.log('[RTC] ICE Connection State:', this.peerConnection.iceConnectionState);
+                if (this.peerConnection.iceConnectionState === 'failed') {
+                    console.error('[RTC] ICE Connection FAILED. Check STUN/TURN server configuration.');
                 }
             };
 
