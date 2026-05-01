@@ -189,8 +189,6 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
     # Check for pending incoming calls
     try:
-        from database import redis_client
-        import json
         if redis_client:
             # redis_client is async
             keys = await redis_client.keys(f"rtc_offer:*:{user_id}")
@@ -274,7 +272,6 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 
                                 # Store offer in Redis with 45s expiration
                                 call_key = f"rtc_offer:{user_id}:{target_id}"
-                                import json
                                 await redis_client.setex(call_key, 45, json.dumps(data.get('payload')))
 
                                 # ALWAYS Trigger Web Push for calls to ensure background delivery
@@ -296,7 +293,6 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 call_key = f"rtc_offer:{target_id}:{user_id}" # caller is target_id, receiver is user_id
                                 cached_offer_raw = await redis_client.get(call_key)
                                 if cached_offer_raw:
-                                    import json
                                     offer_msg = {
                                         "type": "rtc_signal",
                                         "sender_id": target_id,
