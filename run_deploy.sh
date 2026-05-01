@@ -23,7 +23,7 @@ fs.writeFileSync('frontend/chat-sw.js', c);
 node -e "
 const fs = require('fs');
 let c = fs.readFileSync('frontend/index.html', 'utf8');
-c = c.replace(/id=\"app-version\">[^<]*/g, 'id=\"app-version\">' + process.env.VERSION);
+c = c.replace(/(id=\"app-version-tag\"[^>]*>)[^<]+(<\/span>)/g, '\$1' + process.env.VERSION + '\$2');
 fs.writeFileSync('frontend/index.html', c);
 "
 
