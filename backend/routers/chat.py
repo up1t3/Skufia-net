@@ -24,7 +24,7 @@ async def validate_idempotency(x_idempotency_key: str = Header(..., alias="X-Ide
 from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArticle, MarketListing, Event, Message, GlobalNotification, PostLike, WikiLike, ChatRoom, ChatRoomMember, RoomKeyBundle, RoomInvite
 from auth import get_current_user, oauth2_scheme
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
 
 from ws_manager import manager
@@ -63,7 +63,7 @@ from typing import List, Optional
 class MessageCreate(BaseModel):
     receiver_id: Optional[int] = None
     room_id: Optional[int] = None
-    content: str
+    content: str = Field(..., min_length=1, max_length=4096)
     encryption_iv: Optional[str] = "" # Default to empty string for E2EE
     file_url: Optional[str] = None
     reply_to_id: Optional[int] = None
@@ -1116,7 +1116,7 @@ def search_users(query: str, current_user: User = Depends(get_current_user), db:
     } for u in users]
 
 class ChatContent(BaseModel):
-    content: str
+    content: str = Field(..., min_length=1, max_length=4096)
     encryption_iv: Optional[str] = ""
     file_url: Optional[str] = None
 
@@ -1797,7 +1797,7 @@ async def upload_avatar_file(file: UploadFile = FastAPIFile(...), current_user: 
     return {"status": "ok", "avatar_url": avatar_url}
 
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 
 # --- PUSH NOTIFICATIONS ---

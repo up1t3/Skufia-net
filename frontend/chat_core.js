@@ -18,6 +18,14 @@ window.initChatCore = function() {
             const globalInd = document.getElementById('global-status-indicator');
             if (globalInd) globalInd.classList.add('online');
             addLog('WebSocket Connection Established: Skufia-Net Online', 'success');
+            
+            // Setup WebSocket Keep-Alive Ping
+            if (window.wsPingInterval) clearInterval(window.wsPingInterval);
+            window.wsPingInterval = setInterval(() => {
+                if (state.chat.socket && state.chat.socket.readyState === WebSocket.OPEN) {
+                    state.chat.socket.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, 20000); // 20 seconds
         };
 
         state.chat.socket.onmessage = async (event) => {
@@ -199,6 +207,7 @@ window.initChatCore = function() {
         };
 
         state.chat.socket.onclose = () => {
+            if (window.wsPingInterval) clearInterval(window.wsPingInterval);
             const globalInd = document.getElementById('global-status-indicator');
             if (globalInd) globalInd.classList.remove('online');
             state.chat.socket = null;

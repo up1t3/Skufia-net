@@ -219,8 +219,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                 # We receive messages here for WebRTC signaling relay and other real-time events
                 text_data = await websocket.receive_text()
 
-                # Check rate limit (5 messages per second)
-                if not await check_rate_limit(f"ws:{user_id}", limit=5, window=1):
+                # Check rate limit (50 messages per second to allow ICE candidate bursts)
+                if not await check_rate_limit(f"ws:{user_id}", limit=50, window=1):
                     await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Rate limit exceeded")
                     return
 

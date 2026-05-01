@@ -3,11 +3,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
-# Import the actual models and app
-from backend.database import Base
-import backend.routes as routes
+import sys
+import os
+os.environ["TESTING"] = "1"
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../backend')))
 
-# Use SQLite in-memory or a test file for isolation
+# Import the actual models and app
+from database import Base
+import main
+import database
+import auth
+
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_skufia.db"
 
 engine = create_engine(
@@ -39,10 +45,13 @@ def client(db_session):
         finally:
             pass
 
-    # Here we override the dependency from routes.py 
-    routes.app.dependency_overrides[routes.get_db] = override_get_db
-    
-    with TestClient(routes.app) as c:
+    from routers import chat, registry
+
+    # Here we override the dependency from auth.py and other routers
+    main.app.dependency_overrides[auth.get_db] = override_get_db
+    main.app.dependency_overrides[chat.get_db] = override_get_db
+    main.app.dependency_overrides[registry.get_db] = override_get_db
+    with TestClient(main.app, base_url="http://testserver/api") as c:
         yield c
     
-    routes.app.dependency_overrides.clear()
+    main.app.dependency_overrides.clear()

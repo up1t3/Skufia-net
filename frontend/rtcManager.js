@@ -355,6 +355,7 @@ class RTCManager {
             if (typeof payload === 'string') parsedPayload = JSON.parse(payload);
         } catch (e) {
             console.error("Failed to parse RTC payload", e);
+            if(window.addLog) window.addLog('Error parsing payload: ' + e.message, 'error');
         }
 
         if(type === 'offer') {
@@ -437,21 +438,34 @@ class RTCManager {
             const incomingTitle = this.isVideoCall ? 'Входящий видеовызов...' : 'Входящий вызов...';
             this.showModal(incomingTitle, name, avatarHtml, true);
         } else if(type === 'answer') {
+            if(window.addLog) window.addLog('Received answer from ' + senderId, 'info');
+            console.log('[RTC] Received answer, parsing payload:', parsedPayload);
             if(this.peerConnection) {
-                this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload)).then(() => {
-                    if (this.pendingCandidates) {
-                        this.pendingCandidates.forEach(c => this.peerConnection.addIceCandidate(c).catch(e => console.warn(e)));
-                        this.pendingCandidates = [];
-                    }
-                }).catch(e => console.error('[RTC] Error setting answer:', e));
-                
-                this.statusText.textContent = 'Звонок активен';
-                this._callWasAnswered = true;
-                if (this._missedCallTimeout) {
-                    clearTimeout(this._missedCallTimeout);
-                    this._missedCallTimeout = null;
-                }
-                this.startTimer();
+                this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload))
+                    .then(() => {
+                        console.log('[RTC] Remote description set successfully');
+                        if (this.pendingCandidates) {
+                            this.pendingCandidates.forEach(c => this.peerConnection.addIceCandidate(c).catch(e => console.warn(e)));
+                            this.pendingCandidates = [];
+                        }
+                        
+                        // IMPORTANT: Update UI *after* successful SDP negotiation
+                        this.statusText.textContent = 'Звонок активен';
+                        this._callWasAnswered = true;
+                        if (this._missedCallTimeout) {
+                            clearTimeout(this._missedCallTimeout);
+                            this._missedCallTimeout = null;
+                        }
+                        this.startTimer();
+                        if (window.addLog) window.addLog('Звонок установлен', 'success');
+                    })
+                    .catch(e => {
+                        console.error('[RTC] Error setting answer:', e);
+                        if(window.addLog) window.addLog('Error setting answer: ' + e.message, 'error');
+                    });
+            } else {
+                console.error('[RTC] Answer received but peerConnection is null!');
+                if(window.addLog) window.addLog('Answer received but no peerConnection!', 'warning');
             }
         } else if(type === 'candidate') {
             if (this.peerConnection && this.peerConnection.remoteDescription && this.peerConnection.remoteDescription.type) {
@@ -494,26 +508,37 @@ class RTCManager {
         this.modal.style.display = 'flex';
         this.floatingBar.style.display = 'none';
         
-        await this.initiatePeerConnection(this.currentCallTarget, false);
-        await this.peerConnection.setRemoteDescription(new RTCSessionDescription(this.incomingOffer));
-        if (this.pendingCandidates) {
-            this.pendingCandidates.forEach(c => this.peerConnection.addIceCandidate(c).catch(e => console.warn(e)));
-            this.pendingCandidates = [];
+        try {
+            await this.initiatePeerConnection(this.currentCallTarget, false);
+            await this.peerConnection.setRemoteDescription(new RTCSessionDescription(this.incomingOffer));
+            if (this.pendingCandidates) {
+                this.pendingCandidates.forEach(c => this.peerConnection.addIceCandidate(c).catch(e => console.warn(e)));
+                this.pendingCandidates = [];
+            }
+            const answer = await this.peerConnection.createAnswer();
+            await this.peerConnection.setLocalDescription(answer);
+            if(window.sendSocketEvent) {
+                window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'answer', payload: JSON.stringify(answer) });
+            }
+            this.statusText.textContent = 'Звонок активен';
+            this.startTimer();
+            if (window.addLog) window.addLog('Ответ отправлен', 'success');
+        } catch (e) {
+            console.error('[RTC] Error accepting call:', e);
+            if (window.addLog) window.addLog('Ошибка при ответе: ' + e.message, 'error');
+            this.endCall(false);
         }
-        const answer = await this.peerConnection.createAnswer();
-        await this.peerConnection.setLocalDescription(answer);
-        
-        if(window.sendSocketEvent) {
-             window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'answer', payload: JSON.stringify(answer) });
-        }
-        this.statusText.textContent = 'Звонок активен';
-        this.startTimer();
     }
 
     async initiatePeerConnection(targetId, isInitiator) {
         try {
-            const constraints = { audio: true, video: this.isVideoCall };
+            console.log('[RTC] Initiating peer connection, targetId:', targetId, 'isInitiator:', isInitiator);
+            const constraints = { 
+                audio: true, 
+                video: this.isVideoCall ? { facingMode: this.currentFacingMode } : false 
+            };
             this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+            console.log('[RTC] Obtained local media stream successfully');
             
             if (this.isVideoCall) {
                 const localVid = document.getElementById('rtc-local-video');
@@ -537,7 +562,9 @@ class RTCManager {
                 const remoteVid = document.getElementById('rtc-remote-video');
                 
                 if (event.streams && event.streams[0]) {
-                    remoteVid.srcObject = event.streams[0];
+                    if (remoteVid.srcObject !== event.streams[0]) {
+                        remoteVid.srcObject = event.streams[0];
+                    }
                 } else {
                     if (!this.remoteStream) {
                         this.remoteStream = new MediaStream();
@@ -545,11 +572,26 @@ class RTCManager {
                     if (!this.remoteStream.getTracks().includes(event.track)) {
                         this.remoteStream.addTrack(event.track);
                     }
-                    remoteVid.srcObject = this.remoteStream;
+                    if (remoteVid.srcObject !== this.remoteStream) {
+                        remoteVid.srcObject = this.remoteStream;
+                    }
                 }
                 
                 // Play remote media (audio+video handled by the same unmuted element)
-                remoteVid.play().catch(e => console.error('[RTC] Remote play error:', e));
+                remoteVid.muted = false; // explicitly unmute remote stream
+                remoteVid.play().then(() => {
+                    console.log('[RTC] Remote media playback started successfully');
+                }).catch(e => {
+                    console.error('[RTC] Remote play error (autoplay blocked?):', e);
+                    // Add tap-to-play overlay if blocked
+                    this.statusText.textContent = 'Нажмите, чтобы включить звук';
+                    const handleTap = () => {
+                        remoteVid.play();
+                        this.statusText.textContent = 'Звонок активен';
+                        document.removeEventListener('click', handleTap);
+                    };
+                    document.addEventListener('click', handleTap);
+                });
 
                 if (event.track.kind === 'video') {
                     document.getElementById('rtc-video-container').style.display = 'block';
@@ -629,64 +671,49 @@ class RTCManager {
     }
 
     async switchActiveCamera() {
-        if (!this.localStream) return;
-        const videoTrack = this.localStream.getVideoTracks()[0];
-        if (!videoTrack) return;
+        if (!this.isVideoCall || !this.localStream) return;
         
         try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
+            // Toggle facing mode
+            this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
+            console.log('[RTC] Switching camera to:', this.currentFacingMode);
             
-            if (videoDevices.length < 2) {
-                if(window.addLog) window.addLog('Доступна только одна камера', 'warning');
-                return;
-            }
+            // Re-acquire local stream with new facing mode
+            const constraints = {
+                audio: true,
+                video: { facingMode: this.currentFacingMode }
+            };
             
-            const currentSettings = videoTrack.getSettings();
-            const currentFacingMode = currentSettings.facingMode;
-            
-            // Toggle facingMode (default to environment if we can't detect)
-            let newFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-            
-            // Critical for iOS/Android: Stop the existing camera track before requesting the new one
-            videoTrack.stop();
-            this.localStream.removeTrack(videoTrack);
-            
-            let newStream;
-            try {
-                // First try with exact facingMode
-                newStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: { exact: newFacingMode } } 
-                });
-            } catch(fallbackErr) {
-                // If exact fails, fallback to general facingMode preference
-                console.warn("[RTC] facingMode exact failed, falling back", fallbackErr);
-                newStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: newFacingMode } 
-                });
-            }
-            
+            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
             const newVideoTrack = newStream.getVideoTracks()[0];
+            const newAudioTrack = newStream.getAudioTracks()[0];
             
-            // Replace track in peer connection
+            // Replace video track in RTCPeerConnection
             if (this.peerConnection) {
-                const sender = this.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
-                if (sender) {
-                    await sender.replaceTrack(newVideoTrack);
+                const senders = this.peerConnection.getSenders();
+                const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+                if (videoSender) {
+                    await videoSender.replaceTrack(newVideoTrack);
+                }
+                const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+                if (audioSender && newAudioTrack) {
+                    await audioSender.replaceTrack(newAudioTrack);
                 }
             }
             
-            // Replace track in local stream
-            this.localStream.addTrack(newVideoTrack);
+            // Stop old tracks
+            this.localStream.getTracks().forEach(t => t.stop());
             
-            // Update local video element
+            // Assign new stream to local variables and UI
+            this.localStream = newStream;
             const localVid = document.getElementById('rtc-local-video');
-            localVid.srcObject = null;
             localVid.srcObject = this.localStream;
-            localVid.play().catch(e => console.error('[RTC] Switch cam local play error:', e));
+            
         } catch (e) {
             console.error('[RTC] Error switching camera:', e);
-            if(window.addLog) window.addLog('Ошибка при смене камеры: ' + e.message, 'error');
+            if (window.addLog) window.addLog('Ошибка переключения камеры: ' + e.message, 'error');
+            // Revert on failure
+            this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
         }
     }
 
@@ -818,15 +845,33 @@ class RTCManager {
             clearTimeout(this._missedCallTimeout);
             this._missedCallTimeout = null;
         }
-        if(this.localStream) {
-            this.localStream.getTracks().forEach(track => track.stop());
+        
+        if (this.peerConnection) {
+            this.peerConnection.onicecandidate = null;
+            this.peerConnection.ontrack = null;
+            this.peerConnection.onconnectionstatechange = null;
+            this.peerConnection.close();
+            this.peerConnection = null;
         }
+        
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => {
+                track.stop();
+            });
+            this.localStream = null;
+        }
+
+        if (this.remoteStream) {
+            this.remoteStream.getTracks().forEach(track => {
+                track.stop();
+            });
+            this.remoteStream = null;
+        }
+        
         if(this.previewStream) {
             this.previewStream.getTracks().forEach(track => track.stop());
         }
-        if(this.peerConnection) {
-            this.peerConnection.close();
-        }
+
         if(emit && this.currentCallTarget && window.sendSocketEvent) {
             window.sendSocketEvent('rtc_signal', { target: this.currentCallTarget, signal_type: 'end' });
         }

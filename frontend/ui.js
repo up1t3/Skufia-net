@@ -95,6 +95,7 @@ window.stopSound = function(soundName) {
 };
 
 window.addLog = function(message, type = 'info') {
+    console.log(`[SYS_LOG] ${type.toUpperCase()}: ${message}`);
     const consoleLog = document.getElementById('console-log');
     if (!consoleLog) return;
     const entry = document.createElement('div');

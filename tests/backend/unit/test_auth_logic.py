@@ -1,5 +1,5 @@
-from backend.auth import get_password_hash, verify_password, create_access_token
-import jwt
+from auth import get_password_hash, verify_password, create_access_token
+from jose import jwt
 from datetime import timedelta
 import os
 import pytest

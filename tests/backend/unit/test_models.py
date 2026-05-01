@@ -1,4 +1,4 @@
-from backend.database import User, Profile, ChatRoom
+from database import User, Profile, ChatRoom
 from sqlalchemy.exc import IntegrityError
 import pytest
 
