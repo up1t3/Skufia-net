@@ -439,17 +439,19 @@ class RTCManager {
             this.showModal(incomingTitle, name, avatarHtml, true);
         } else if(type === 'answer') {
             if(window.addLog) window.addLog('Received answer from ' + senderId, 'info');
-            console.log('[RTC] Received answer, parsing payload:', parsedPayload);
+            console.log('[RTC] Received answer, peerConnection exists:', !!this.peerConnection, 'signalingState:', this.peerConnection?.signalingState);
             if(this.peerConnection) {
                 this.peerConnection.setRemoteDescription(new RTCSessionDescription(parsedPayload))
                     .then(() => {
-                        console.log('[RTC] Remote description set successfully');
+                        console.log('[RTC] CALLER: Remote description set successfully. connectionState:', this.peerConnection.connectionState, 'iceConnectionState:', this.peerConnection.iceConnectionState);
                         if (this.pendingCandidates) {
+                            console.log('[RTC] CALLER: Flushing', this.pendingCandidates.length, 'pending candidates');
                             this.pendingCandidates.forEach(c => this.peerConnection.addIceCandidate(c).catch(e => console.warn(e)));
                             this.pendingCandidates = [];
                         }
                         
                         // IMPORTANT: Update UI *after* successful SDP negotiation
+                        console.log('[RTC] CALLER: Setting statusText to Звонок активен. statusText element:', !!this.statusText, 'current text:', this.statusText?.textContent);
                         this.statusText.textContent = 'Звонок активен';
                         this._callWasAnswered = true;
                         if (this._missedCallTimeout) {
@@ -460,7 +462,7 @@ class RTCManager {
                         if (window.addLog) window.addLog('Звонок установлен', 'success');
                     })
                     .catch(e => {
-                        console.error('[RTC] Error setting answer:', e);
+                        console.error('[RTC] CALLER: Error setting answer:', e);
                         if(window.addLog) window.addLog('Error setting answer: ' + e.message, 'error');
                     });
             } else {
@@ -616,10 +618,14 @@ class RTCManager {
 
             this.peerConnection.onconnectionstatechange = () => {
                 const st = this.peerConnection.connectionState;
+                console.log('[RTC] Connection State Changed:', st);
                 if (st === 'connected') {
+                    console.log('[RTC] CONNECTION ESTABLISHED — updating UI to Звонок активен');
                     this.statusText.textContent = 'Звонок активен';
+                    this._callWasAnswered = true;
                     this.startTimer();
                 } else if (st === 'disconnected' || st === 'failed') {
+                    console.log('[RTC] Connection lost/failed, ending call');
                     this.endCall(false);
                 }
             };
