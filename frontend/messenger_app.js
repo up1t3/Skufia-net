@@ -475,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 font-family: var(--font-primary);
                 animation: slideUp 0.5s ease-out forwards;
             `;
-            banner.innerHTML = \`
+            banner.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Установите приложение</h3>
                     <button id="close-ios-banner" style="background: none; border: none; color: var(--text-secondary); font-size: 20px; cursor: pointer; padding: 0;">&times;</button>
@@ -487,18 +487,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     1. Нажмите иконку <b>Поделиться</b> <span style="font-size: 18px; vertical-align: middle;">&#8681;</span><br>
                     2. Выберите <b>На экран «Домой»</b> <span style="font-size: 18px; vertical-align: middle;">&#8862;</span>
                 </div>
-            \`;
+            `;
 
             // Keyframe animation needs to be injected if it doesn't exist
             if (!document.getElementById('ios-banner-keyframes')) {
                 const style = document.createElement('style');
                 style.id = 'ios-banner-keyframes';
-                style.innerHTML = \`
+                style.innerHTML = `
                     @keyframes slideUp {
                         from { transform: translate(-50%, 100%); opacity: 0; }
                         to { transform: translate(-50%, 0); opacity: 1; }
                     }
-                \`;
+                `;
                 document.head.appendChild(style);
             }
 
