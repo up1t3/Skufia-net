@@ -35,10 +35,21 @@ services:
     image: coturn/coturn
     container_name: skufia-coturn
     restart: always
-    ports:
-      - "3478:3478/udp"
-      - "3478:3478/tcp"
-    command: turnserver --use-auth-secret --static-auth-secret=${TURN_SECRET:-skufia_secret} --realm=${TURN_REALM:-skuf-net.ru}
+    network_mode: host
+    command: >
+      turnserver
+      --lt-cred-mech
+      --user=guest:guest_password
+      --realm=skuf-net.ru
+      --external-ip=147.45.245.133
+      --listening-port=3478
+      --min-port=49152
+      --max-port=49252
+      --no-tls
+      --no-dtls
+      --fingerprint
+      --log-file=stdout
+      --simple-log
 
   backend-blue:
     image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest

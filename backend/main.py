@@ -229,16 +229,27 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                     msg_type = data.get('type')
                     if msg_type == 'rtc_signal':
                         target_id = data.get('target')
+                        signal_type = data.get('signal_type')
+                        print(f"[RTC] signal={signal_type} from={user_id} to={target_id}")
                         if target_id:
                             relay_msg = {
                                 "type": "rtc_signal",
                                 "sender_id": user_id,
-                                "signal_type": data.get('signal_type'),
+                                "signal_type": signal_type,
                                 "payload": data.get('payload')
                             }
                             await manager.send_personal_message(relay_msg, target_id)
                             
-                            if data.get('signal_type') == 'offer':
+                            if signal_type == 'offer':
+                                # Detect audio vs video from SDP
+                                payload_str = data.get('payload', '')
+                                if isinstance(payload_str, str):
+                                    is_video = 'm=video' in payload_str
+                                else:
+                                    is_video = 'm=video' in json.dumps(payload_str)
+                                call_type_label = "видеозвонок" if is_video else "аудиозвонок"
+                                print(f"[RTC] OFFER type={call_type_label} from={user_id} to={target_id}")
+
                                 # Start 45s timeout for missed calls
                                 call_key = f"{user_id}_{target_id}"
                                 async def missed_call_timeout(u_id, t_id):
@@ -275,18 +286,22 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                 await redis_client.setex(call_key, 45, json.dumps(data.get('payload')))
 
                                 # ALWAYS Trigger Web Push for calls to ensure background delivery
-                                from ws_manager import trigger_web_push
-                                db = SessionLocal()
-                                from database import User
-                                sender_user = db.query(User).filter(User.id == user_id).first()
-                                sender_name = sender_user.profile.nickname if sender_user and sender_user.profile else "Пользователь"
-                                db.close()
-                                push_payload = {
-                                    "title": f"Входящий видеозвонок",
-                                    "body": f"Вам звонит {sender_name}. Нажмите, чтобы ответить.",
-                                    "data": {"action": "call", "sender_id": user_id}
-                                }
-                                asyncio.create_task(trigger_web_push(target_id, push_payload, ttl=45, urgency="high"))
+                                try:
+                                    from ws_manager import trigger_web_push
+                                    db = SessionLocal()
+                                    from database import User
+                                    sender_user = db.query(User).filter(User.id == user_id).first()
+                                    sender_name = sender_user.profile.nickname if sender_user and sender_user.profile else "Пользователь"
+                                    db.close()
+                                    push_payload = {
+                                        "title": f"Входящий {call_type_label}",
+                                        "body": f"Вам звонит {sender_name}. Нажмите, чтобы ответить.",
+                                        "data": {"action": "call", "sender_id": user_id}
+                                    }
+                                    asyncio.create_task(trigger_web_push(target_id, push_payload, ttl=45, urgency="high"))
+                                    print(f"[RTC] Push notification sent to user {target_id}")
+                                except Exception as e:
+                                    print(f"[RTC] Push notification error: {e}")
                                     
                             elif data.get('signal_type') == 'request_offer':
                                 # Receiver is asking for the cached offer (after waking up from push)
