@@ -16,7 +16,7 @@ if (!config.password) {
 const conn = new Client();
 conn.on('ready', () => {
   console.log('Client :: ready');
-  conn.exec(`cd /opt/skufia && git reset --hard && git pull && cd frontend && docker build --no-cache -t skufia-frontend:latest . && docker tag skufia-frontend:latest ghcr.io/up1t3/skufia-frontend:latest && cd /opt/skufia && docker compose -f docker-compose.production.yml up -d frontend`, (err, stream) => {
+  conn.exec(`cd /opt/skufia && git reset --hard && git pull && export VERSION="v2.1.8_01.05_13:00" && node -e "const fs=require('fs'); let c=fs.readFileSync('frontend/chat-sw.js','utf8'); c=c.replace(/const CACHE_NAME = '[^']+';/, \\"const CACHE_NAME = 'skufia-chat-\\"+process.env.VERSION+\\"';\\"); fs.writeFileSync('frontend/chat-sw.js',c);" && cd frontend && docker build --no-cache -t skufia-frontend:latest . && docker tag skufia-frontend:latest ghcr.io/up1t3/skufia-frontend:latest && cd /opt/skufia/backend && docker build --no-cache -t skufia-backend:latest . && docker tag skufia-backend:latest ghcr.io/up1t3/skufia-backend:latest && cd /opt/skufia && docker compose -f docker-compose.production.yml up -d`, (err, stream) => {
     if (err) throw err;
     stream.on('close', (code, signal) => {
       console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);

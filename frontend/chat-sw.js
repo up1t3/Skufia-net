@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufenger-chat-v2.1.7'; // Bumped for robust cache-busting during install
+const CACHE_NAME = 'skufia-chat-v2.1.8_01.05_13:00'; // Bumped for robust cache-busting during install
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
