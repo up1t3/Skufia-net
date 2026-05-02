@@ -66,6 +66,7 @@ class MessageCreate(BaseModel):
     content: str = Field(..., min_length=1, max_length=4096)
     encryption_iv: Optional[str] = "" # Default to empty string for E2EE
     file_url: Optional[str] = None
+    file_type: Optional[str] = None
     reply_to_id: Optional[int] = None
     client_id: Optional[int] = None
 
@@ -1363,6 +1364,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "iv": msg.encryption_iv,
         "key_version": msg_key_version,
         "file_url": msg.file_url,
+        "file_type": msg.file_type,
         "reply_to_id": msg.reply_to_id,
         "is_edited": False,
         "timestamp": datetime.utcnow().isoformat() + "Z",

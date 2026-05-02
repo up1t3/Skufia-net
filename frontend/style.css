@@ -1412,6 +1412,10 @@ body.super-user .nav-btn.active {
     position: relative;
     word-wrap: break-word;
     box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 /* Incoming bubble */
@@ -3650,4 +3654,36 @@ body.skufenger-fullscreen .mobile-back-btn {
     .event-card {
         gap: 12px;
     }
+}
+
+.e2ee-compatibility-indicator {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid transparent;
+}
+
+.e2ee-compatibility-indicator.enabled {
+    background: rgba(0, 255, 65, 0.2);
+    color: #00ff41;
+    border-color: #00ff41;
+}
+
+.e2ee-compatibility-indicator.disabled {
+    background: rgba(138, 148, 162, 0.2);
+    color: #8a94a2;
+    border-color: #8a94a2;
+}
+
+.e2ee-compatibility-indicator.warning {
+    background: rgba(255, 165, 0, 0.2);
+    color: #ffb700;
+    border-color: rgba(255, 165, 0, 0.4);
+}
+
+.e2ee-compatibility-indicator svg {
+    margin-right: 4px;
 }

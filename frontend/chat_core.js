@@ -108,18 +108,24 @@ window.initChatCore = function() {
                     // [FIX] Robust optimistic confirmation: match by data-optimistic-ts attribute (ID-based, not text-based)
                     // This works reliably with E2EE chats where text content is encrypted
                     if (state.chat.currentRoomId == msg.room_id) {
-                        // Strategy 1: Find optimistic message by timestamp attribute (reliable)
+                        // Strategy 1: Find optimistic message by client_id OR data-optimistic-ts attribute
                         let matchedEl = null;
-                        const pendingMsgs = Array.from(document.querySelectorAll('#chat-history .msg-row.msg-optimistic'));
-                        if (pendingMsgs.length > 0) {
-                            // Take the oldest pending optimistic message (FIFO order)
-                            matchedEl = pendingMsgs[0];
+                        
+                        // First check for a direct ID match using msg.client_id
+                        if (msg.client_id) {
+                            matchedEl = document.getElementById(`msg-${msg.client_id}`);
+                        }
+                        
+                        // Fallback to data-optimistic-ts if client_id match isn't found
+                        if (!matchedEl && msg.client_id) {
+                            matchedEl = document.querySelector(`#chat-history .msg-row.msg-optimistic[data-optimistic-ts="${msg.client_id}"]:not([id^="msg-circle-uploading-"])`);
                         }
                         
                         if (matchedEl) {
                             // Optimistic message confirmed — update its ID to the real DB ID
                             matchedEl.id = `msg-${msg.id}`;
                             matchedEl.classList.remove('msg-optimistic');
+                            matchedEl.removeAttribute('data-optimistic-ts');
                             console.log('[WS] Optimistic confirmed: msg-' + msg.id);
                         } else if (!document.getElementById(`msg-${msg.id}`)) {
                             // No optimistic element found, and real element not in DOM either
@@ -675,36 +681,43 @@ window.initChatCore = function() {
 
         // --- E2EE: INITIALIZATION ---
         const e2eIndicator = document.getElementById('e2ee-indicator');
+        const badge = document.getElementById('chat-encryption-status');
+        
         if (type === 'private') {
+            const prefs = JSON.parse(localStorage.getItem('skuf_e2ee_prefs') || '{}');
+            const isE2EEnabled = !!prefs[roomId];
+            
             if (e2eIndicator) {
                 e2eIndicator.style.display = 'inline-flex';
-                e2eIndicator.style.background = 'rgba(255, 193, 7, 0.2)';
-                e2eIndicator.style.color = '#ffc107';
-                e2eIndicator.style.borderColor = '#ffc107';
                 
-                // Trigger Key Exchange!
-                if (typeof getOrEstablishSessionKey === 'function') {
-                    try {
-                        const key = await getOrEstablishSessionKey(roomId, receiverId);
-                        if (key) {
-                            e2eIndicator.style.background = 'rgba(0, 255, 65, 0.2)';
-                            e2eIndicator.style.color = '#00ff41';
-                            e2eIndicator.style.borderColor = '#00ff41';
-                        } else {
-                            e2eIndicator.style.background = 'rgba(255, 51, 51, 0.2)';
-                            e2eIndicator.style.color = '#ff3333';
-                            e2eIndicator.style.borderColor = '#ff3333';
-                        }
-                    } catch(e) {
-                        console.error('E2EE Error:', e);
-                        e2eIndicator.style.background = 'rgba(255, 51, 51, 0.2)';
-                        e2eIndicator.style.color = '#ff3333';
-                        e2eIndicator.style.borderColor = '#ff3333';
-                    }
+                // Clear old inline styles if they exist
+                e2eIndicator.style.background = '';
+                e2eIndicator.style.color = '';
+                e2eIndicator.style.borderColor = '';
+                
+                if (!e2eIndicator.classList.contains('e2ee-compatibility-indicator')) {
+                    e2eIndicator.classList.add('e2ee-compatibility-indicator');
+                }
+                
+                if (isE2EEnabled) {
+                    e2eIndicator.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+                    e2eIndicator.classList.add('enabled');
+                    e2eIndicator.classList.remove('disabled', 'warning');
+                    if (badge) badge.textContent = '🔒 E2E';
                 } else {
-                    e2eIndicator.style.background = 'rgba(255, 51, 51, 0.2)';
-                    e2eIndicator.style.color = '#ff3333';
-                    e2eIndicator.style.borderColor = '#ff3333';
+                    e2eIndicator.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>';
+                    e2eIndicator.classList.add('disabled');
+                    e2eIndicator.classList.remove('enabled', 'warning');
+                    if (badge) badge.textContent = '🔓 Нет E2E';
+                }
+            }
+            
+            // Still exchange keys if E2EE is enabled
+            if (isE2EEnabled && typeof getOrEstablishSessionKey === 'function') {
+                try {
+                    await getOrEstablishSessionKey(roomId, receiverId);
+                } catch(e) {
+                    console.error('E2EE Error:', e);
                 }
             }
         }
@@ -920,46 +933,65 @@ window.initChatCore = function() {
             timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         }
 
-        const fileUrl = msg.file_url || null;
+        const fileUrlRaw = msg.file_url || null;
         let fileHtml = '';
-        if (fileUrl) {
+        if (fileUrlRaw) {
+            const urls = fileUrlRaw.split(',');
             const BASE_URL = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : '';
-            const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
-            const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|opus)(\?.*)?$/i.test(fileUrl);
-            const isVideo = /\.(mp4)$/i.test(fileUrl) || msg.file_type === 'video_circle' || (msg.file_url && msg.file_url.includes('/video/'));
             
-            if (isImage) {
-                fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
-            } else if (isVideo && (msg.file_type === 'video_circle' || fileUrl.includes('/video/'))) {
-                // Circle video ("кружочки")
-                fileHtml = `<div class="msg-video-circle">
-                    <video autoplay loop muted playsinline style="width: 240px; height: 240px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan);">
-                        <source src="${BASE_URL}${fileUrl}" type="video/webm">
-                        <source src="${BASE_URL}${fileUrl}" type="video/mp4">
-                    </video>
-                    <!-- Click to unmute/pause overlay could be added here -->
+            if (urls.length > 1) {
+                // Gallery Mode
+                let gridHtml = '';
+                urls.forEach(url => {
+                    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
+                    const isVideo = /\.(mp4|webm)$/i.test(url);
+                    if (isImage) {
+                        gridHtml += `<a href="${BASE_URL}${url}" target="_blank" class="gallery-item-image" style="display:block;width:100%;height:100%;"><img src="${BASE_URL}${url}" alt="attachment" style="width:100%; height:100%; object-fit:cover;"></a>`;
+                    } else if (isVideo) {
+                        gridHtml += `<div class="gallery-video-wrapper" style="width:100%;height:100%;">
+                            <video src="${BASE_URL}${url}" controls style="width:100%; height:100%; object-fit:cover;"></video>
+                        </div>`;
+                    } else {
+                         const fname = url.split('/').pop() || 'file';
+                         gridHtml += `<a class="gallery-file-link" href="${BASE_URL}${url}" target="_blank" download style="display:flex; align-items:center; justify-content:center; flex-direction:column; padding:10px; background:rgba(255,255,255,0.05); text-decoration:none; color:inherit;"><span class="file-icon">📁</span><span style="font-size:10px; word-break:break-all;">${fname}</span></a>`;
+                    }
+                });
+                
+                fileHtml = `<div class="msg-media-gallery" data-count="${urls.length}">
+                    ${gridHtml}
                 </div>`;
-                // To enable audio, we can remove 'muted' and let users click to play, or keep it muted with controls. Let's make it have controls or click-to-play.
-                fileHtml = `<div class="msg-video-circle" style="position: relative; width: 240px; height: 240px; border-radius: 50%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan); cursor: pointer;" onclick="const v = this.querySelector('video'); if(v.paused){v.play();}else{v.pause();}">
-                    <video loop playsinline style="width: 100%; height: 100%; object-fit: cover;">
-                        <source src="${BASE_URL}${fileUrl}" type="video/webm">
-                        <source src="${BASE_URL}${fileUrl}" type="video/mp4">
-                    </video>
-                    <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.5); border-radius: 50%; padding: 4px; display: flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
-                </div>`;
-            } else if (isAudio) {
-                const audioId = `audio-${msg.id || Date.now()}`;
-                fileHtml = `<div class="msg-audio-player">
-                    <audio id="${audioId}" controls preload="metadata" style="width:100%;max-width:280px;border-radius:8px;outline:none;accent-color:var(--accent-cyan);">
-                        <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
-                        <source src="${BASE_URL}${fileUrl}" type="audio/webm">
-                    </audio>
-                </div>`;
-                // IndexedDB cache: store audio blob locally for offline playback
-                setTimeout(() => window._cacheAudioLocally && window._cacheAudioLocally(fileUrl, BASE_URL + fileUrl), 100);
             } else {
-                const fname = fileUrl.split('/').pop() || 'file';
-                fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
+                // Single File Mode
+                const fileUrl = urls[0];
+                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
+                const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|opus)(\?.*)?$/i.test(fileUrl);
+                const isVideo = /\.(mp4)$/i.test(fileUrl) || msg.file_type === 'video_circle' || (msg.file_url && msg.file_url.includes('/video/'));
+                
+                if (isImage) {
+                    fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
+                } else if (isVideo && (msg.file_type === 'video_circle' || fileUrl.includes('/video/'))) {
+                    // Circle video ("кружочки")
+                    fileHtml = `<div class="msg-video-circle" style="position: relative; width: 240px; height: 240px; border-radius: 50%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan); cursor: pointer;" onclick="const v = this.querySelector('video'); if(v.paused){v.play();}else{v.pause();}">
+                        <video loop playsinline style="width: 100%; height: 100%; object-fit: cover;">
+                            <source src="${BASE_URL}${fileUrl}" type="video/webm">
+                            <source src="${BASE_URL}${fileUrl}" type="video/mp4">
+                        </video>
+                        <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.5); border-radius: 50%; padding: 4px; display: flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                    </div>`;
+                } else if (isAudio) {
+                    const audioId = `audio-${msg.id || Date.now()}`;
+                    fileHtml = `<div class="msg-audio-player">
+                        <audio id="${audioId}" controls preload="metadata" style="width:100%;max-width:280px;border-radius:8px;outline:none;accent-color:var(--accent-cyan);">
+                            <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
+                            <source src="${BASE_URL}${fileUrl}" type="audio/webm">
+                        </audio>
+                    </div>`;
+                    // IndexedDB cache: store audio blob locally for offline playback
+                    setTimeout(() => window._cacheAudioLocally && window._cacheAudioLocally(fileUrl, BASE_URL + fileUrl), 100);
+                } else {
+                    const fname = fileUrl.split('/').pop() || 'file';
+                    fileHtml = `<a class="msg-file-attachment" href="${BASE_URL}${fileUrl}" target="_blank" download><span class="file-icon">📁</span> СКАЧАТЬ: ${fname}</a>`;
+                }
             }
         }
 
@@ -1247,7 +1279,10 @@ window.initChatCore = function() {
         try {
             // --- E2EE: ENCRYPTION ---
             let isEncrypted = false;
-            if (state.chat.currentRoomType === 'private' && typeof getOrEstablishSessionKey === 'function') {
+            const prefs = JSON.parse(localStorage.getItem('skuf_e2ee_prefs') || '{}');
+            const isE2EEnabled = !!prefs[roomId];
+            
+            if (isE2EEnabled && state.chat.currentRoomType === 'private' && typeof getOrEstablishSessionKey === 'function') {
                 const sessionKeyMap = await getOrEstablishSessionKey(roomId, receiverId);
                 if (sessionKeyMap) {
                     let activeKey;
@@ -1386,16 +1421,20 @@ window.initChatCore = function() {
 
 
     /** Intercept file selection and open preview modal */
-    function uploadChatFile(/** @type {File} */ file) {
-        if (file.size > 50 * 1024 * 1024) {
-            if (window.showToast) window.showToast('Файл превышает лимит 50 МБ');
-            addLog('Файл превышает лимит 50 МБ', 'error');
+    function uploadChatFiles(/** @type {FileList | File[]} */ fileList) {
+        const files = Array.from(fileList);
+        if (files.length === 0) return;
+
+        const totalSize = files.reduce((acc, f) => acc + f.size, 0);
+        if (totalSize > 50 * 1024 * 1024) {
+            if (window.showToast) window.showToast('Суммарный размер файлов превышает лимит 50 МБ');
+            addLog('Суммарный размер файлов превышает лимит 50 МБ', 'error');
             clearChatFile();
             return;
         }
 
-        // Save file to state for modal
-        state.modalFile = file;
+        // Save files to state for modal
+        state.modalFiles = files;
         
         const previewContainer = document.getElementById('media-preview-container');
         if (previewContainer) {
@@ -1404,29 +1443,65 @@ window.initChatCore = function() {
             previewContainer.innerHTML = '';
             if (cancelBtn) previewContainer.appendChild(cancelBtn);
             
-            if (file.type.startsWith('image/')) {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                previewContainer.appendChild(img);
-            } else if (file.type.startsWith('video/')) {
-                const vid = document.createElement('video');
-                vid.src = URL.createObjectURL(file);
-                vid.controls = true;
-                previewContainer.appendChild(vid);
-            } else if (file.type.startsWith('audio/')) {
-                const aud = document.createElement('audio');
-                aud.src = URL.createObjectURL(file);
-                aud.controls = true;
-                previewContainer.appendChild(aud);
-            } else {
-                const card = document.createElement('div');
-                card.className = 'media-file-card';
-                card.innerHTML = `
-                    <svg viewBox="0 0 24 24" width="64" height="64" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-size">${(file.size / 1024).toFixed(1)} KB</div>`;
-                previewContainer.appendChild(card);
-            }
+            // Create a wrapper for multiple files
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.flexWrap = 'wrap';
+            wrapper.style.gap = '10px';
+            wrapper.style.justifyContent = 'center';
+            wrapper.style.maxHeight = '50vh';
+            wrapper.style.overflowY = 'auto';
+
+            files.forEach(file => {
+                const item = document.createElement('div');
+                item.style.position = 'relative';
+                item.style.width = files.length > 1 ? '100px' : 'auto';
+                item.style.height = files.length > 1 ? '100px' : 'auto';
+                item.style.maxWidth = '100%';
+                
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'contain';
+                    img.style.borderRadius = '8px';
+                    item.appendChild(img);
+                } else if (file.type.startsWith('video/')) {
+                    const vid = document.createElement('video');
+                    vid.src = URL.createObjectURL(file);
+                    vid.controls = true;
+                    vid.style.width = '100%';
+                    vid.style.height = '100%';
+                    vid.style.borderRadius = '8px';
+                    item.appendChild(vid);
+                } else if (file.type.startsWith('audio/')) {
+                    const aud = document.createElement('audio');
+                    aud.src = URL.createObjectURL(file);
+                    aud.controls = true;
+                    aud.style.width = '100%';
+                    item.appendChild(aud);
+                } else {
+                    const card = document.createElement('div');
+                    card.className = 'media-file-card';
+                    card.innerHTML = `
+                        <svg viewBox="0 0 24 24" width="32" height="32" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                        <div class="file-name" style="font-size:10px; word-break:break-all; text-align:center;">${file.name}</div>
+                        <div class="file-size" style="font-size:10px;">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                    `;
+                    card.style.width = '100%';
+                    card.style.height = '100%';
+                    card.style.display = 'flex';
+                    card.style.flexDirection = 'column';
+                    card.style.alignItems = 'center';
+                    card.style.justifyContent = 'center';
+                    card.style.background = 'rgba(255,255,255,0.05)';
+                    card.style.borderRadius = '8px';
+                    item.appendChild(card);
+                }
+                wrapper.appendChild(item);
+            });
+            previewContainer.appendChild(wrapper);
         }
 
         const captionInput = document.getElementById('media-preview-caption');
@@ -1441,14 +1516,14 @@ window.initChatCore = function() {
     window.closeMediaPreview = function() {
         const modal = document.getElementById('media-preview-modal');
         if (modal) modal.style.display = 'none';
-        state.modalFile = null;
+        state.modalFiles = [];
         clearChatFile();
     };
 
     // @ts-ignore
     window.sendMediaPreview = async function() {
-        const file = state.modalFile;
-        if (!file) return;
+        const files = state.modalFiles;
+        if (!files || files.length === 0) return;
 
         const captionInput = /** @type {HTMLInputElement | null} */ (document.getElementById('media-preview-caption'));
         const caption = captionInput ? captionInput.value.trim() : '';
@@ -1461,16 +1536,16 @@ window.initChatCore = function() {
         }
 
         try {
-            // 1. Upload file
+            // 1. Upload files
             const formData = new FormData();
-            formData.append('file', file);
+            files.forEach(f => formData.append('files', f)); // Expects 'files' array in backend
             
             const token = state.user.token;
             const headers = {};
             if (token) headers['Authorization'] = `Bearer ${token}`;
             headers['X-Idempotency-Key'] = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
             const apiBase = window.API_BASE_URL || '/api';
-            const resp = await fetch(`${apiBase}/chat/upload`, {
+            const resp = await fetch(`${apiBase}/chat/upload_multiple`, {
                 method: 'POST',
                 headers,
                 body: formData
@@ -1482,7 +1557,8 @@ window.initChatCore = function() {
             const data = await resp.json();
             
             // 2. Set pendingFile so sendChatMsg can use it
-            state.pendingFile = { url: data.file_url, name: data.original_name || file.name };
+            const joinedUrls = data.file_urls.join(',');
+            state.pendingFile = { url: joinedUrls, name: files.length > 1 ? `${files.length} files` : files[0].name };
             
             // 3. Send message passing the caption directly
             await window.sendChatMsg(caption);
@@ -2088,6 +2164,13 @@ window.initChatCore = function() {
             await apiRequest(`/chat/rooms/${state.chat.currentRoomId}/members`, 'POST', { user_ids: userIds });
             addLog(`Добавлено участников: ${userIds.length}`, 'success');
             document.getElementById('add-member-modal').style.display = 'none';
+            
+            // Update UI dynamically
+            state.chat.membersCount += userIds.length;
+            const statusEl = document.getElementById('chat-header-status');
+            if (statusEl && ['group', 'channel'].includes(state.chat.currentRoomType)) {
+                statusEl.textContent = `${state.chat.membersCount} участник(ов)`;
+            }
         } catch (e) {
             addLog('Ошибка при добавлении участников', 'error');
         }
@@ -2192,8 +2275,8 @@ window.initChatCore = function() {
     const chatFileInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-file-input'));
     if (chatFileInput) {
         chatFileInput.addEventListener('change', () => {
-            if (chatFileInput.files && chatFileInput.files[0]) {
-                uploadChatFile(chatFileInput.files[0]);
+            if (chatFileInput.files && chatFileInput.files.length > 0) {
+                uploadChatFiles(chatFileInput.files);
             }
         });
     }
@@ -2201,8 +2284,8 @@ window.initChatCore = function() {
     const chatMediaInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-media-input'));
     if (chatMediaInput) {
         chatMediaInput.addEventListener('change', () => {
-            if (chatMediaInput.files && chatMediaInput.files[0]) {
-                uploadChatFile(chatMediaInput.files[0]);
+            if (chatMediaInput.files && chatMediaInput.files.length > 0) {
+                uploadChatFiles(chatMediaInput.files);
             }
         });
     }
@@ -2562,8 +2645,10 @@ window.initChatCore = function() {
                         // [UX] Show loading placeholder while video uploads
                         const placeholderId = 'msg-circle-uploading-' + Date.now();
                         const history = document.getElementById('chat-history');
+                        let placeholderRow = null;
+                        
                         if (history) {
-                            const placeholderRow = document.createElement('div');
+                            placeholderRow = document.createElement('div');
                             placeholderRow.className = 'msg-row msg-me';
                             placeholderRow.id = placeholderId;
                             placeholderRow.innerHTML = `
@@ -2593,8 +2678,12 @@ window.initChatCore = function() {
                         await this.uploadVideo(videoBlob);
                         
                         // Remove placeholder after upload completes
-                        const ph = document.getElementById(placeholderId);
-                        if (ph) ph.remove();
+                        if (placeholderRow && placeholderRow.parentNode) {
+                            placeholderRow.remove();
+                        } else {
+                            const ph = document.getElementById(placeholderId);
+                            if (ph) ph.remove();
+                        }
                     }
                 };
                 
@@ -2843,7 +2932,8 @@ window.initChatCore = function() {
     window.selectChatRoom = selectChatRoom;
     window.renderChatMessage = renderChatMessage;
     window.sendChatMsg = sendChatMsg;
-    window.uploadChatFile = uploadChatFile;
+    window.uploadChatFiles = uploadChatFiles;
+    window.uploadChatFile = (file) => uploadChatFiles([file]);
     window.clearChatFile = clearChatFile;
     window.renderFabContacts = renderFabContacts;
     window.VoiceRecorderService = VoiceRecorderService;

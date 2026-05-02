@@ -963,12 +963,36 @@ const handleInput = document.getElementById('settings-handle');
                 break;
             }
             case 'encryption': {
-                const badge = document.getElementById('chat-encryption-status');
-                const isE2EE = badge && badge.textContent.includes('E2EE');
-                alert(isE2EE
+                const roomId = state.chat.currentRoomId;
+                if (!roomId) { addLog('Сначала выберите чат', 'error'); return; }
 
-? '🔒 Этот чат защищён сквозным шифрованием (E2EE).\nКлючи сессии генерируются локально и не передаются на сервер.'
-                    : '⚠️ Шифрование не активно.\nВыберите приватный чат для активации E2EE.');
+                const prefs = JSON.parse(localStorage.getItem('skuf_e2ee_prefs') || '{}');
+                // By default E2EE is OFF, so if not set, it's false
+                const isCurrentlyEnabled = !!prefs[roomId];
+                const newState = !isCurrentlyEnabled;
+                
+                prefs[roomId] = newState;
+                localStorage.setItem('skuf_e2ee_prefs', JSON.stringify(prefs));
+                
+                // Update UI indicator
+                const badge = document.getElementById('chat-encryption-status');
+                const e2eeIndicator = document.getElementById('e2ee-indicator');
+                
+                if (newState) {
+                    if (badge) badge.textContent = '🔒 E2E';
+                    if (e2eeIndicator) {
+                        e2eeIndicator.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>';
+                        e2eeIndicator.style.color = '#00ff41'; // Green for encrypted
+                    }
+                    addLog('🔐 Шифрование (E2EE) ВКЛЮЧЕНО для этого чата', 'info');
+                } else {
+                    if (badge) badge.textContent = '🔓 Нет E2E';
+                    if (e2eeIndicator) {
+                        e2eeIndicator.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>';
+                        e2eeIndicator.style.color = '#8a94a2'; // Gray for unencrypted
+                    }
+                    addLog('🔓 Шифрование (E2EE) ОТКЛЮЧЕНО для этого чата', 'error');
+                }
                 break;
             }
         }
