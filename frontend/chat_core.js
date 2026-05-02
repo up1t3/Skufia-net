@@ -2095,13 +2095,28 @@ window.initChatCore = function() {
 
     // --- ADD MEMBER LOGIC ---
     let addMemberSelectedIds = new Set();
-    window.openAddMemberModal = function() {
+    window.openAddMemberModal = async function() {
         const modal = document.getElementById('add-member-modal');
         if (!modal || state.chat.currentRoomId == null) return;
         addMemberSelectedIds.clear();
         document.getElementById('add-member-search').value = '';
-        window.filterAddMemberContacts(); // Will render un-filtered
+        
         modal.style.display = 'flex';
+        const list = document.getElementById('add-member-list');
+        list.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>';
+
+        try {
+            if (!state.contacts || state.contacts.length === 0) {
+                const users = await apiRequest('/users/list');
+                state.contacts = users.filter(u => u.id !== state.user.id);
+            }
+        } catch (e) {
+            console.error('Add member contacts loading error:', e);
+            list.innerHTML = '<div style="text-align:center; padding:15px; color:red;">Ошибка загрузки</div>';
+            return;
+        }
+
+        window.filterAddMemberContacts(); // Will render un-filtered
         if(window.toggleChatOptions) window.toggleChatOptions(); // close dropdown
     };
 
@@ -2129,25 +2144,39 @@ window.initChatCore = function() {
             div.style.display = 'flex';
             div.style.alignItems = 'center';
             div.style.justifyContent = 'space-between';
-            div.style.padding = '8px';
-            div.style.borderBottom = '1px solid var(--border-metal)';
+            div.style.cursor = 'pointer';
             
             const isSelected = addMemberSelectedIds.has(c.id);
             
+            const initial = (c.username || c.name || '?').charAt(0).toUpperCase();
+            const charCode = initial.charCodeAt(0) || 65;
+            const hue = (charCode * 137) % 360;
+            const onlineDot = c.is_online ? `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#00f2ff;margin-left:5px;vertical-align:middle;"></span>` : '';
+            const handleText = c.handle ? `<span style="color:var(--text-dim);font-size:11px;">${c.handle}</span>` : '';
+
             div.innerHTML = `
                 <div style="display:flex; alignItems:center; gap:10px;">
-                    <img src="https://api.dicebear.com/7.x/identicon/svg?seed=${c.name || 'User'}" style="width:30px; height:30px; border-radius:50%; background:var(--bg-panel);">
-                    <div>
-                        <div style="font-size:13px; font-weight:500;">${c.name || c.username || 'Unknown'}</div>
-                        <div style="font-size:11px; color:var(--text-dim);">${c.phone || ''}</div>
+                    <div class="sidebar-item-avatar dynamic-avatar" style="background:linear-gradient(135deg,hsl(${hue},70%,50%),hsl(${hue},80%,30%));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:20px;overflow:hidden;width:40px;height:40px;border-radius:50%;flex-shrink:0;">
+                        ${c.avatar_url ? '' : initial}
+                    </div>
+                    <div class="sidebar-item-info">
+                        <div class="sidebar-item-name" style="font-weight:600;">${c.name || c.username || 'Unknown'}${onlineDot}</div>
+                        <div class="sidebar-item-last-msg">${handleText || c.phone || ''}</div>
                     </div>
                 </div>
-                <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
+                <input type="checkbox" ${isSelected ? 'checked' : ''} style="width:20px; height:20px; cursor:pointer; accent-color: var(--accent-cyan);">
             `;
             
-            div.onclick = () => {
+            if (c.avatar_url) {
+                window.applyAvatarDisplay(div.querySelector('.sidebar-item-avatar'), c.avatar_url);
+            }
+            
+            div.onclick = (e) => {
+                if(e.target.tagName !== 'INPUT') {
+                    const cb = div.querySelector('input[type="checkbox"]');
+                    cb.checked = !cb.checked;
+                }
                 const cb = div.querySelector('input[type="checkbox"]');
-                cb.checked = !cb.checked;
                 if(cb.checked) addMemberSelectedIds.add(c.id);
                 else addMemberSelectedIds.delete(c.id);
             };
