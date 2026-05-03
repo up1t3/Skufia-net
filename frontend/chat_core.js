@@ -930,7 +930,10 @@ window.initChatCore = function() {
         const apiBaseUrl = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : '';
         
         function getAvatarUrlForUid(uid) {
-            if (String(uid) === myId) return state.user.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`;
+            if (String(uid) === myId) {
+                const aUrl = state.user.avatar_url || (state.user.profile && state.user.profile.avatar_url);
+                return aUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`;
+            }
             
             if (state.chat.currentRoomMembers) {
                 const mem = state.chat.currentRoomMembers.find(m => String(m.user_id) === String(uid));

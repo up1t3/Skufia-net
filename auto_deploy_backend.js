@@ -13,7 +13,12 @@ git reset --hard origin/main
 export GIT_HASH=$(git rev-parse --short HEAD)
 echo "=== Deploying BACKEND ==="
 
-docker compose -f docker-compose.production.yml up -d --build backend-blue backend-green
+cd backend
+docker build --no-cache -t skufia-backend:latest .
+docker tag skufia-backend:latest ghcr.io/up1t3/skufia-backend:latest
+cd /opt/skufia
+
+docker compose -f docker-compose.production.yml up -d backend-blue backend-green
 echo "=== BACKEND DEPLOY COMPLETE ==="
     `, (err, stream) => {
         if (err) throw err;
