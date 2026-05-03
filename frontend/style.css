@@ -1455,6 +1455,15 @@ body.super-user .nav-btn.active {
     border-radius: inherit;
     max-width: 300px;
 }
+.msg-bubble-image .msg-sender-name {
+    padding: 8px 12px 0 12px;
+}
+.msg-bubble-image .msg-text {
+    padding: 8px 12px;
+}
+.msg-bubble-image .msg-meta {
+    padding: 0 12px 8px 12px;
+}
 [data-theme="neon"] .msg-sent {
     background: #5a2d73;
     color: #fff;

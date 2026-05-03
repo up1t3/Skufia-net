@@ -1151,8 +1151,8 @@ window.initChatCore = function() {
             bubble.className = `msg-bubble msg-bubble-circle ${isMe ? 'msg-sent' : 'msg-received'}`;
         } else if (isSingleAudio) {
             bubble.className = `msg-bubble msg-bubble-audio ${isMe ? 'msg-sent' : 'msg-received'}`;
-        } else if (isSingleImage && (!msg.text || msg.text.trim() === '')) {
-            // Full width image if no text
+        } else if (isSingleImage) {
+            // Full width image
             bubble.className = `msg-bubble msg-bubble-image ${isMe ? 'msg-sent' : 'msg-received'}`;
         } else {
             bubble.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
@@ -1251,6 +1251,18 @@ window.initChatCore = function() {
                 message_id: msg.id
             }));
         }
+        const reactBtn = document.createElement('span');
+        reactBtn.className = 'quick-react-btn';
+        reactBtn.innerHTML = '☺+';
+        reactBtn.title = 'Реакция';
+        reactBtn.style.cssText = 'cursor:pointer; opacity:0.5; font-size:12px; margin-right:6px; transition:0.2s;';
+        reactBtn.onmouseover = () => reactBtn.style.opacity = '1';
+        reactBtn.onmouseout = () => reactBtn.style.opacity = '0.5';
+        reactBtn.onclick = (e) => {
+            e.stopPropagation();
+            window.showEmojiPicker(msg.id, e.clientX, e.clientY);
+        };
+        footerDiv.appendChild(reactBtn);
         footerDiv.appendChild(timeSpan);
         bubble.appendChild(footerDiv);
 
