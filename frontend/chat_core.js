@@ -1135,6 +1135,10 @@ window.initChatCore = function() {
         const isMissedCall = rawText.includes('Пропущенный') && (rawText.includes('аудиозвонок') || rawText.includes('видеозвонок'));
         const isVideoCircle = msg.file_type === 'video_circle' || (fileUrlRaw && fileUrlRaw.includes('/video/'));
 
+        // Bubble Wrapper
+        const bubbleWrapper = document.createElement('div');
+        bubbleWrapper.className = `msg-bubble-wrapper ${isMe ? 'wrapper-sent' : 'wrapper-received'}`;
+
         // Bubble
         const bubble = document.createElement('div');
         if (isMissedCall) {
@@ -1262,8 +1266,10 @@ window.initChatCore = function() {
         footerDiv.appendChild(timeSpan);
         bubble.appendChild(footerDiv);
 
+        bubbleWrapper.appendChild(bubble);
+
         // Render reactions if any
-        window.renderReactionsOnMessage(bubble, msg.reactions, msg.id);
+        window.renderReactionsOnMessage(bubbleWrapper, msg.reactions, msg.id);
 
         // Context menu logic — single tap opens menu (no text selection)
         // Long-press = native copy (handled by browser)
@@ -1331,7 +1337,7 @@ window.initChatCore = function() {
         // Prevent context menu (long-press) from showing our custom menu — let native copy work
         bubble.addEventListener('contextmenu', (e) => e.preventDefault());
 
-        rowDiv.appendChild(bubble);
+        rowDiv.appendChild(bubbleWrapper);
 
         // [UX] Fade-in animation for new messages so user sees them appear
         if (!prepend && !skipScroll) {

@@ -1403,9 +1403,19 @@ body.super-user .nav-btn.active {
     color: #d9a8ff;
 }
 
+/* Bubble Wrapper */
+.msg-bubble-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-width: 72%;
+    position: relative;
+}
+.wrapper-received { align-items: flex-start; }
+.wrapper-sent { align-items: flex-end; }
+
 /* Bubble base */
 .msg-bubble {
-    max-width: 72%;
+    width: fit-content;
     padding: 8px 13px 6px;
     font-size: 14px;
     line-height: 1.5;
