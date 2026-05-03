@@ -1175,9 +1175,10 @@ window.initChatCore = function() {
             bubble.appendChild(replyBadge);
         }
 
-        // Text (skip for pure circle videos — no text bubble needed)
+        // Text (skip for pure circle videos or pure audio with standard labels — no text bubble needed)
         const isCircleOnly = isVideoCircle && (!rawText.trim() || rawText.trim() === '📹');
-        if (!isCircleOnly) {
+        const isAudioOnly = isSingleAudio && (!rawText.trim() || /^[🎤🎵🔊🎧\s]*(Голосовое сообщение.*|Voice message.*)?$/i.test(rawText.trim()));
+        if (!isCircleOnly && !isAudioOnly) {
             const textDiv = document.createElement('div');
             textDiv.className = 'msg-text';
             
