@@ -973,7 +973,7 @@ window.initChatCore = function() {
                     // Circle video ("кружочки")
                     fileHtml = `<div class="msg-video-circle" style="position: relative; width: 240px; height: 240px; border-radius: 50%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan); cursor: pointer;" onclick="const v = this.querySelector('video'); if(v.paused){v.play();}else{v.pause();}">
                         <video loop playsinline style="width: 100%; height: 100%; object-fit: cover;">
-                            <source src="${BASE_URL}${fileUrl}" type="video/webm">
+                            <source src="${BASE_URL}${fileUrl}" type="video/${fileUrl.split('.').pop()}">
                             <source src="${BASE_URL}${fileUrl}" type="video/mp4">
                         </video>
                         <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.5); border-radius: 50%; padding: 4px; display: flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
@@ -981,7 +981,7 @@ window.initChatCore = function() {
                 } else if (isAudio) {
                     const audioId = `audio-${msg.id || Date.now()}`;
                     fileHtml = `<div class="msg-audio-player">
-                        <audio id="${audioId}" controls preload="metadata" style="width:100%;max-width:280px;border-radius:8px;outline:none;accent-color:var(--accent-cyan);">
+                        <audio id="${audioId}" controls preload="metadata" onloadedmetadata="if(!isFinite(this.duration) || this.duration > 3600){ this.currentTime=Number.MAX_SAFE_INTEGER; this.ontimeupdate=function(){this.ontimeupdate=null; this.currentTime=0;} }" style="width:100%;max-width:280px;border-radius:8px;outline:none;accent-color:var(--accent-cyan);">
                             <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
                             <source src="${BASE_URL}${fileUrl}" type="audio/webm">
                         </audio>

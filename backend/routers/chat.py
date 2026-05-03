@@ -1237,15 +1237,35 @@ async def upload_video_file(file: UploadFile = FastAPIFile(...), current_user: U
     if ext.lower() not in ['.webm', '.mp4']:
         ext = '.webm'
 
-    unique_name = f"{uuid.uuid4().hex}{ext}"
+    unique_name = uuid.uuid4().hex
 
     os.makedirs(os.path.join('uploads', 'video'), exist_ok=True)
-    save_path = os.path.join('uploads', 'video', unique_name)
+    save_path = os.path.join('uploads', 'video', f"{unique_name}{ext}")
 
     with open(save_path, 'wb') as f:
         f.write(contents)
 
-    return {"video_url": f"/api/uploads/video/{unique_name}"}
+    final_ext = ext
+    if ext.lower() != '.mp4':
+        import subprocess
+        mp4_path = os.path.join('uploads', 'video', f"{unique_name}.mp4")
+        try:
+            # Synchronous conversion to standard MP4 H.264
+            subprocess.run(
+                ['ffmpeg', '-y', '-i', save_path, '-c:v', 'libx264', '-preset', 'fast', '-c:a', 'aac', '-b:v', '1M', mp4_path],
+                check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+            )
+            try:
+                os.remove(save_path)
+            except Exception:
+                pass
+            final_ext = '.mp4'
+        except Exception as e:
+            print(f"[FFMPEG ERROR] Transcoding failed: {e}")
+            # Fallback to the original webm if conversion fails
+            pass
+
+    return {"video_url": f"/api/uploads/video/{unique_name}{final_ext}"}
 
 @router.post('/chat/upload')
 async def upload_chat_file(file: UploadFile = FastAPIFile(...), current_user: User = Depends(get_current_user), idem_key: str = Depends(validate_idempotency)):
