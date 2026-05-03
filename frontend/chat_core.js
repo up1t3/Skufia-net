@@ -980,8 +980,26 @@ window.initChatCore = function() {
                     </div>`;
                 } else if (isAudio) {
                     const audioId = `audio-${msg.id || Date.now()}`;
-                    fileHtml = `<div class="msg-audio-player">
-                        <audio id="${audioId}" controls preload="metadata" onloadedmetadata="if(!isFinite(this.duration) || this.duration > 3600){ this.currentTime=Number.MAX_SAFE_INTEGER; this.ontimeupdate=function(){this.ontimeupdate=null; this.currentTime=0;} }" style="width:100%;max-width:280px;border-radius:8px;outline:none;accent-color:var(--accent-cyan);">
+                    fileHtml = `
+                    <div class="msg-custom-audio-player" style="display:flex; align-items:center; background:rgba(0,0,0,0.4); padding:8px 12px; border-radius:12px; gap:12px; min-width:240px; border:1px solid rgba(0, 255, 255, 0.2);">
+                        <button class="audio-play-btn" onclick="const a=document.getElementById('${audioId}'); if(a.paused){a.play(); this.querySelector('.play-icon').style.display='none'; this.querySelector('.pause-icon').style.display='block';}else{a.pause(); this.querySelector('.play-icon').style.display='block'; this.querySelector('.pause-icon').style.display='none';}" style="background:var(--accent-cyan); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow: 0 0 8px rgba(0,255,255,0.4);">
+                            <svg class="play-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-base)" style="margin-left:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg class="pause-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-base)" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        </button>
+                        <div style="flex-grow:1; display:flex; flex-direction:column; gap:6px;">
+                            <div class="audio-timeline" style="height:3px; background:rgba(0,255,255,0.2); border-radius:2px; position:relative; cursor:pointer;" onclick="const a=document.getElementById('${audioId}'); const rect=this.getBoundingClientRect(); a.currentTime = a.duration * ((event.clientX - rect.left)/rect.width);">
+                                <div id="progress-${audioId}" style="height:100%; width:0%; background:var(--accent-cyan); position:absolute; left:0; top:0; border-radius:2px; transition:width 0.1s linear;"></div>
+                                <!-- Pseudo-waveform dots for aesthetics -->
+                                <div style="position:absolute; top:-2px; left:0; width:100%; height:7px; display:flex; justify-content:space-between; opacity:0.5; pointer-events:none;">
+                                    <div style="width:2px; height:4px; background:var(--accent-cyan); border-radius:1px; margin-top:1px;"></div><div style="width:2px; height:7px; background:var(--accent-cyan); border-radius:1px;"></div><div style="width:2px; height:3px; background:var(--accent-cyan); border-radius:1px; margin-top:2px;"></div><div style="width:2px; height:5px; background:var(--accent-cyan); border-radius:1px; margin-top:1px;"></div><div style="width:2px; height:2px; background:var(--accent-cyan); border-radius:1px; margin-top:2px;"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); font-family:monospace; font-weight:600;">
+                                <span id="time-${audioId}">0:00</span>
+                                <span id="dur-${audioId}">...</span>
+                            </div>
+                        </div>
+                        <audio id="${audioId}" preload="metadata" onloadedmetadata="if(!isFinite(this.duration) || this.duration > 3600){ this.currentTime=Number.MAX_SAFE_INTEGER; this.ontimeupdate=function(){this.ontimeupdate=null; this.currentTime=0;} } let d=this.duration; if(!isFinite(d))d=0; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); document.getElementById('dur-${audioId}').textContent=m+':'+s;" ontimeupdate="let p=document.getElementById('progress-${audioId}'); let t=document.getElementById('time-${audioId}'); if(p) p.style.width = (this.currentTime/this.duration*100)+'%'; let m=Math.floor(this.currentTime/60); let s=Math.floor(this.currentTime%60).toString().padStart(2,'0'); if(t) t.textContent=m+':'+s;" onended="this.currentTime=0; document.getElementById('progress-${audioId}').style.width='0%'; this.parentElement.querySelector('.play-icon').style.display='block'; this.parentElement.querySelector('.pause-icon').style.display='none';" style="display:none;">
                             <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
                             <source src="${BASE_URL}${fileUrl}" type="audio/webm">
                         </audio>
