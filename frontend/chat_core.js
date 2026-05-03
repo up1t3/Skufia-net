@@ -946,7 +946,7 @@ window.initChatCore = function() {
                     const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
                     const isVideo = /\.(mp4|webm)$/i.test(url);
                     if (isImage) {
-                        gridHtml += `<a href="${BASE_URL}${url}" target="_blank" class="gallery-item-image" style="display:block;width:100%;height:100%;"><img src="${BASE_URL}${url}" alt="attachment" style="width:100%; height:100%; object-fit:cover;"></a>`;
+                        gridHtml += `<a href="javascript:void(0)" onclick="window.openChatLightbox('${BASE_URL}${url}', [${urls.map(u => `'${BASE_URL}${u}'`).join(', ')}], ${urls.indexOf(url)})" class="gallery-item-image" style="display:block;width:100%;height:100%;"><img src="${BASE_URL}${url}" alt="attachment" style="width:100%; height:100%; object-fit:cover;"></a>`;
                     } else if (isVideo) {
                         gridHtml += `<div class="gallery-video-wrapper" style="width:100%;height:100%;">
                             <video src="${BASE_URL}${url}" controls style="width:100%; height:100%; object-fit:cover;"></video>
@@ -968,7 +968,7 @@ window.initChatCore = function() {
                 const isVideo = /\.(mp4)$/i.test(fileUrl) || msg.file_type === 'video_circle' || (msg.file_url && msg.file_url.includes('/video/'));
                 
                 if (isImage) {
-                    fileHtml = `<a href="${BASE_URL}${fileUrl}" target="_blank"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
+                    fileHtml = `<a href="javascript:void(0)" onclick="window.openChatLightbox('${BASE_URL}${fileUrl}', ['${BASE_URL}${fileUrl}'], 0)"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
                 } else if (isVideo && (msg.file_type === 'video_circle' || fileUrl.includes('/video/'))) {
                     // Circle video ("кружочки")
                     fileHtml = `<div class="msg-video-circle" style="position: relative; width: 240px; height: 240px; border-radius: 50%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan); cursor: pointer;" onclick="const v = this.querySelector('video'); if(v.paused){v.play();}else{v.pause();}">
@@ -2968,5 +2968,156 @@ window.initChatCore = function() {
     window.VoiceRecorderService = VoiceRecorderService;
     window.VideoCircleService = VideoCircleService;
     window.EmojiPickerEngine = EmojiPickerEngine;
+
+    // --- IN-APP IMAGE LIGHTBOX ---
+    window.openChatLightbox = function(url, galleryUrls, index) {
+        let modal = document.getElementById('chat-lightbox-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'chat-lightbox-modal';
+            modal.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; flex-direction:column; justify-content:center; align-items:center;';
+            
+            const img = document.createElement('img');
+            img.id = 'chat-lightbox-img';
+            img.style.cssText = 'max-width:100%; max-height:85%; object-fit:contain; border-radius:8px; transition: transform 0.2s ease;';
+            
+            const closeBtn = document.createElement('div');
+            closeBtn.innerHTML = '&#10005;'; // X mark
+            closeBtn.style.cssText = 'position:absolute; top:20px; right:20px; color:#fff; font-size:30px; cursor:pointer; width:40px; height:40px; display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.5); border-radius:50%; z-index:10000;';
+            closeBtn.onclick = () => window.closeChatLightbox();
+            
+            const counter = document.createElement('div');
+            counter.id = 'chat-lightbox-counter';
+            counter.style.cssText = 'position:absolute; top:25px; left:20px; color:#fff; font-size:16px; font-weight:bold; background:rgba(0,0,0,0.5); padding:5px 12px; border-radius:12px;';
+            
+            const prevBtn = document.createElement('div');
+            prevBtn.id = 'chat-lightbox-prev';
+            prevBtn.innerHTML = '&#10094;'; // <
+            prevBtn.style.cssText = 'position:absolute; left:10px; top:50%; transform:translateY(-50%); color:#fff; font-size:40px; cursor:pointer; padding:20px; text-shadow:0 0 10px rgba(0,0,0,0.8); user-select:none; z-index:10000;';
+            
+            const nextBtn = document.createElement('div');
+            nextBtn.id = 'chat-lightbox-next';
+            nextBtn.innerHTML = '&#10095;'; // >
+            nextBtn.style.cssText = 'position:absolute; right:10px; top:50%; transform:translateY(-50%); color:#fff; font-size:40px; cursor:pointer; padding:20px; text-shadow:0 0 10px rgba(0,0,0,0.8); user-select:none; z-index:10000;';
+
+            const downloadBtn = document.createElement('a');
+            downloadBtn.id = 'chat-lightbox-download';
+            downloadBtn.innerHTML = '&#8681;'; // Download arrow
+            downloadBtn.style.cssText = 'position:absolute; bottom:30px; right:30px; color:#fff; font-size:24px; cursor:pointer; text-decoration:none; width:50px; height:50px; display:flex; justify-content:center; align-items:center; background:rgba(255,255,255,0.2); border-radius:50%; backdrop-filter:blur(5px); border:1px solid rgba(255,255,255,0.3); z-index:10000;';
+            downloadBtn.download = '';
+            downloadBtn.target = '_blank';
+
+            modal.appendChild(closeBtn);
+            modal.appendChild(counter);
+            modal.appendChild(img);
+            modal.appendChild(prevBtn);
+            modal.appendChild(nextBtn);
+            modal.appendChild(downloadBtn);
+            
+            document.body.appendChild(modal);
+
+            // Click outside to close
+            modal.onclick = (e) => {
+                if (e.target === modal) window.closeChatLightbox();
+            };
+
+            // Swipe logic
+            let touchstartX = 0;
+            let touchendX = 0;
+            
+            modal.addEventListener('touchstart', e => {
+                touchstartX = e.changedTouches[0].screenX;
+            }, {passive: true});
+
+            modal.addEventListener('touchend', e => {
+                touchendX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, {passive: true});
+
+            function handleSwipe() {
+                if (touchendX < touchstartX - 50) window.lightboxNext();
+                if (touchendX > touchstartX + 50) window.lightboxPrev();
+            }
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (modal.style.display !== 'flex') return;
+                if (e.key === 'Escape') window.closeChatLightbox();
+                if (e.key === 'ArrowRight') window.lightboxNext();
+                if (e.key === 'ArrowLeft') window.lightboxPrev();
+            });
+        }
+
+        // Attach data
+        window._lightboxUrls = galleryUrls || [url];
+        window._lightboxIndex = index || 0;
+        
+        window.updateLightboxView = function() {
+            const img = document.getElementById('chat-lightbox-img');
+            const counter = document.getElementById('chat-lightbox-counter');
+            const prev = document.getElementById('chat-lightbox-prev');
+            const next = document.getElementById('chat-lightbox-next');
+            const dl = document.getElementById('chat-lightbox-download');
+            
+            const curUrl = window._lightboxUrls[window._lightboxIndex];
+            img.src = curUrl;
+            dl.href = curUrl;
+            
+            if (window._lightboxUrls.length > 1) {
+                counter.style.display = 'block';
+                counter.innerText = `${window._lightboxIndex + 1} / ${window._lightboxUrls.length}`;
+                prev.style.display = window._lightboxIndex > 0 ? 'block' : 'none';
+                next.style.display = window._lightboxIndex < window._lightboxUrls.length - 1 ? 'block' : 'none';
+            } else {
+                counter.style.display = 'none';
+                prev.style.display = 'none';
+                next.style.display = 'none';
+            }
+        };
+        
+        window.lightboxNext = function() {
+            if (window._lightboxIndex < window._lightboxUrls.length - 1) {
+                window._lightboxIndex++;
+                window.updateLightboxView();
+            }
+        };
+        
+        window.lightboxPrev = function() {
+            if (window._lightboxIndex > 0) {
+                window._lightboxIndex--;
+                window.updateLightboxView();
+            }
+        };
+
+        const prevBtn = document.getElementById('chat-lightbox-prev');
+        const nextBtn = document.getElementById('chat-lightbox-next');
+        prevBtn.onclick = (e) => { e.stopPropagation(); window.lightboxPrev(); };
+        nextBtn.onclick = (e) => { e.stopPropagation(); window.lightboxNext(); };
+
+        window.updateLightboxView();
+        modal.style.display = 'flex';
+        
+        // Push state for back button to close modal instead of exiting app
+        history.pushState({ lightbox: true }, "", "#lightbox");
+    };
+
+    window.closeChatLightbox = function() {
+        const modal = document.getElementById('chat-lightbox-modal');
+        if (modal) modal.style.display = 'none';
+        if (history.state && history.state.lightbox) {
+            history.back(); // Remove the pushed state
+        }
+    };
+
+    window.addEventListener('popstate', (e) => {
+        // If popstate happens, check if modal is open and we aren't in lightbox state
+        const modal = document.getElementById('chat-lightbox-modal');
+        if (modal && modal.style.display === 'flex') {
+            if (!e.state || !e.state.lightbox) {
+                // User pressed back button
+                modal.style.display = 'none';
+            }
+        }
+    });
 
 };
