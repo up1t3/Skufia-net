@@ -2183,10 +2183,7 @@ window.initChatCore = function() {
         if (!name) return addLog('Название группы не может быть пустым', 'error');
 
         try {
-            await apiRequest(`/chat/rooms/${roomId}`, {
-                method: 'PUT',
-                body: { name: name, description: desc, avatar_url: avatarUrl }
-            });
+            await apiRequest(`/chat/rooms/${roomId}`, 'PUT', { name: name, description: desc, avatar_url: avatarUrl });
             addLog('Настройки сохранены', 'success');
             document.getElementById('group-settings-modal').remove();
             if (window.fetchChatRooms) await window.fetchChatRooms(); // refresh sidebar
@@ -2207,12 +2204,7 @@ window.initChatCore = function() {
         formData.append('file', file);
         try {
             // Upload to generic chat upload endpoint
-            const res = await apiRequest('/chat/upload', {
-                method: 'POST',
-                headers: { 'Accept': 'application/json' }, // Do NOT set Content-Type, let browser set it with boundary
-                body: formData,
-                isFormData: true // Custom flag so apiRequest doesn't stringify
-            });
+            const res = await apiRequest('/chat/upload', 'POST', formData);
             if (res && res.file_url) {
                 document.getElementById('group-edit-avatar-url').value = res.file_url;
                 document.getElementById('group-edit-avatar-preview').src = window.API_BASE_URL + res.file_url.replace('/api', '');
