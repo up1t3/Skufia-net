@@ -921,13 +921,40 @@ window.initChatCore = function() {
         
         const myId = String(state.user.id);
         
+        function getAvatarUrlForUid(uid) {
+            if (uid === myId) return state.user.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`;
+            
+            if (state.chat.currentRoomMembers) {
+                const mem = state.chat.currentRoomMembers.find(m => String(m.user_id) === String(uid));
+                if (mem && mem.avatar_url) return mem.avatar_url;
+            }
+            
+            const r = (state.chat.rooms || []).find(r => String(r.other_user_id) === String(uid));
+            if (r && r.avatar_url) return r.avatar_url;
+            
+            const c = (state.contacts || []).find(c => String(c.id) === String(uid));
+            if (c && c.avatar_url) return c.avatar_url;
+            
+            return `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`;
+        }
+        
         for (const [emoji, uids] of Object.entries(reactions)) {
             if (!uids || uids.length === 0) continue;
             const chip = document.createElement('div');
             chip.className = 'reaction-chip';
             if (uids.includes(myId)) chip.classList.add('reacted-by-me');
             
-            chip.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">${uids.length}</span>`;
+            let avatarsHtml = '<div class="reaction-avatars">';
+            const displayUids = uids.slice(-3); // show last 3 avatars
+            displayUids.forEach(uid => {
+                const avatarUrl = getAvatarUrlForUid(uid);
+                const fullUrl = avatarUrl.startsWith('/') ? BASE_URL + avatarUrl : avatarUrl;
+                avatarsHtml += `<img src="${fullUrl}" class="reaction-avatar-mini" alt="">`;
+            });
+            avatarsHtml += '</div>';
+
+            const countHtml = uids.length > 1 ? `<span class="reaction-count">${uids.length}</span>` : '';
+            chip.innerHTML = `<span class="reaction-emoji">${emoji}</span>${avatarsHtml}${countHtml}`;
             
             chip.onclick = async (e) => {
                 e.stopPropagation();
