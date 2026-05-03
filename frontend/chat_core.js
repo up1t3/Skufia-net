@@ -935,6 +935,9 @@ window.initChatCore = function() {
 
         const fileUrlRaw = msg.file_url || null;
         let fileHtml = '';
+        let isSingleImage = false;
+        let isSingleAudio = false;
+
         if (fileUrlRaw) {
             const urls = fileUrlRaw.split(',');
             const BASE_URL = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : '';
@@ -963,12 +966,12 @@ window.initChatCore = function() {
             } else {
                 // Single File Mode
                 const fileUrl = urls[0];
-                const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
-                const isAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|opus)(\?.*)?$/i.test(fileUrl);
+                isSingleImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
+                isSingleAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|opus)(\?.*)?$/i.test(fileUrl);
                 const isVideo = /\.(mp4)$/i.test(fileUrl) || msg.file_type === 'video_circle' || (msg.file_url && msg.file_url.includes('/video/'));
                 
-                if (isImage) {
-                    fileHtml = `<a href="javascript:void(0)" onclick="window.openChatLightbox('${BASE_URL}${fileUrl}', ['${BASE_URL}${fileUrl}'], 0)"><img class="msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
+                if (isSingleImage) {
+                    fileHtml = `<a href="javascript:void(0)" onclick="window.openChatLightbox('${BASE_URL}${fileUrl}', ['${BASE_URL}${fileUrl}'], 0)"><img class="msg-image msg-file-img-preview" src="${BASE_URL}${fileUrl}" alt="attachment"></a>`;
                 } else if (isVideo && (msg.file_type === 'video_circle' || fileUrl.includes('/video/'))) {
                     // Circle video ("кружочки")
                     fileHtml = `<div class="msg-video-circle" style="position: relative; width: 240px; height: 240px; border-radius: 50%; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid var(--accent-cyan); cursor: pointer;" onclick="const v = this.querySelector('video'); if(v.paused){v.play();}else{v.pause();}">
@@ -978,28 +981,32 @@ window.initChatCore = function() {
                         </video>
                         <div style="position: absolute; bottom: 15px; right: 15px; background: rgba(0,0,0,0.5); border-radius: 50%; padding: 4px; display: flex;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
                     </div>`;
-                } else if (isAudio) {
+                } else if (isSingleAudio) {
                     const audioId = `audio-${msg.id || Date.now()}`;
                     fileHtml = `
-                    <div class="msg-custom-audio-player" style="display:flex; align-items:center; background:rgba(0,0,0,0.4); padding:8px 12px; border-radius:12px; gap:12px; min-width:240px; border:1px solid rgba(0, 255, 255, 0.2);">
-                        <button class="audio-play-btn" onclick="const a=document.getElementById('${audioId}'); if(a.paused){a.play(); this.querySelector('.play-icon').style.display='none'; this.querySelector('.pause-icon').style.display='block';}else{a.pause(); this.querySelector('.play-icon').style.display='block'; this.querySelector('.pause-icon').style.display='none';}" style="background:var(--accent-cyan); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow: 0 0 8px rgba(0,255,255,0.4);">
-                            <svg class="play-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-base)" style="margin-left:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                            <svg class="pause-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-base)" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    <div class="msg-custom-audio-player" style="display:flex; align-items:center; background:transparent; padding:0; gap:12px; min-width:240px;">
+                        <button class="audio-play-btn" onclick="const a=document.getElementById('${audioId}'); if(a.paused){ document.querySelectorAll('audio').forEach(other=>other.pause()); a.playbackRate = window.globalAudioPlaybackRate || 1.0; a.play(); this.querySelector('.play-icon').style.display='none'; this.querySelector('.pause-icon').style.display='block';}else{a.pause(); this.querySelector('.play-icon').style.display='block'; this.querySelector('.pause-icon').style.display='none';}" style="background:var(--accent-cyan); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow: 0 0 8px rgba(0,255,255,0.4);">
+                            <svg class="play-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-dark)" style="margin-left:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg class="pause-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-dark)" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                         </button>
                         <div style="flex-grow:1; display:flex; flex-direction:column; gap:6px;">
-                            <div class="audio-timeline" style="height:3px; background:rgba(0,255,255,0.2); border-radius:2px; position:relative; cursor:pointer;" onclick="const a=document.getElementById('${audioId}'); const rect=this.getBoundingClientRect(); a.currentTime = a.duration * ((event.clientX - rect.left)/rect.width);">
+                            <div class="audio-timeline" style="height:3px; background:rgba(255,255,255,0.2); border-radius:2px; position:relative; cursor:pointer;" onclick="const a=document.getElementById('${audioId}'); const rect=this.getBoundingClientRect(); a.currentTime = a.duration * ((event.clientX - rect.left)/rect.width);">
                                 <div id="progress-${audioId}" style="height:100%; width:0%; background:var(--accent-cyan); position:absolute; left:0; top:0; border-radius:2px; transition:width 0.1s linear;"></div>
                                 <!-- Pseudo-waveform dots for aesthetics -->
                                 <div style="position:absolute; top:-2px; left:0; width:100%; height:7px; display:flex; justify-content:space-between; opacity:0.5; pointer-events:none;">
                                     <div style="width:2px; height:4px; background:var(--accent-cyan); border-radius:1px; margin-top:1px;"></div><div style="width:2px; height:7px; background:var(--accent-cyan); border-radius:1px;"></div><div style="width:2px; height:3px; background:var(--accent-cyan); border-radius:1px; margin-top:2px;"></div><div style="width:2px; height:5px; background:var(--accent-cyan); border-radius:1px; margin-top:1px;"></div><div style="width:2px; height:2px; background:var(--accent-cyan); border-radius:1px; margin-top:2px;"></div>
                                 </div>
                             </div>
-                            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); font-family:monospace; font-weight:600;">
+                            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-main); opacity:0.8; font-family:monospace; font-weight:600;">
                                 <span id="time-${audioId}">0:00</span>
-                                <span id="dur-${audioId}">...</span>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span id="dur-${audioId}">...</span>
+                                    <div class="audio-speed-btn" onclick="if(!window.toggleAudioSpeed){ window.globalAudioPlaybackRate=1.0; window.toggleAudioSpeed=function(){ const rates=[1.0, 1.5, 2.0]; let idx=rates.indexOf(window.globalAudioPlaybackRate); idx=(idx+1)%rates.length; window.globalAudioPlaybackRate=rates[idx]; document.querySelectorAll('audio').forEach(a=>a.playbackRate=window.globalAudioPlaybackRate); document.querySelectorAll('.audio-speed-btn').forEach(b=>b.textContent=window.globalAudioPlaybackRate+'x'); }; } window.toggleAudioSpeed();" style="background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:10px; cursor:pointer; font-size:10px; border:1px solid rgba(255,255,255,0.1); display:inline-block;" id="speed-${audioId}">1x</div>
+                                    <script>setTimeout(()=>{document.getElementById('speed-${audioId}').textContent=(window.globalAudioPlaybackRate||1.0)+'x';}, 0);</script>
+                                </div>
                             </div>
                         </div>
-                        <audio id="${audioId}" preload="metadata" onloadedmetadata="if(!isFinite(this.duration) || this.duration > 3600){ this.currentTime=Number.MAX_SAFE_INTEGER; this.ontimeupdate=function(){this.ontimeupdate=null; this.currentTime=0;} } let d=this.duration; if(!isFinite(d))d=0; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); document.getElementById('dur-${audioId}').textContent=m+':'+s;" ontimeupdate="let p=document.getElementById('progress-${audioId}'); let t=document.getElementById('time-${audioId}'); if(p) p.style.width = (this.currentTime/this.duration*100)+'%'; let m=Math.floor(this.currentTime/60); let s=Math.floor(this.currentTime%60).toString().padStart(2,'0'); if(t) t.textContent=m+':'+s;" onended="this.currentTime=0; document.getElementById('progress-${audioId}').style.width='0%'; this.parentElement.querySelector('.play-icon').style.display='block'; this.parentElement.querySelector('.pause-icon').style.display='none';" style="display:none;">
+                        <audio id="${audioId}" preload="metadata" onloadedmetadata="if(!isFinite(this.duration) || this.duration > 3600){ this.currentTime=Number.MAX_SAFE_INTEGER; this.ontimeupdate=function(){this.ontimeupdate=null; this.currentTime=0;} } let d=this.duration; if(!isFinite(d))d=0; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); document.getElementById('dur-${audioId}').textContent=m+':'+s;" ontimeupdate="let p=document.getElementById('progress-${audioId}'); let t=document.getElementById('time-${audioId}'); if(p) p.style.width = (this.currentTime/this.duration*100)+'%'; let m=Math.floor(this.currentTime/60); let s=Math.floor(this.currentTime%60).toString().padStart(2,'0'); if(t) t.textContent=m+':'+s;" onended="this.currentTime=0; document.getElementById('progress-${audioId}').style.width='0%'; this.parentElement.querySelector('.play-icon').style.display='block'; this.parentElement.querySelector('.pause-icon').style.display='none';" style="display:none;" onplay="this.playbackRate=window.globalAudioPlaybackRate||1.0;">
                             <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
                             <source src="${BASE_URL}${fileUrl}" type="audio/webm">
                         </audio>
@@ -1057,6 +1064,11 @@ window.initChatCore = function() {
         } else if (isVideoCircle) {
             // Чистый кружочек — без прямоугольной обёртки bubble
             bubble.className = `msg-bubble msg-bubble-circle ${isMe ? 'msg-sent' : 'msg-received'}`;
+        } else if (isSingleAudio) {
+            bubble.className = `msg-bubble msg-bubble-audio ${isMe ? 'msg-sent' : 'msg-received'}`;
+        } else if (isSingleImage && (!msg.text || msg.text.trim() === '')) {
+            // Full width image if no text
+            bubble.className = `msg-bubble msg-bubble-image ${isMe ? 'msg-sent' : 'msg-received'}`;
         } else {
             bubble.className = `msg-bubble ${isMe ? 'msg-sent' : 'msg-received'}`;
         }
