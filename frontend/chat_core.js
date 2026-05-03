@@ -2186,10 +2186,17 @@ window.initChatCore = function() {
             await apiRequest(`/chat/rooms/${roomId}`, 'PUT', { name: name, description: desc, avatar_url: avatarUrl });
             addLog('Настройки сохранены', 'success');
             document.getElementById('group-settings-modal').remove();
-            if (window.fetchChatRooms) await window.fetchChatRooms(); // refresh sidebar
+            
+            // refresh sidebar
+            if (typeof loadChatRooms === 'function') {
+                await loadChatRooms();
+            } else if (window.loadChatRooms) {
+                await window.loadChatRooms();
+            }
+            
             // trigger re-select to update header
             if (state.chat.currentRoomId === roomId && window.selectChatRoom) {
-                window.selectChatRoom(roomId, name, 'group');
+                window.selectChatRoom(roomId, name, 'group', null, null, avatarUrl);
             }
         } catch(e) {
             addLog('Ошибка сохранения: ' + e.message, 'error');
