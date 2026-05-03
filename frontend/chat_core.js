@@ -921,13 +921,16 @@ window.initChatCore = function() {
             wrapper.appendChild(container);
         }
         container.innerHTML = '';
+        if (typeof reactions === 'string') {
+            try { reactions = JSON.parse(reactions); } catch(e) { reactions = {}; }
+        }
         if (!reactions || Object.keys(reactions).length === 0) return;
         
         const myId = String(state.user.id);
         const apiBaseUrl = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : '';
         
         function getAvatarUrlForUid(uid) {
-            if (uid === myId) return state.user.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`;
+            if (String(uid) === myId) return state.user.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`;
             
             if (state.chat.currentRoomMembers) {
                 const mem = state.chat.currentRoomMembers.find(m => String(m.user_id) === String(uid));
@@ -947,7 +950,7 @@ window.initChatCore = function() {
             if (!uids || uids.length === 0) continue;
             const chip = document.createElement('div');
             chip.className = 'reaction-chip';
-            if (uids.includes(myId)) chip.classList.add('reacted-by-me');
+            if (uids.some(u => String(u) === myId)) chip.classList.add('reacted-by-me');
             
             let avatarsHtml = '<div class="reaction-avatars">';
             const displayUids = uids.slice(-3); // show last 3 avatars

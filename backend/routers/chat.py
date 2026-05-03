@@ -1532,8 +1532,14 @@ async def react_to_message(message_id: int, req: ReactionUpdate, current_user: U
 
     # SQLAlchemy JSONB needs to be reassigned or mutated with flag_modified
     from sqlalchemy.orm.attributes import flag_modified
+    import json
     reactions = msg.reactions or {}
-    if not isinstance(reactions, dict):
+    if isinstance(reactions, str):
+        try:
+            reactions = json.loads(reactions)
+        except:
+            reactions = {}
+    elif not isinstance(reactions, dict):
         reactions = dict(reactions)
 
     emoji = req.emoji
