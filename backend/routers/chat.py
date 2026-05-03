@@ -349,7 +349,7 @@ def list_rooms(current_user: User = Depends(get_current_user), db: Session = Dep
             "name": room.name,
             "type": room.room_type,
             "my_role": m.role,
-            "avatar_url": None,
+            "avatar_url": room.avatar_url,
             "other_user_id": None,
             "last_message": last_msg_text,
             "last_activity": last_activity,
