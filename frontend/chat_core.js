@@ -1026,7 +1026,7 @@ window.initChatCore = function() {
         // Check for missed call system message
         let rawText = msg.text || msg.content || '';
         const isMissedCall = rawText.includes('Пропущенный') && (rawText.includes('аудиозвонок') || rawText.includes('видеозвонок'));
-        const isVideoCircle = msg.file_type === 'video_circle' || (fileUrl && fileUrl.includes('/video/'));
+        const isVideoCircle = msg.file_type === 'video_circle' || (fileUrlRaw && fileUrlRaw.includes('/video/'));
 
         // Bubble
         const bubble = document.createElement('div');
