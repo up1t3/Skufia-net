@@ -871,18 +871,18 @@ window.initChatCore = function() {
     }
 
     window.showEmojiPicker = function(message_id, x, y) {
-        document.querySelectorAll('.emoji-picker-container').forEach(e => e.remove());
+        document.querySelectorAll('.emoji-picker-overlay, .emoji-picker-container').forEach(e => e.remove());
+        
+        const overlay = document.createElement('div');
+        overlay.className = 'emoji-picker-overlay';
+        
         const container = document.createElement('div');
         container.className = 'emoji-picker-container';
-        container.style.position = 'fixed';
-        // Adjust coordinates to ensure picker stays within viewport
+        
+        // Default positioning for desktop
         container.style.top = `${Math.min(y, window.innerHeight - 400)}px`;
-        container.style.left = `${Math.min(Math.max(x - 150, 10), window.innerWidth - 320)}px`;
-        container.style.zIndex = '10001';
-        container.style.boxShadow = '0 10px 30px rgba(0,0,0,0.6)';
-        container.style.borderRadius = '12px';
-        container.style.overflow = 'hidden';
-        container.style.background = 'var(--bg-panel)';
+        const maxLeft = window.innerWidth - 350;
+        container.style.left = `${Math.min(Math.max(x - 150, 10), maxLeft)}px`;
         
         const picker = document.createElement('emoji-picker');
         picker.style.setProperty('--background', 'var(--bg-panel)');
@@ -892,23 +892,20 @@ window.initChatCore = function() {
         
         picker.addEventListener('emoji-click', async event => {
             const emoji = event.detail.unicode;
+            overlay.remove();
             container.remove();
             try {
                 await apiRequest(`/chat/message/${message_id}/react`, 'POST', { emoji });
             } catch(e) { console.error('React failed', e); }
         });
         
-        // click outside to close
-        setTimeout(() => {
-            document.addEventListener('click', function closePicker(e) {
-                if (!container.contains(e.target)) {
-                    container.remove();
-                    document.removeEventListener('click', closePicker);
-                }
-            });
-        }, 10);
+        overlay.addEventListener('click', () => {
+            overlay.remove();
+            container.remove();
+        });
         
         container.appendChild(picker);
+        document.body.appendChild(overlay);
         document.body.appendChild(container);
     };
 
@@ -1175,10 +1172,9 @@ window.initChatCore = function() {
             bubble.appendChild(replyBadge);
         }
 
-        // Text (skip for pure circle videos or pure audio with standard labels — no text bubble needed)
-        const isCircleOnly = isVideoCircle && (!rawText.trim() || rawText.trim() === '📹');
-        const isAudioOnly = isSingleAudio && (!rawText.trim() || /^[🎤🎵🔊🎧\s]*(Голосовое сообщение.*|Voice message.*)?$/i.test(rawText.trim()));
-        if (!isCircleOnly && !isAudioOnly) {
+        // Text (skip for pure media with standard labels — no text bubble needed)
+        const isMediaOnly = (isVideoCircle || isSingleAudio || isSingleImage) && (!rawText.trim() || /^[📹📷🎤🎵🔊🎧\s]*(Голосовое сообщение.*|Voice message.*)?$/i.test(rawText.trim()));
+        if (!isMediaOnly) {
             const textDiv = document.createElement('div');
             textDiv.className = 'msg-text';
             
