@@ -1254,6 +1254,8 @@ window.initChatCore = function() {
                 safeText = safeText.replace(urlRegex, function(url) {
                     return `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color:var(--accent-cyan); text-decoration:underline;">${url}</a>`;
                 });
+                // Highlight mentions
+                safeText = safeText.replace(/(^|\s)@([a-zA-Zа-яА-Я0-9_]+)/g, '$1<span class="mention">@$2</span>');
                 textDiv.innerHTML = safeText;
             }
             bubble.appendChild(textDiv);
@@ -2075,6 +2077,15 @@ window.initChatCore = function() {
             <div style="padding:16px 20px;border-top:1px solid var(--border-metal);">
                 <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:10px;">⚙️ НАСТРОЙКИ</div>
                 
+                <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
+                    <img id="group-edit-avatar-preview" src="${roomInfo.avatar_url ? (roomInfo.avatar_url.startsWith('/') || roomInfo.avatar_url.startsWith('http') ? roomInfo.avatar_url : window.API_BASE_URL + '/' + roomInfo.avatar_url) : `https://api.dicebear.com/7.x/identicon/svg?seed=${roomInfo.name}`}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-metal);">
+                    <div>
+                        <input type="file" id="group-edit-avatar" style="display:none;" accept="image/*" onchange="window.uploadGroupAvatar(this)">
+                        <button onclick="document.getElementById('group-edit-avatar').click()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);color:var(--text-primary);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">Изменить аватарку</button>
+                        <input type="hidden" id="group-edit-avatar-url" value="${roomInfo.avatar_url || ''}">
+                    </div>
+                </div>
+                
                 <div style="margin-bottom: 10px;">
                     <label style="font-size:11px;color:var(--text-dim);">Название</label>
                     <input type="text" id="group-edit-name" value="${roomInfo.name}" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:13px;margin-top:4px;">
@@ -2164,30 +2175,51 @@ window.initChatCore = function() {
     window.updateGroupSettings = async function(roomId) {
         const nameInput = document.getElementById('group-edit-name');
         const descInput = document.getElementById('group-edit-desc');
-        
-        const name = nameInput ? nameInput.value.trim() : null;
-        const desc = descInput ? descInput.value.trim() : null;
-        
-        if (!name) {
-            addLog('Имя группы не может быть пустым', 'error');
-            return;
-        }
+        const avatarInput = document.getElementById('group-edit-avatar-url');
+        if (!nameInput) return;
+        const name = nameInput.value.trim();
+        const desc = descInput ? descInput.value.trim() : '';
+        const avatarUrl = avatarInput ? avatarInput.value : '';
+        if (!name) return addLog('Название группы не может быть пустым', 'error');
 
         try {
-            await apiRequest(`/chat/rooms/${roomId}`, 'PUT', { name: name, description: desc });
-            addLog('✅ Настройки группы сохранены', 'success');
-            
-            // Update the room name in the header if it changed
-            if (state.chat.currentRoomId === roomId) {
-                const headerTitle = document.getElementById('chat-header-title');
-                if (headerTitle) headerTitle.textContent = name;
+            await apiRequest(`/chat/rooms/${roomId}`, {
+                method: 'PUT',
+                body: { name: name, description: desc, avatar_url: avatarUrl }
+            });
+            addLog('Настройки сохранены', 'success');
+            document.getElementById('group-settings-modal').remove();
+            if (window.fetchChatRooms) await window.fetchChatRooms(); // refresh sidebar
+            // trigger re-select to update header
+            if (state.chat.currentRoomId === roomId && window.selectChatRoom) {
+                window.selectChatRoom(roomId, name, 'group');
             }
-            
-            // Refresh modal
-            window.openGroupSettings();
+        } catch(e) {
+            addLog('Ошибка сохранения: ' + e.message, 'error');
+        }
+    };
+
+    // @ts-ignore
+    window.uploadGroupAvatar = async function(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+            // Upload to generic chat upload endpoint
+            const res = await apiRequest('/chat/upload', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' }, // Do NOT set Content-Type, let browser set it with boundary
+                body: formData,
+                isFormData: true // Custom flag so apiRequest doesn't stringify
+            });
+            if (res && res.file_url) {
+                document.getElementById('group-edit-avatar-url').value = res.file_url;
+                document.getElementById('group-edit-avatar-preview').src = window.API_BASE_URL + res.file_url.replace('/api', '');
+                addLog('Аватарка загружена', 'success');
+            }
         } catch (e) {
-            console.error('Update group error:', e);
-            addLog('Ошибка сохранения настроек', 'error');
+            addLog('Ошибка загрузки аватарки: ' + e.message, 'error');
         }
     };
 
@@ -2443,13 +2475,95 @@ window.initChatCore = function() {
         const chatMain = document.querySelector('.chat-main');
         if (chatMain) chatMain.classList.remove('active');
     }
+    
+    function handleChatInputMentions(e) {
+        const input = e.target;
+        const value = input.value;
+        const cursorPosition = input.selectionStart;
+        const textBeforeCursor = value.substring(0, cursorPosition);
+        
+        // Look for @ followed by word characters right before cursor
+        const match = textBeforeCursor.match(/(?:^|\s)@([a-zA-Zа-яА-Я0-9_]*)$/);
+        let dropdown = document.getElementById('mentions-dropdown');
+        
+        if (!match) {
+            if (dropdown) dropdown.remove();
+            return;
+        }
+        
+        const query = match[1].toLowerCase();
+        const members = state.chat.currentRoomMembers || [];
+        
+        const filtered = members.filter(m => m.username.toLowerCase().includes(query) || (m.display_name && m.display_name.toLowerCase().includes(query)));
+        
+        if (filtered.length === 0) {
+            if (dropdown) dropdown.remove();
+            return;
+        }
+        
+        if (!dropdown) {
+            dropdown = document.createElement('div');
+            dropdown.id = 'mentions-dropdown';
+            dropdown.style.cssText = `
+                position: absolute;
+                bottom: calc(100% + 10px);
+                left: 20px;
+                background: var(--bg-panel);
+                border: 1px solid var(--border-metal);
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                max-height: 200px;
+                overflow-y: auto;
+                z-index: 1000;
+                min-width: 200px;
+                padding: 8px 0;
+                backdrop-filter: blur(10px);
+            `;
+            // Find input row or container
+            const row = input.closest('.chat-input-row') || input.parentElement;
+            row.style.position = 'relative';
+            row.appendChild(dropdown);
+        }
+        
+        dropdown.innerHTML = filtered.map(m => `
+            <div class="mention-item" data-username="${m.username}" style="display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;transition:0.2s;">
+                <img src="${window.getAvatarUrlForUid ? window.getAvatarUrlForUid(m.user_id) : `https://api.dicebear.com/7.x/identicon/svg?seed=${m.username}`}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+                <span style="font-size:13px;font-weight:600;color:var(--text-primary);">${m.username}</span>
+                ${m.display_name && m.display_name !== m.username ? `<span style="font-size:11px;color:var(--text-dim);">${m.display_name}</span>` : ''}
+            </div>
+        `).join('');
+        
+        dropdown.querySelectorAll('.mention-item').forEach(item => {
+            item.onmouseenter = () => item.style.background = 'rgba(0,242,255,0.1)';
+            item.onmouseleave = () => item.style.background = 'transparent';
+            item.onclick = function(ev) {
+                ev.preventDefault();
+                const username = this.dataset.username;
+                const replacement = '@' + username + ' ';
+                const newValue = value.substring(0, cursorPosition - match[0].length + (match[0].startsWith(' ') ? 1 : 0)) + replacement + value.substring(cursorPosition);
+                input.value = newValue;
+                dropdown.remove();
+                input.focus();
+                
+                // Adjust cursor position
+                const newCursorPos = cursorPosition - match[0].length + (match[0].startsWith(' ') ? 1 : 0) + replacement.length;
+                input.setSelectionRange(newCursorPos, newCursorPos);
+                
+                // Trigger input event to update drafts etc.
+                input.dispatchEvent(new Event('input'));
+            };
+        });
+    }
 
-    // Attach local listeners
+    // Attach local file listeners
+
     const chatInput = document.getElementById('chat-input');
     const sendChatBtn = document.getElementById('send-chat-btn');
     if (chatInput) {
         let typingTimer;
         chatInput.addEventListener('input', (e) => {
+            handleChatInputMentions(e);
+
             if (state.chat.currentRoomId != null) {
                 localStorage.setItem(`skuf_draft_${state.chat.currentRoomId}`, e.target.value);
             }

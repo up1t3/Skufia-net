@@ -3827,3 +3827,6 @@ body.skufenger-fullscreen .mobile-back-btn {
         max-height: 400px !important;
     }
 }
+
+
+.mention { color: var(--accent-cyan); font-weight: bold; background: rgba(0, 242, 255, 0.1); padding: 0 4px; border-radius: 4px; cursor: pointer; }
