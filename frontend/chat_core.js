@@ -3048,9 +3048,19 @@ window.initChatCore = function() {
             });
         }
 
-        // Attach data
-        window._lightboxUrls = galleryUrls || [url];
-        window._lightboxIndex = index || 0;
+        // Dynamically find ALL images in the chat feed
+        const allImgElements = Array.from(document.querySelectorAll('.gallery-item-image img, .msg-file-img-preview'));
+        const allUrls = allImgElements.map(img => img.src);
+        const foundIndex = allUrls.indexOf(url);
+        
+        if (foundIndex !== -1 && allUrls.length > 0) {
+            window._lightboxUrls = allUrls;
+            window._lightboxIndex = foundIndex;
+        } else {
+            // Fallback for isolated images
+            window._lightboxUrls = galleryUrls || [url];
+            window._lightboxIndex = index || 0;
+        }
         
         window.updateLightboxView = function() {
             const img = document.getElementById('chat-lightbox-img');

@@ -13,8 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
         if (window.location.search.includes('app=messenger') || window.location.search.includes('app=skufenger') || window.location.hash.includes('messenger')) {
-            document.write('<link rel="manifest" href="manifest-skufenger.json">');
-            document.write('<style>body { opacity: 0; } body.skufenger-fullscreen { opacity: 1; transition: opacity 0.3s; }</style>');
+            window.location.replace('messenger.html' + window.location.search + window.location.hash);
         } else {
             document.write('<link rel="manifest" href="manifest.json">');
         }
@@ -35,7 +34,7 @@
     <div class="scanline"></div>
 
     <!-- Auth Overlay -->
-    <div id="auth-overlay" class="modal auth-modal-custom" style="display: flex;">
+    <div id="auth-overlay" class="modal auth-modal-custom" style="display: none;">
         <div class="modal-content auth-content">
             <div class="modal-header">
                 <h2 id="auth-title">АВТОРИЗАЦИЯ</h2>
