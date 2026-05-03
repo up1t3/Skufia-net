@@ -1513,6 +1513,63 @@ async def delete_message(message_id: int, current_user: User = Depends(get_curre
 
     return {"status": "success"}
 
+class ReactionUpdate(BaseModel):
+    emoji: str
+
+@router.post('/chat/message/{message_id}/react')
+async def react_to_message(message_id: int, req: ReactionUpdate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    msg = db.query(Message).filter(Message.id == message_id).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Access control: user must be in the room or it's a private message to/from them
+    if msg.room_id:
+        member = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == msg.room_id, ChatRoomMember.user_id == current_user.id).first()
+        if not member:
+            raise HTTPException(status_code=403, detail="Not a member of this room")
+    elif msg.receiver_id != current_user.id and msg.sender_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # SQLAlchemy JSONB needs to be reassigned or mutated with flag_modified
+    from sqlalchemy.orm.attributes import flag_modified
+    reactions = msg.reactions or {}
+    if not isinstance(reactions, dict):
+        reactions = dict(reactions)
+
+    emoji = req.emoji
+    user_id_str = str(current_user.id)
+
+    if emoji in reactions:
+        if user_id_str in reactions[emoji]:
+            reactions[emoji].remove(user_id_str)
+            if not reactions[emoji]:
+                del reactions[emoji]
+        else:
+            reactions[emoji].append(user_id_str)
+    else:
+        reactions[emoji] = [user_id_str]
+
+    msg.reactions = reactions
+    flag_modified(msg, "reactions")
+    db.commit()
+
+    payload = {
+        "type": "reaction_update",
+        "message_id": message_id,
+        "reactions": reactions,
+        "room_id": msg.room_id
+    }
+
+    if msg.room_id:
+        members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == msg.room_id).all()
+        uids = [m.user_id for m in members]
+        await manager.broadcast_msg(payload, user_ids=uids)
+    else:
+        uids = [msg.sender_id, msg.receiver_id] if msg.receiver_id else [msg.sender_id]
+        await manager.broadcast_msg(payload, user_ids=uids)
+
+    return {"status": "success", "reactions": reactions}
+
 @router.get('/chat/rooms/{room_id}/members')
 def get_room_members(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()

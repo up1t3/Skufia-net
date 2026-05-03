@@ -3707,3 +3707,47 @@ body.skufenger-fullscreen .mobile-back-btn {
 .e2ee-compatibility-indicator svg {
     margin-right: 4px;
 }
+
+/* --- Reaction Chips --- */
+.reactions-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid color-mix(in srgb, var(--border-metal) 30%, transparent);
+    border-radius: 12px;
+    padding: 2px 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.reaction-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.05);
+}
+
+.reaction-chip.reacted-by-me {
+    background: color-mix(in srgb, var(--accent-cyan) 20%, transparent);
+    border-color: color-mix(in srgb, var(--accent-cyan) 50%, transparent);
+}
+
+.reaction-chip .reaction-emoji {
+    margin-right: 4px;
+    font-size: 14px;
+}
+
+.reaction-chip .reaction-count {
+    color: var(--text-main);
+    font-weight: bold;
+}

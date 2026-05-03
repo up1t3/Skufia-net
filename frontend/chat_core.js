@@ -185,6 +185,11 @@ window.initChatCore = function() {
             } else if (data.type === 'delete_message') {
                 const el = document.getElementById(`msg-${data.message_id}`);
                 if (el) el.remove();
+            } else if (data.type === 'reaction_update') {
+                const el = document.getElementById(`msg-${data.message_id}`);
+                if (el && typeof renderReactionsOnMessage === 'function') {
+                    renderReactionsOnMessage(el, data.reactions, data.message_id);
+                }
             } else if (data.type === 'read_ack') {
                 const el = document.getElementById(`msg-${data.message_id}`);
                 if (el) {
@@ -865,6 +870,80 @@ window.initChatCore = function() {
         }
     }
 
+    window.showEmojiPicker = function(message_id, x, y) {
+        document.querySelectorAll('.emoji-picker-container').forEach(e => e.remove());
+        const container = document.createElement('div');
+        container.className = 'emoji-picker-container';
+        container.style.position = 'fixed';
+        // Adjust coordinates to ensure picker stays within viewport
+        container.style.top = `${Math.min(y, window.innerHeight - 400)}px`;
+        container.style.left = `${Math.min(Math.max(x - 150, 10), window.innerWidth - 320)}px`;
+        container.style.zIndex = '10001';
+        container.style.boxShadow = '0 10px 30px rgba(0,0,0,0.6)';
+        container.style.borderRadius = '12px';
+        container.style.overflow = 'hidden';
+        container.style.background = 'var(--bg-panel)';
+        
+        const picker = document.createElement('emoji-picker');
+        picker.style.setProperty('--background', 'var(--bg-panel)');
+        picker.style.setProperty('--border-color', 'var(--border-main)');
+        picker.style.setProperty('--text-color', 'var(--text-main)');
+        picker.style.setProperty('--indicator-color', 'var(--accent-cyan)');
+        
+        picker.addEventListener('emoji-click', async event => {
+            const emoji = event.detail.unicode;
+            container.remove();
+            try {
+                await apiRequest(`/chat/message/${message_id}/react`, 'POST', { emoji });
+            } catch(e) { console.error('React failed', e); }
+        });
+        
+        // click outside to close
+        setTimeout(() => {
+            document.addEventListener('click', function closePicker(e) {
+                if (!container.contains(e.target)) {
+                    container.remove();
+                    document.removeEventListener('click', closePicker);
+                }
+            });
+        }, 10);
+        
+        container.appendChild(picker);
+        document.body.appendChild(container);
+    };
+
+    window.renderReactionsOnMessage = function(bubbleEl, reactions, message_id) {
+        let container = bubbleEl.querySelector('.reactions-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.className = 'reactions-container';
+            bubbleEl.appendChild(container);
+        }
+        container.innerHTML = '';
+        if (!reactions || Object.keys(reactions).length === 0) return;
+        
+        const myId = String(state.user.id);
+        
+        for (const [emoji, uids] of Object.entries(reactions)) {
+            if (!uids || uids.length === 0) continue;
+            const chip = document.createElement('div');
+            chip.className = 'reaction-chip';
+            if (uids.includes(myId)) chip.classList.add('reacted-by-me');
+            
+            chip.innerHTML = `<span class="reaction-emoji">${emoji}</span><span class="reaction-count">${uids.length}</span>`;
+            
+            chip.onclick = async (e) => {
+                e.stopPropagation();
+                try {
+                    await apiRequest(`/chat/message/${message_id}/react`, 'POST', { emoji });
+                } catch (err) {
+                    console.error('Failed to toggle reaction', err);
+                }
+            };
+            container.appendChild(chip);
+        }
+    };
+
     /** @param {any} msg 
      *  @param {boolean} prepend */
     function renderChatMessage(msg, prepend = false, skipScroll = false) {
@@ -1006,9 +1085,15 @@ window.initChatCore = function() {
                                 </div>
                             </div>
                         </div>
-                        <audio id="${audioId}" preload="metadata" onloadedmetadata="if(!isFinite(this.duration) || this.duration > 3600){ this.currentTime=Number.MAX_SAFE_INTEGER; this.ontimeupdate=function(){this.ontimeupdate=null; this.currentTime=0;} } let d=this.duration; if(!isFinite(d))d=0; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); document.getElementById('dur-${audioId}').textContent=m+':'+s;" ontimeupdate="let p=document.getElementById('progress-${audioId}'); let t=document.getElementById('time-${audioId}'); if(p) p.style.width = (this.currentTime/this.duration*100)+'%'; let m=Math.floor(this.currentTime/60); let s=Math.floor(this.currentTime%60).toString().padStart(2,'0'); if(t) t.textContent=m+':'+s;" onended="this.currentTime=0; document.getElementById('progress-${audioId}').style.width='0%'; this.parentElement.querySelector('.play-icon').style.display='block'; this.parentElement.querySelector('.pause-icon').style.display='none';" style="display:none;" onplay="this.playbackRate=window.globalAudioPlaybackRate||1.0;">
+                        <audio id="${audioId}" preload="metadata" 
+                            onloadedmetadata="if(this.duration === Infinity || isNaN(this.duration)) { this.currentTime = 1e101; this.ontimeupdate = function() { this.ontimeupdate = null; this.currentTime = 0; }; } else { let d=this.duration; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); let el=document.getElementById('dur-${audioId}'); if(el) el.textContent=m+':'+s; }" 
+                            ondurationchange="if(this.duration !== Infinity && !isNaN(this.duration)){ let d=this.duration; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); let el=document.getElementById('dur-${audioId}'); if(el) el.textContent=m+':'+s; }" 
+                            ontimeupdate="let p=document.getElementById('progress-${audioId}'); let t=document.getElementById('time-${audioId}'); if(p && this.duration) p.style.width = (this.currentTime/this.duration*100)+'%'; let m=Math.floor(this.currentTime/60); let s=Math.floor(this.currentTime%60).toString().padStart(2,'0'); if(t) t.textContent=m+':'+s;" 
+                            onended="this.currentTime=0; document.getElementById('progress-${audioId}').style.width='0%'; this.parentElement.querySelector('.play-icon').style.display='block'; this.parentElement.querySelector('.pause-icon').style.display='none';" 
+                            style="display:none;" 
+                            onplay="this.playbackRate=window.globalAudioPlaybackRate||1.0;">
                             <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
-                            <source src="${BASE_URL}${fileUrl}" type="audio/webm">
+                            <source src="${BASE_URL}${fileUrl}" type="audio/mp4">
                         </audio>
                     </div>`;
                     // IndexedDB cache: store audio blob locally for offline playback
@@ -1168,6 +1253,9 @@ window.initChatCore = function() {
         footerDiv.appendChild(timeSpan);
         bubble.appendChild(footerDiv);
 
+        // Render reactions if any
+        window.renderReactionsOnMessage(bubble, msg.reactions, msg.id);
+
         // Context menu logic — single tap opens menu (no text selection)
         // Long-press = native copy (handled by browser)
         bubble.addEventListener('click', (e) => {
@@ -1192,6 +1280,12 @@ window.initChatCore = function() {
 
             const cleanText = (msg.text || msg.content || '').replace(/[`]/g, '');
             
+            // Реакция
+            const reactDiv = document.createElement('div');
+            reactDiv.innerHTML = '<span style="margin-right:8px">😀</span>Реакция';
+            reactDiv.onclick = (ev) => { ev.stopPropagation(); window.showEmojiPicker(msg.id, e.clientX, e.clientY); menu.remove(); };
+            menu.appendChild(reactDiv);
+
             // Переслать
             const forwardDiv = document.createElement('div');
             forwardDiv.innerHTML = '<span style="margin-right:8px">↗️</span>Переслать';
