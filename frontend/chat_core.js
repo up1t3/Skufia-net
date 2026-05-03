@@ -959,7 +959,10 @@ window.initChatCore = function() {
             const displayUids = uids.slice(-3); // show last 3 avatars
             displayUids.forEach(uid => {
                 const avatarUrl = getAvatarUrlForUid(uid);
-                const fullUrl = avatarUrl.startsWith('/') ? apiBaseUrl + avatarUrl : avatarUrl;
+                let fullUrl = avatarUrl;
+                if (!fullUrl.startsWith('http') && !fullUrl.startsWith('data:') && !fullUrl.startsWith('SPRITE:')) {
+                    fullUrl = apiBaseUrl + (fullUrl.startsWith('/') ? '' : '/') + fullUrl;
+                }
                 avatarsHtml += `<img src="${fullUrl}" class="reaction-avatar-mini" alt="">`;
             });
             avatarsHtml += '</div>';
