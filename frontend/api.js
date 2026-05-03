@@ -37,6 +37,8 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
             document.documentElement.classList.remove('is-logged-in'); // Allow overlay to show
             
             const authOverlay = document.getElementById('auth-overlay');
+            const syncOverlay = document.getElementById('boot-sync-overlay');
+            if (syncOverlay) syncOverlay.style.display = 'none';
             if (authOverlay) {
                 authOverlay.style.display = 'flex';
                 const authTitle = document.getElementById('auth-title');

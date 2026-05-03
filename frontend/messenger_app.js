@@ -127,19 +127,46 @@ document.addEventListener('DOMContentLoaded', () => {
         window.initChatCore();
     }
 
+    // --- BOOT TELEMETRY ---
+    const _bootLog = [];
+    function bootStep(phase, msg) {
+        const ts = new Date().toISOString().split('T')[1];
+        const entry = `[BOOT ${ts}] ${phase}: ${msg}`;
+        _bootLog.push(entry);
+        console.log(entry);
+        // Update sync overlay text if visible
+        const el = document.getElementById('boot-sync-status');
+        if (el) el.textContent = msg.toUpperCase();
+    }
+    window._getBootLog = () => _bootLog.slice(); // Debug helper
+
+    function showSyncOverlay(show) {
+        const el = document.getElementById('boot-sync-overlay');
+        if (el) el.style.display = show ? 'flex' : 'none';
+    }
+
+    function showAuth(titleText) {
+        const authOverlay = document.getElementById('auth-overlay');
+        const authTitle = document.getElementById('auth-title');
+        showSyncOverlay(false);
+        if (authOverlay) authOverlay.style.display = 'flex';
+        if (authTitle && titleText) authTitle.textContent = titleText;
+    }
+
     // --- SYSTEM BOOT & ALERTS ---
     async function bootSystem() {
-        console.log('--- SYSTEM BOOT START ---');
+        bootStep('INIT', 'System boot started');
         const authOverlay = document.getElementById('auth-overlay');
         const authTitle = document.getElementById('auth-title');
         
         if (!state.user.token) {
-            console.log('BOOT: No token found. Showing auth overlay.');
-            if (authOverlay) authOverlay.style.display = 'flex';
+            bootStep('AUTH', 'No token — showing login');
+            showAuth('АВТОРИЗАЦИЯ');
             return;
         }
 
         // Client-side JWT expiration check
+        bootStep('JWT', 'Validating token locally');
         try {
             let base64Url = state.user.token.split('.')[1];
             let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -151,17 +178,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join(''));
             const payload = JSON.parse(payloadStr);
             if (payload.exp && (payload.exp * 1000 < Date.now())) {
-                console.warn('BOOT: Token expired locally. Forcing re-auth.');
+                bootStep('JWT', 'Token expired — re-auth');
                 state.user.token = null;
                 localStorage.removeItem('skuf_token');
-                if (authOverlay) authOverlay.style.display = 'flex';
+                showAuth('СЕССИЯ ИСТЕКЛА');
                 return;
             }
+            bootStep('JWT', 'Token valid, exp=' + new Date(payload.exp * 1000).toISOString());
         } catch(e) {
-            console.warn('BOOT: Invalid token format or decoding failed. Forcing re-auth.', e);
+            bootStep('JWT', 'Decode failed: ' + e.message);
             state.user.token = null;
             localStorage.removeItem('skuf_token');
-            if (authOverlay) authOverlay.style.display = 'flex';
+            showAuth('АВТОРИЗАЦИЯ');
             return;
         }
 
@@ -169,15 +197,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const sessionPw = sessionStorage.getItem('skuf_session_pw');
             if (sessionPw) {
                 state.user.password = sessionPw;
+                bootStep('PWD', 'Session password restored from sessionStorage');
+            } else {
+                bootStep('PWD', 'No session password cached');
             }
         }
 
-        console.log('BOOT: Token found. Initializing system in background...');
-        
-        // PHASE 1 (Fast): Hide overlay immediately to show UI skeleton
-        if (authOverlay) {
-            authOverlay.style.display = 'none';
-        }
+        bootStep('UI', 'Showing sync overlay');
+        // PHASE 1 (Fast): Show sync indicator instead of blank screen
+        if (authOverlay) authOverlay.style.display = 'none';
+        showSyncOverlay(true);
         document.documentElement.classList.add('is-logged-in');
         switchView('messages');
 
@@ -202,9 +231,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            console.log('BOOT: Verifying token with /me...');
+            bootStep('API', 'Verifying token with /me...');
             const me = await apiRequest('/me');
-            console.log('BOOT: Token verified. User:', me.username);
+            bootStep('API', 'Token verified. User: ' + me.username);
             state.user.id = me.id;
             state.user.username = me.username;
             state.user.profile = me;
@@ -237,10 +266,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const settingsPreview = document.getElementById('settings-avatar-preview');
             if (settingsPreview && aUrl) {
                 if (typeof applyAvatarDisplay === 'function') applyAvatarDisplay(settingsPreview, aUrl);
-            }            // We will remove the overlay after subsystems load to prevent flash of empty app
-            // if (authOverlay) authOverlay.style.display = 'none';
+            }
 
-            console.log('BOOT: Loading subsystems...');
+            bootStep('SUBSYS', 'Loading media engines...');
             
             // Standard initialization
             if (window.addLog) window.addLog('Инициализация Skufia Enterprise OS...', 'info');
@@ -253,16 +281,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Subsystem init failed:', e);
             }
 
+            bootStep('E2EE', 'Initializing encryption keys...');
             try {
                 if (window.ensureKeys) {
                     await window.ensureKeys();
                     if (!state.chat.keys.publicKey || !state.chat.keys.privateKey) {
                         throw new Error('NO_KEYS');
                     }
+                    bootStep('E2EE', 'Keys loaded successfully');
                 }
             } catch (e) {
-                console.error('E2EE key init failed:', e);
+                bootStep('E2EE', 'Key init failed: ' + e.message);
                 if (e.message === 'NO_KEYS' || (e.message && e.message.includes('NO_KEYS'))) {
+                    showSyncOverlay(false);
                     const authOverlay = document.getElementById('auth-overlay');
                     if (authOverlay) {
                         authOverlay.style.display = 'flex';
@@ -279,17 +310,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if (window.addLog) window.addLog('⚠️ Крипто-модуль недоступен — E2EE отключён', 'warning');
             }
+
+            bootStep('WS', 'Connecting WebSocket...');
             if (window.connectWebSocket) {
                 if (state.user.token) {
                     window.connectWebSocket();
                 } else {
-                    console.warn('Skipping connectWebSocket: missing token.');
+                    bootStep('WS', 'Skipped — no token');
                 }
             }
-            if (window.loadChatRooms) await window.loadChatRooms(); // make it await if it's async, or wait
+
+            bootStep('DATA', 'Loading chat rooms...');
+            if (window.loadChatRooms) await window.loadChatRooms();
             if (window.loadFolders) await window.loadFolders();
             
-            console.log('--- SYSTEM BOOT COMPLETE ---');
+            // PHASE FINAL: Hide sync overlay, show the app
+            showSyncOverlay(false);
+            bootStep('DONE', 'System boot complete');
 
             // --- CHECK FOR BACKGROUND CALL INTENT ---
             if (window.location.hash.includes('call_action=')) {
@@ -333,10 +370,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('SW registered successfully');
                 }).catch(err => console.error('SW registration failed:', err));
 
-                // Listen for updates from SW
+                // Listen for updates from SW — with reload-loop guard
                 navigator.serviceWorker.addEventListener('message', (event) => {
                     if (event.data && event.data.type === 'SW_UPDATED') {
-                        console.log('New version detected:', event.data.version);
+                        console.log('[SW] New version detected:', event.data.version);
+                        
+                        // Guard against infinite reload loops
+                        const RELOAD_KEY = 'skuf_sw_reload_ts';
+                        const lastReload = parseInt(sessionStorage.getItem(RELOAD_KEY) || '0', 10);
+                        const now = Date.now();
+                        if (now - lastReload < 15000) {
+                            console.warn('[SW] Reload suppressed — already reloaded <15s ago');
+                            return;
+                        }
+
                         if (!document.getElementById('pwa-update-banner')) {
                             const updateBanner = document.createElement('div');
                             updateBanner.id = 'pwa-update-banner';
@@ -348,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         </div>
                                         <div style="font-size: 13px; color: var(--text-dim);">Установлена новая версия Skufia.</div>
                                     </div>
-                                    <button onclick="window.location.reload(true)" class="cyber-btn primary-btn" style="padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    <button onclick="sessionStorage.setItem('skuf_sw_reload_ts', Date.now().toString()); window.location.reload(true)" class="cyber-btn primary-btn" style="padding: 10px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                                         ПЕРЕЗАГРУЗИТЬ
                                     </button>

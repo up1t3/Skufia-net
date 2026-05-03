@@ -269,14 +269,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            // Listen for SW_UPDATED message — auto-reload page to apply new version
+            // Listen for SW_UPDATED message — auto-reload with loop guard
             navigator.serviceWorker.addEventListener('message', (event) => {
                 if (event.data && event.data.type === 'SW_UPDATED') {
                     console.log('[app.js] New version detected:', event.data.version);
+                    
+                    // Guard against infinite reload loops
+                    const RELOAD_KEY = 'skuf_sw_reload_ts';
+                    const lastReload = parseInt(sessionStorage.getItem(RELOAD_KEY) || '0', 10);
+                    const now = Date.now();
+                    if (now - lastReload < 15000) {
+                        console.warn('[app.js] Reload suppressed — already reloaded <15s ago');
+                        return;
+                    }
+                    
                     // Auto-reload after 2 seconds to apply the new SW cache
                     setTimeout(() => {
                         if (!window._swReloading) {
                             window._swReloading = true;
+                            sessionStorage.setItem(RELOAD_KEY, Date.now().toString());
                             window.location.reload();
                         }
                     }, 2000);

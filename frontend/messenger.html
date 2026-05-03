@@ -106,6 +106,17 @@
             </form>
         </div>
     </div>
+
+    <!-- Boot Sync Overlay — shown during background initialization -->
+    <div id="boot-sync-overlay" style="display: none; position: fixed; inset: 0; z-index: 9998; background: var(--bg-main, #0a0e14); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
+        <div style="width: 48px; height: 48px; border: 3px solid rgba(0,242,255,0.15); border-top-color: var(--accent-cyan, #00f2ff); border-radius: 50%; animation: boot-spin 0.8s linear infinite;"></div>
+        <div id="boot-sync-status" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim, #8a94a2); letter-spacing: 1px;">СИНХРОНИЗАЦИЯ...</div>
+        <style>
+            @keyframes boot-spin {
+                to { transform: rotate(360deg); }
+            }
+        </style>
+    </div>
     
     <!-- Avatar Crop Modal -->
     <div id="avatar-crop-modal" class="modal" style="display: none; z-index: 10000;">
@@ -657,16 +668,16 @@
     </div>
 
 <script defer src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script defer src="db.js?v=56"></script>
-    <script defer src="rtcManager.js?v=56"></script>
-    <script defer src="ui.js?v=52"></script>
-    <script defer src="api.js?v=52"></script>
-    <script defer src="crypto.js?v=52"></script>
-    <script defer src="features.js?v=1777506872470"></script>
-    <script defer src="lightbox.js?v=52"></script>
-    <script defer src="chat_core.js?v=56"></script>
-    <script defer src="media_capture.js?v=57"></script>
-    <script defer src="messenger_app.js?v=56"></script>
+    <script defer src="db.js?v=57"></script>
+    <script defer src="rtcManager.js?v=57"></script>
+    <script defer src="ui.js?v=53"></script>
+    <script defer src="api.js?v=53"></script>
+    <script defer src="crypto.js?v=53"></script>
+    <script defer src="features.js?v=1777506872471"></script>
+    <script defer src="lightbox.js?v=53"></script>
+    <script defer src="chat_core.js?v=57"></script>
+    <script defer src="media_capture.js?v=58"></script>
+    <script defer src="messenger_app.js?v=57"></script>
 
 </body>
 </html>
