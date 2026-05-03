@@ -910,16 +910,21 @@ window.initChatCore = function() {
     };
 
     window.renderReactionsOnMessage = function(bubbleEl, reactions, message_id) {
-        let container = bubbleEl.querySelector('.reactions-container');
+        // Find bubbleWrapper if the passed element is a msg-row
+        let wrapper = bubbleEl.classList.contains('msg-row') ? bubbleEl.querySelector('.msg-bubble-wrapper') : bubbleEl;
+        if (!wrapper) wrapper = bubbleEl;
+        
+        let container = wrapper.querySelector('.reactions-container');
         if (!container) {
             container = document.createElement('div');
             container.className = 'reactions-container';
-            bubbleEl.appendChild(container);
+            wrapper.appendChild(container);
         }
         container.innerHTML = '';
         if (!reactions || Object.keys(reactions).length === 0) return;
         
         const myId = String(state.user.id);
+        const apiBaseUrl = window.API_BASE_URL ? window.API_BASE_URL.replace('/api', '') : '';
         
         function getAvatarUrlForUid(uid) {
             if (uid === myId) return state.user.avatar_url || `https://api.dicebear.com/7.x/identicon/svg?seed=${uid}`;
@@ -948,7 +953,7 @@ window.initChatCore = function() {
             const displayUids = uids.slice(-3); // show last 3 avatars
             displayUids.forEach(uid => {
                 const avatarUrl = getAvatarUrlForUid(uid);
-                const fullUrl = avatarUrl.startsWith('/') ? BASE_URL + avatarUrl : avatarUrl;
+                const fullUrl = avatarUrl.startsWith('/') ? apiBaseUrl + avatarUrl : avatarUrl;
                 avatarsHtml += `<img src="${fullUrl}" class="reaction-avatar-mini" alt="">`;
             });
             avatarsHtml += '</div>';
