@@ -1791,26 +1791,26 @@ body.super-user .nav-btn.active {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    background: var(--bg-panel);
+    background: #1c1c1e;
     backdrop-filter: var(--backdrop-blur);
     -webkit-backdrop-filter: var(--backdrop-blur);
-    border: 1px solid var(--border-metal);
-    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border-metal);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
     animation: mediaModalSlideUp 0.3s ease-out;
 }
 
 #media-preview-modal .modal-header {
     padding: 14px 20px;
     margin-bottom: 0;
-    border-bottom: 1px solid var(--border-metal);
-    background: color-mix(in srgb, var(--bg-dark) 50%, transparent);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.3);
 }
 
 #media-preview-modal .modal-header h2 {
     margin: 0;
     font-size: 15px;
     font-weight: 600;
-    color: var(--text-main);
+    color: #ffffff;
     letter-spacing: 0.3px;
 }
 
@@ -1821,7 +1821,7 @@ body.super-user .nav-btn.active {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--bg-dark);
+    background: #000000;
     overflow: hidden;
     position: relative;
 }
@@ -1845,8 +1845,8 @@ body.super-user .nav-btn.active {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: color-mix(in srgb, var(--bg-dark) 40%, transparent);
-    border-top: 1px solid var(--border-metal);
+    background: #1c1c1e;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .media-preview-footer .cyber-input {
@@ -1854,9 +1854,9 @@ body.super-user .nav-btn.active {
     border-radius: 22px;
     font-size: 14px;
     padding: 10px 16px;
-    background: var(--bg-accent);
-    border: 1px solid var(--border-metal);
-    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffffff;
     transition: var(--transition);
 }
 
@@ -1867,7 +1867,7 @@ body.super-user .nav-btn.active {
 }
 
 .media-preview-footer .cyber-input::placeholder {
-    color: var(--text-dim);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .media-send-btn {
