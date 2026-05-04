@@ -100,7 +100,7 @@ services:
   smtp-proxy:
     image: alpine/socat
     container_name: skufia-smtp-proxy
-    command: tcp-listen:2525,fork,reuseaddr tcp6:smtp.yandex.ru:465
+    command: tcp-listen:2525,fork,reuseaddr openssl:smtp.yandex.ru:465,verify=0,pf=ip6
     restart: always
 
 volumes:
