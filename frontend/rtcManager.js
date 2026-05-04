@@ -669,44 +669,51 @@ class RTCManager {
                 console.log('[RTC] ontrack fired, track kind:', event.track.kind);
                 
                 const remoteVid = document.getElementById('rtc-remote-video');
+                let remoteAud = document.getElementById('rtc-remote-audio');
+                if (!remoteAud) {
+                    remoteAud = document.createElement('audio');
+                    remoteAud.id = 'rtc-remote-audio';
+                    remoteAud.autoplay = true;
+                    remoteAud.playsInline = true;
+                    document.body.appendChild(remoteAud);
+                }
                 
-                if (event.streams && event.streams[0]) {
-                    if (remoteVid.srcObject !== event.streams[0]) {
-                        remoteVid.srcObject = event.streams[0];
-                    }
-                } else {
-                    if (!this.remoteStream) {
-                        this.remoteStream = new MediaStream();
-                    }
-                    if (!this.remoteStream.getTracks().includes(event.track)) {
-                        this.remoteStream.addTrack(event.track);
-                    }
+                if (!this.remoteStream) {
+                    this.remoteStream = new MediaStream();
+                }
+                if (!this.remoteStream.getTracks().includes(event.track)) {
+                    this.remoteStream.addTrack(event.track);
+                }
+                
+                if (event.track.kind === 'video') {
                     if (remoteVid.srcObject !== this.remoteStream) {
                         remoteVid.srcObject = this.remoteStream;
                     }
-                }
-                
-                // Play remote media (audio+video handled by the same unmuted element)
-                remoteVid.muted = false; // explicitly unmute remote stream
-                remoteVid.play().then(() => {
-                    console.log('[RTC] Remote media playback started successfully');
-                }).catch(e => {
-                    console.error('[RTC] Remote play error (autoplay blocked?):', e);
-                    // Add tap-to-play overlay if blocked
-                    this.callState.transition(CallState.AUTOPLAY_BLOCKED);
-                    const handleTap = () => {
-                        remoteVid.play();
-                        this.callState.transition(CallState.ACTIVE);
-                        document.removeEventListener('click', handleTap);
-                    };
-                    document.addEventListener('click', handleTap);
-                });
-
-                if (event.track.kind === 'video') {
+                    remoteVid.muted = true; // Mute video so it doesn't fight for audio focus
+                    remoteVid.play().catch(e => console.warn(e));
+                    
                     document.getElementById('rtc-video-container').style.display = 'block';
                     document.getElementById('rtc-profile-info').style.display = 'none';
                     document.getElementById('rtc-modal-bg').style.display = 'none';
                     document.getElementById('rtc-switch-cam-col').style.display = 'flex';
+                } else if (event.track.kind === 'audio') {
+                    if (remoteAud.srcObject !== this.remoteStream) {
+                        remoteAud.srcObject = this.remoteStream;
+                    }
+                    remoteAud.muted = false;
+                    remoteAud.play().then(() => {
+                        console.log('[RTC] Remote audio playback started successfully');
+                    }).catch(e => {
+                        console.error('[RTC] Remote audio play error:', e);
+                        // Add tap-to-play overlay if blocked
+                        this.callState.transition(CallState.AUTOPLAY_BLOCKED);
+                        const handleTap = () => {
+                            remoteAud.play();
+                            this.callState.transition(CallState.ACTIVE);
+                            document.removeEventListener('click', handleTap);
+                        };
+                        document.addEventListener('click', handleTap);
+                    });
                 }
             };
 
@@ -731,6 +738,26 @@ class RTCManager {
                     this.callState.transition(CallState.ACTIVE);
                     this._callWasAnswered = true;
                     this.startTimer();
+                    
+                    // Setup MediaSession API to keep call alive in background
+                    if ('mediaSession' in navigator) {
+                        try {
+                            const name = this.callerName ? this.callerName.textContent : 'Skufenger';
+                            navigator.mediaSession.metadata = new MediaMetadata({
+                                title: this.isVideoCall ? 'Видеозвонок' : 'Аудиозвонок',
+                                artist: name,
+                                album: 'Skufenger Call',
+                                artwork: [
+                                    { src: '/pwa/icon-192.png', sizes: '192x192', type: 'image/png' }
+                                ]
+                            });
+                            navigator.mediaSession.setActionHandler('pause', () => { /* prevent native pause */ });
+                            navigator.mediaSession.setActionHandler('play', () => { /* prevent native pause */ });
+                            if (navigator.mediaSession.setActionHandler) {
+                                navigator.mediaSession.setActionHandler('hangup', () => this.endCall());
+                            }
+                        } catch(e) { console.warn('MediaSession API error:', e); }
+                    }
                 } else if (st === 'disconnected' || st === 'failed') {
                     console.log('[RTC] Connection lost/failed, ending call');
                     this.endCall(false);
