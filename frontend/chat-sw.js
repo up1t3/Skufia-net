@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v2.2.0_04.05_17:41'; // Bumped to force update of chat_core.js and password reset UI
+const CACHE_NAME = 'skufia-chat-v2.2.0_04.05_18:38'; // Bumped to force update of chat_core.js and password reset UI
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
