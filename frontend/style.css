@@ -2368,10 +2368,11 @@ body.super-user .nav-btn.active {
 .msg-file-attachment .file-icon { font-size: 14px; }
 
 .msg-file-img-preview {
-    max-width: 260px;
-    max-height: 180px;
+    max-width: 320px;
+    max-height: 400px;
     margin-top: 6px;
     border: 1px solid var(--border-metal);
+    border-radius: 8px;
     cursor: pointer;
     transition: var(--transition);
 }
