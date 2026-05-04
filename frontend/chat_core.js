@@ -3474,12 +3474,7 @@ window.initChatCore = function() {
             img.id = 'chat-lightbox-img';
             img.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain; transition: transform 0.2s ease;';
             
-            // Allow pinch-to-zoom by modifying viewport meta tag
-            const viewportMeta = document.querySelector('meta[name="viewport"]');
-            if (viewportMeta && !window._originalViewport) {
-                window._originalViewport = viewportMeta.content;
-                viewportMeta.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
-            }
+            // Viewport manipulation removed, we will use CSS transforms for zoom
             const closeBtn = document.createElement('div');
             closeBtn.innerHTML = '&#10005;'; // X mark
             closeBtn.style.cssText = 'position:absolute; top:20px; right:20px; color:#fff; font-size:30px; cursor:pointer; width:40px; height:40px; display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.5); border-radius:50%; z-index:10000;';
@@ -3520,28 +3515,92 @@ window.initChatCore = function() {
                 if (e.target === modal) window.closeChatLightbox();
             };
 
-            // Swipe logic
+            // Zoom, Pan and Swipe logic
             let touchstartX = 0;
             let touchendX = 0;
-            let isMultiTouch = false;
             
+            let scale = 1;
+            let currentX = 0;
+            let currentY = 0;
+            let startX = 0;
+            let startY = 0;
+            let startDistance = 0;
+            let startScale = 1;
+            let isDragging = false;
+            let isPinching = false;
+            let lastTapTime = 0;
+
+            const updateTransform = () => {
+                img.style.transform = `translate(${currentX}px, ${currentY}px) scale(${scale})`;
+            };
+
             modal.addEventListener('touchstart', e => {
-                if (e.touches.length > 1) isMultiTouch = true;
-                touchstartX = e.changedTouches[0].screenX;
-            }, {passive: true});
+                const now = new Date().getTime();
+                if (now - lastTapTime < 300 && e.touches.length === 1) {
+                    e.preventDefault();
+                    if (scale > 1) {
+                        scale = 1;
+                        currentX = 0;
+                        currentY = 0;
+                    } else {
+                        scale = 2;
+                    }
+                    img.style.transition = 'transform 0.3s ease';
+                    updateTransform();
+                }
+                lastTapTime = now;
+
+                if (e.touches.length === 2) {
+                    isPinching = true;
+                    isDragging = false;
+                    startDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    startScale = scale;
+                } else if (e.touches.length === 1) {
+                    if (scale > 1) {
+                        isDragging = true;
+                        startX = e.touches[0].clientX - currentX;
+                        startY = e.touches[0].clientY - currentY;
+                    } else {
+                        touchstartX = e.touches[0].screenX;
+                    }
+                }
+            }, {passive: false});
 
             modal.addEventListener('touchmove', e => {
-                if (e.touches.length > 1) isMultiTouch = true;
-            }, {passive: true});
+                if (isPinching && e.touches.length === 2) {
+                    e.preventDefault();
+                    const currentDistance = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    scale = Math.max(1, Math.min(startScale * (currentDistance / startDistance), 5));
+                    img.style.transition = 'none';
+                    updateTransform();
+                } else if (isDragging && e.touches.length === 1 && scale > 1) {
+                    e.preventDefault();
+                    currentX = e.touches[0].clientX - startX;
+                    currentY = e.touches[0].clientY - startY;
+                    img.style.transition = 'none';
+                    updateTransform();
+                }
+            }, {passive: false});
 
             modal.addEventListener('touchend', e => {
-                if (isMultiTouch) {
-                    if (e.touches.length === 0) isMultiTouch = false;
-                    return; // Ignore swipe logic if zooming
+                if (isPinching && e.touches.length < 2) {
+                    isPinching = false;
                 }
-                touchendX = e.changedTouches[0].screenX;
-                handleSwipe();
-            }, {passive: true});
+                if (isDragging && e.touches.length === 0) {
+                    isDragging = false;
+                }
+
+                if (e.touches.length === 0 && scale === 1 && !isPinching) {
+                    touchendX = e.changedTouches[0].screenX;
+                    handleSwipe();
+                }
+            }, {passive: false});
 
             function handleSwipe() {
                 const delta = touchendX - touchstartX;
@@ -3638,13 +3697,6 @@ window.initChatCore = function() {
     window.closeChatLightbox = function() {
         const modal = document.getElementById('chat-lightbox-modal');
         if (modal) modal.style.display = 'none';
-        
-        // Restore viewport
-        const viewportMeta = document.querySelector('meta[name="viewport"]');
-        if (viewportMeta && window._originalViewport) {
-            viewportMeta.content = window._originalViewport;
-            window._originalViewport = null;
-        }
 
         // Remove the lightbox history entry without navigating away from chat
         if (history.state && history.state.lightbox) {
