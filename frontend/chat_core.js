@@ -315,9 +315,14 @@ window.initChatCore = function() {
             
             // Avatar
             const avatarDiv = document.createElement('div');
-            const initial = (room.name || room.room_name || '?').charAt(0).toUpperCase();
-            avatarDiv.style.cssText = 'width:24px;height:24px;border-radius:50%;background:var(--accent-cyan);color:#000;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;';
-            avatarDiv.textContent = initial;
+            avatarDiv.style.cssText = 'width:24px;height:24px;border-radius:50%;background:var(--accent-cyan);color:#000;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;overflow:hidden;';
+            if (room.avatar_url) {
+                window.applyAvatarDisplay(avatarDiv, room.avatar_url);
+                avatarDiv.textContent = '';
+            } else {
+                const initial = (room.name || room.room_name || '?').charAt(0).toUpperCase();
+                avatarDiv.textContent = initial;
+            }
 
             const nameSpan = document.createElement('span');
             nameSpan.textContent = room.name || room.room_name || 'Chat';
@@ -393,9 +398,14 @@ window.initChatCore = function() {
             };
 
             const avatarDiv = document.createElement('div');
-            const initial = (room.name || room.room_name || '?').charAt(0).toUpperCase();
-            avatarDiv.style.cssText = 'width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg, var(--accent-cyan), #00a2ff);color:#000;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;flex-shrink:0;';
-            avatarDiv.textContent = initial;
+            avatarDiv.style.cssText = 'width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg, var(--accent-cyan), #00a2ff);color:#000;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:bold;flex-shrink:0;overflow:hidden;';
+            if (room.avatar_url) {
+                window.applyAvatarDisplay(avatarDiv, room.avatar_url);
+                avatarDiv.textContent = '';
+            } else {
+                const initial = (room.name || room.room_name || '?').charAt(0).toUpperCase();
+                avatarDiv.textContent = initial;
+            }
             
             const infoDiv = document.createElement('div');
             infoDiv.style.cssText = 'flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;';

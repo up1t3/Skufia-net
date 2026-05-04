@@ -758,20 +758,41 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleToRegister.addEventListener('click', (e) => {
             e.preventDefault();
             document.getElementById('login-form').style.display = 'none';
+            document.getElementById('forgot-password-form').style.display = 'none';
+            document.getElementById('reset-password-form').style.display = 'none';
             document.getElementById('register-form').style.display = 'block';
             document.getElementById('auth-title').textContent = 'РЕГИСТРАЦИЯ';
         });
     }
 
-    const toggleToLogin = document.getElementById('toggle-to-login');
-    if (toggleToLogin) {
-        toggleToLogin.addEventListener('click', (e) => {
+    const toggleToForgot = document.getElementById('toggle-to-forgot');
+    if (toggleToForgot) {
+        toggleToForgot.addEventListener('click', (e) => {
             e.preventDefault();
+            document.getElementById('login-form').style.display = 'none';
             document.getElementById('register-form').style.display = 'none';
-            document.getElementById('login-form').style.display = 'block';
-            document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
+            document.getElementById('reset-password-form').style.display = 'none';
+            document.getElementById('forgot-password-form').style.display = 'block';
+            document.getElementById('auth-title').textContent = 'ВОССТАНОВЛЕНИЕ';
         });
     }
+
+    const bindToggleToLogin = (id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('register-form').style.display = 'none';
+                document.getElementById('forgot-password-form').style.display = 'none';
+                document.getElementById('reset-password-form').style.display = 'none';
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
+            });
+        }
+    };
+    bindToggleToLogin('toggle-to-login-from-reg');
+    bindToggleToLogin('toggle-to-login-from-forgot');
+    bindToggleToLogin('toggle-to-login-from-reset');
 
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -887,6 +908,80 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const forgotForm = document.getElementById('forgot-password-form');
+    if (forgotForm) {
+        forgotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const errEl = document.getElementById('forgot-error');
+            const succEl = document.getElementById('forgot-success');
+            const identifier = document.getElementById('forgot-username').value;
+            
+            if (btn) btn.textContent = 'ОТПРАВКА...';
+            if (errEl) errEl.textContent = '';
+            if (succEl) succEl.textContent = '';
+            
+            try {
+                await window.apiAuth.requestPasswordReset(identifier);
+                if (succEl) succEl.textContent = 'Код восстановления отправлен. Проверьте почту.';
+                
+                // Automatically switch to reset form after 2 seconds
+                setTimeout(() => {
+                    document.getElementById('forgot-password-form').style.display = 'none';
+                    document.getElementById('reset-password-form').style.display = 'block';
+                    document.getElementById('auth-title').textContent = 'СБРОС ПАРОЛЯ';
+                }, 2000);
+            } catch (err) {
+                if (errEl) errEl.textContent = err.message || 'Ошибка отправки кода';
+            } finally {
+                if (btn) btn.textContent = 'ОТПРАВИТЬ КОД';
+            }
+        });
+    }
+
+    const resetForm = document.getElementById('reset-password-form');
+    if (resetForm) {
+        resetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const errEl = document.getElementById('reset-error');
+            const succEl = document.getElementById('reset-success');
+            
+            const code = document.getElementById('reset-code').value;
+            const newPassword = document.getElementById('reset-new-password').value;
+            
+            if (newPassword.length < 6) {
+                if (errEl) errEl.textContent = 'Новый пароль должен быть не менее 6 символов.';
+                return;
+            }
+            
+            if (btn) btn.textContent = 'СБРОС...';
+            if (errEl) errEl.textContent = '';
+            if (succEl) succEl.textContent = '';
+            
+            try {
+                await window.apiAuth.resetPassword(code, newPassword);
+                if (succEl) succEl.textContent = 'Пароль успешно сброшен. E2EE ключи аннулированы.';
+                
+                // We wipe out local storage so the user must login again with new password and generate new keys
+                localStorage.removeItem('skuf_token');
+                sessionStorage.removeItem('skuf_session_pw');
+                if (state.user) {
+                    state.user.token = null;
+                    state.user.password = null;
+                }
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            } catch (err) {
+                if (errEl) errEl.textContent = err.message || 'Ошибка сброса пароля';
+            } finally {
+                if (btn) btn.textContent = 'СБРОСИТЬ ПАРОЛЬ';
+            }
+        });
+    }
+
     bootSystem();
     syncGlobalAlerts();
     setInterval(syncGlobalAlerts, 30000);
@@ -981,6 +1076,62 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.classList.remove('btn-danger');
             }, 2800);
         }
+    };
+
+    window.changeUserPassword = async function() {
+        const oldPass = document.getElementById('settings-old-password').value;
+        const newPass = document.getElementById('settings-new-password').value;
+        const msgBox = document.getElementById('settings-password-msg');
+        
+        if (!oldPass || !newPass) {
+            msgBox.textContent = 'Заполните оба поля.';
+            msgBox.style.color = '#ff3333';
+            return;
+        }
+        
+        if (newPass.length < 6) {
+            msgBox.textContent = 'Новый пароль должен быть не менее 6 символов.';
+            msgBox.style.color = '#ff3333';
+            return;
+        }
+
+        const btn = document.getElementById('btn-change-password');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ОБРАБОТКА...';
+        btn.disabled = true;
+        msgBox.textContent = '';
+
+        try {
+            // Re-encrypt private key with new password
+            let newEncryptedPrivateKey = null;
+            if (window.state && window.state.chat && window.state.chat.keys && window.state.chat.keys.privateKey) {
+                try {
+                    newEncryptedPrivateKey = await CryptoManager.exportIdentityWithPassword(window.state.chat.keys.privateKey, newPass);
+                } catch(e) {
+                    console.error('Failed to re-encrypt private key', e);
+                    throw new Error('Ошибка шифрования ключа E2EE.');
+                }
+            }
+
+            await window.apiAuth.changePassword(oldPass, newPass, newEncryptedPrivateKey);
+            
+            // Update local state and session storage
+            if (window.state && window.state.user) {
+                window.state.user.password = newPass;
+            }
+            sessionStorage.setItem('skuf_session_pw', newPass);
+
+            msgBox.textContent = 'Пароль успешно изменён.';
+            msgBox.style.color = '#00ff41';
+            document.getElementById('settings-old-password').value = '';
+            document.getElementById('settings-new-password').value = '';
+        } catch (err) {
+            msgBox.textContent = err.message || 'Ошибка смены пароля.';
+            msgBox.style.color = '#ff3333';
+        }
+
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
     };
 
 window.cropperInstance = null;

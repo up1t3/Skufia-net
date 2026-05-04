@@ -15,6 +15,10 @@ window.applyAvatarDisplay = function(element, url, index = null) {
             element.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
         }
     } else {
+        if (url && !url.startsWith('data:')) {
+            const separator = url.includes('?') ? '&' : '?';
+            url = `${url}${separator}t=${Date.now()}`;
+        }
         element.style.backgroundImage = url ? `url(${url})` : 'none';
         element.style.backgroundSize = 'cover';
         element.style.backgroundPosition = 'center';

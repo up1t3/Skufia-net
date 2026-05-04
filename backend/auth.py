@@ -2,11 +2,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 import os
-from database import SessionLocal, User, Profile
+from database import SessionLocal, User, Profile, PasswordResetCode
 from sqlalchemy.orm import Session
 from rate_limit import RateLimiter
 
@@ -127,3 +127,111 @@ def login_user(req: LoginRequest, db = Depends(get_db)):
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+    encrypted_private_key: Optional[str] = None
+
+@router.post('/change-password', dependencies=[Depends(RateLimiter(limit=5, window=60))])
+def change_password(req: ChangePasswordRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not verify_password(req.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Неверный старый пароль")
+    
+    current_user.hashed_password = get_password_hash(req.new_password)
+    
+    # Update the E2EE private key if provided (re-encrypted with new password)
+    if req.encrypted_private_key:
+        current_user.encrypted_private_key = req.encrypted_private_key
+        
+    db.commit()
+    return {"message": "Пароль успешно изменен"}
+
+class ForgotPasswordRequest(BaseModel):
+    username_or_email: str
+
+import random
+import string
+import smtplib
+from email.mime.text import MIMEText
+
+def send_recovery_email(to_email: str, code: str):
+    try:
+        sender_email = os.getenv('SMTP_EMAIL', 'skuf-net@yandex.com')
+        sender_password = os.getenv('SMTP_PASSWORD', 'jzglcxwopljrzyvp')
+        
+        msg = MIMEText(f"Ваш код для сброса пароля в SKUFenger:\n\n{code}\n\nКод действителен в течение 15 минут. Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.")
+        msg['Subject'] = 'SKUFenger: Восстановление пароля'
+        msg['From'] = f"SKUFenger <{sender_email}>"
+        msg['To'] = to_email
+
+        server = smtplib.SMTP_SSL('smtp.yandex.ru', 465)
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, [to_email], msg.as_string())
+        server.quit()
+        print(f"[SECURITY] Email с кодом сброса успешно отправлен на {to_email}")
+    except Exception as e:
+        print(f"[ERROR] Ошибка отправки email: {e}")
+
+@router.post('/forgot-password', dependencies=[Depends(RateLimiter(limit=3, window=60))])
+def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    user = db.query(User).filter(
+        (User.username == req.username_or_email) | (User.email == req.username_or_email)
+    ).first()
+    
+    if not user:
+        # Prevent user enumeration by always returning success
+        return {"message": "Если пользователь существует, код восстановления был отправлен."}
+        
+    # Generate 6-digit code
+    code = ''.join(random.choices(string.digits, k=6))
+    
+    # Send email in background if user has email configured
+    # Fallback: if user didn't set email but uses username, we can't send it unless email exists.
+    if user.email:
+        background_tasks.add_task(send_recovery_email, user.email, code)
+    else:
+        print(f"\n[SECURITY] Пользователь {user.username} не имеет привязанного email. Код: {code}\n")
+    
+    # Save to DB
+    reset_record = PasswordResetCode(
+        user_id=user.id,
+        code=code,
+        expires_at=datetime.utcnow() + timedelta(minutes=15)
+    )
+    db.add(reset_record)
+    db.commit()
+    
+    return {"message": "Если пользователь существует, код восстановления был отправлен."}
+
+class ResetPasswordRequest(BaseModel):
+    code: str
+    new_password: str
+
+@router.post('/reset-password', dependencies=[Depends(RateLimiter(limit=5, window=60))])
+def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
+    # Find valid code
+    reset_record = db.query(PasswordResetCode).filter(
+        PasswordResetCode.code == req.code,
+        PasswordResetCode.expires_at > datetime.utcnow()
+    ).first()
+    
+    if not reset_record:
+        raise HTTPException(status_code=400, detail="Неверный или просроченный код восстановления")
+        
+    user = db.query(User).filter(User.id == reset_record.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+        
+    user.hashed_password = get_password_hash(req.new_password)
+    
+    # CRITICAL: Clear E2EE keys because they were encrypted with the old forgotten password
+    user.public_key = None
+    user.encrypted_private_key = None
+    
+    # Delete the used code
+    db.delete(reset_record)
+    db.commit()
+    
+    return {"message": "Пароль успешно сброшен. Обратите внимание: старые E2EE чаты могут быть недоступны."}

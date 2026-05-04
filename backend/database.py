@@ -128,6 +128,14 @@ class RoomInvite(Base):
     expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class PasswordResetCode(Base):
+    __tablename__ = 'password_reset_codes'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), index=True)
+    code = Column(String, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class ChatRoomMember(Base):
     __tablename__ = 'chat_room_members'

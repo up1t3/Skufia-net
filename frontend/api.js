@@ -86,3 +86,21 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
         throw e;
     }
 };
+
+window.apiAuth = {
+    changePassword: async (old_password, new_password, encrypted_private_key) => {
+        return await window.apiRequest('/auth/change-password', 'POST', {
+            old_password, new_password, encrypted_private_key
+        });
+    },
+    requestPasswordReset: async (username_or_email) => {
+        return await window.apiRequest('/auth/forgot-password', 'POST', {
+            username_or_email
+        });
+    },
+    resetPassword: async (code, new_password) => {
+        return await window.apiRequest('/auth/reset-password', 'POST', {
+            code, new_password
+        });
+    }
+};
