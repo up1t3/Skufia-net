@@ -688,6 +688,17 @@ window.initChatCore = function() {
                 if (statusDot) statusDot.style.display = 'none';
             }
 
+            // Hide call buttons in group chats (only P2P calls are supported)
+            const btnAudioCall = document.getElementById('btn-audio-call');
+            const btnVideoCall = document.getElementById('btn-video-call');
+            if (type === 'private') {
+                if (btnAudioCall) btnAudioCall.style.display = '';
+                if (btnVideoCall) btnVideoCall.style.display = '';
+            } else {
+                if (btnAudioCall) btnAudioCall.style.display = 'none';
+                if (btnVideoCall) btnVideoCall.style.display = 'none';
+            }
+
             const e2eIndicator = document.getElementById('e2ee-indicator');
             if (e2eIndicator) {
                 e2eIndicator.style.display = 'none';

@@ -3,7 +3,7 @@ const { Client } = require('ssh2');
 
 const conn = new Client();
 conn.on('ready', () => {
-    conn.exec(`docker logs --tail 20 skufia-api-green`, (err, stream) => {
+    conn.exec(`docker exec skufia-postgres psql -U postgres -d skufia -c "SELECT * FROM password_reset_codes WHERE user_id=141 ORDER BY created_at DESC LIMIT 10;"`, (err, stream) => {
         if (err) throw err;
         stream.on('close', (code, signal) => {
             conn.end();

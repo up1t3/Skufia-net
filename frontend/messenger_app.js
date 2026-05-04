@@ -952,7 +952,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const errEl = document.getElementById('reset-error');
             const succEl = document.getElementById('reset-success');
             
-            const code = document.getElementById('reset-code').value;
+            const code = document.getElementById('reset-code').value.trim();
             const newPassword = document.getElementById('reset-new-password').value;
             
             if (newPassword.length < 6) {
