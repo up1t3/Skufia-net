@@ -768,13 +768,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleToForgot = document.getElementById('toggle-to-forgot');
     if (toggleToForgot) {
         toggleToForgot.addEventListener('click', (e) => {
-            e.preventDefault();
+            if (e) e.preventDefault();
             document.getElementById('login-form').style.display = 'none';
             document.getElementById('register-form').style.display = 'none';
             document.getElementById('reset-password-form').style.display = 'none';
             document.getElementById('forgot-password-form').style.display = 'block';
-            document.getElementById('auth-title').textContent = 'ВОССТАНОВЛЕНИЕ';
+            document.getElementById('auth-title').textContent = 'СБРОС ПАРОЛЯ';
         });
+        
+        // Check hash on load to open forgot password automatically
+        if (window.location.hash === '#forgot') {
+            setTimeout(() => toggleToForgot.click(), 100);
+        }
     }
 
     const bindToggleToLogin = (id) => {
