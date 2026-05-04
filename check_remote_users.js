@@ -3,7 +3,7 @@ const { Client } = require('ssh2');
 
 const conn = new Client();
 conn.on('ready', () => {
-    conn.exec(`docker exec skufia-smtp-proxy socat -V`, (err, stream) => {
+    conn.exec(`docker logs skufia-smtp-proxy`, (err, stream) => {
         if (err) throw err;
         stream.on('close', (code, signal) => {
             conn.end();

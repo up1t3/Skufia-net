@@ -13,6 +13,8 @@ services:
   redis:
     image: redis:alpine
     container_name: skufia-redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
   celery:
@@ -29,6 +31,8 @@ services:
     volumes:
       - skufia_uploads:/app/uploads
       - skufia_db:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
   coturn:
@@ -65,6 +69,8 @@ services:
     volumes:
       - skufia_uploads:/app/uploads
       - skufia_db:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
   backend-green:
@@ -81,6 +87,8 @@ services:
     volumes:
       - skufia_uploads:/app/uploads
       - skufia_db:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: always
 
   frontend:
@@ -100,6 +108,7 @@ services:
   smtp-proxy:
     image: alpine/socat
     container_name: skufia-smtp-proxy
+    network_mode: "host"
     command: tcp-listen:2525,fork,reuseaddr openssl:smtp.yandex.ru:465,verify=0,pf=ip6
     restart: always
 

@@ -166,7 +166,7 @@ def send_recovery_email(to_email: str, code: str):
         msg['From'] = f"SKUFenger <{sender_email}>"
         msg['To'] = to_email
 
-        server = smtplib.SMTP('smtp-proxy', 2525)
+        server = smtplib.SMTP('host.docker.internal', 2525)
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, [to_email], msg.as_string())
         server.quit()
