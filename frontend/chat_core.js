@@ -1317,6 +1317,14 @@ window.initChatCore = function() {
 
         // Text (skip for pure media with standard labels — no text bubble needed)
         const isMediaOnly = (isVideoCircle || isSingleAudio || isSingleImage) && (!rawText.trim() || /^[📹📷🎤🎵🔊🎧\s]*(Голосовое сообщение.*|Voice message.*)?$/i.test(rawText.trim()));
+        // File attachment FIRST (media above text like Telegram)
+        if (fileHtml) {
+            const fileContainer = document.createElement('div');
+            fileContainer.innerHTML = fileHtml;
+            while (fileContainer.firstChild) bubble.appendChild(fileContainer.firstChild);
+        }
+
+        // Text part SECOND (caption below media)
         if (!isMediaOnly) {
             const textDiv = document.createElement('div');
             textDiv.className = 'msg-text';
@@ -1357,13 +1365,6 @@ window.initChatCore = function() {
                 textDiv.innerHTML = safeText;
             }
             bubble.appendChild(textDiv);
-        }
-
-        // File attachment
-        if (fileHtml) {
-            const fileContainer = document.createElement('div');
-            fileContainer.innerHTML = fileHtml;
-            while (fileContainer.firstChild) bubble.appendChild(fileContainer.firstChild);
         }
 
         // Footer: time + lock icon (only when ACTUALLY decrypted) + read ticks

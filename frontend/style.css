@@ -1475,7 +1475,7 @@ body.super-user .nav-btn.active {
 .msg-bubble-image .msg-text {
     padding: 8px 12px;
 }
-.msg-bubble-image .msg-meta {
+.msg-bubble-image .msg-footer {
     padding: 0 12px 8px 12px;
 }
 [data-theme="neon"] .msg-sent {
