@@ -97,6 +97,12 @@ services:
       - ./frontend/upstream.conf:/etc/nginx/upstream.conf:ro
     restart: always
 
+  smtp-proxy:
+    image: alpine/socat
+    container_name: skufia-smtp-proxy
+    command: tcp-listen:2525,fork,reuseaddr tcp6:smtp.yandex.ru:465
+    restart: always
+
 volumes:
   skufia_uploads:
   skufia_db:

@@ -166,7 +166,9 @@ def send_recovery_email(to_email: str, code: str):
         msg['From'] = f"SKUFenger <{sender_email}>"
         msg['To'] = to_email
 
-        server = smtplib.SMTP_SSL('smtp.yandex.ru', 465)
+        import ssl
+        context = ssl._create_unverified_context()
+        server = smtplib.SMTP_SSL('smtp-proxy', 2525, context=context)
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, [to_email], msg.as_string())
         server.quit()
