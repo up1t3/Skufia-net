@@ -3472,8 +3472,14 @@ window.initChatCore = function() {
             
             const img = document.createElement('img');
             img.id = 'chat-lightbox-img';
-            img.style.cssText = 'max-width:100%; max-height:85%; object-fit:contain; border-radius:8px; transition: transform 0.2s ease;';
+            img.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain; transition: transform 0.2s ease;';
             
+            // Allow pinch-to-zoom by modifying viewport meta tag
+            const viewportMeta = document.querySelector('meta[name="viewport"]');
+            if (viewportMeta && !window._originalViewport) {
+                window._originalViewport = viewportMeta.content;
+                viewportMeta.content = "width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover";
+            }
             const closeBtn = document.createElement('div');
             closeBtn.innerHTML = '&#10005;'; // X mark
             closeBtn.style.cssText = 'position:absolute; top:20px; right:20px; color:#fff; font-size:30px; cursor:pointer; width:40px; height:40px; display:flex; justify-content:center; align-items:center; background:rgba(0,0,0,0.5); border-radius:50%; z-index:10000;';
@@ -3517,12 +3523,22 @@ window.initChatCore = function() {
             // Swipe logic
             let touchstartX = 0;
             let touchendX = 0;
+            let isMultiTouch = false;
             
             modal.addEventListener('touchstart', e => {
+                if (e.touches.length > 1) isMultiTouch = true;
                 touchstartX = e.changedTouches[0].screenX;
             }, {passive: true});
 
+            modal.addEventListener('touchmove', e => {
+                if (e.touches.length > 1) isMultiTouch = true;
+            }, {passive: true});
+
             modal.addEventListener('touchend', e => {
+                if (isMultiTouch) {
+                    if (e.touches.length === 0) isMultiTouch = false;
+                    return; // Ignore swipe logic if zooming
+                }
                 touchendX = e.changedTouches[0].screenX;
                 handleSwipe();
             }, {passive: true});
@@ -3622,6 +3638,14 @@ window.initChatCore = function() {
     window.closeChatLightbox = function() {
         const modal = document.getElementById('chat-lightbox-modal');
         if (modal) modal.style.display = 'none';
+        
+        // Restore viewport
+        const viewportMeta = document.querySelector('meta[name="viewport"]');
+        if (viewportMeta && window._originalViewport) {
+            viewportMeta.content = window._originalViewport;
+            window._originalViewport = null;
+        }
+
         // Remove the lightbox history entry without navigating away from chat
         if (history.state && history.state.lightbox) {
             // Replace the lightbox state with a neutral state so we stay in the chat
