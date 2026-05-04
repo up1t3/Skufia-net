@@ -812,7 +812,23 @@ window.initChatCore = function() {
                 for (const m of messages) {
                     renderChatMessage(m);
                 }
-                chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+                
+                const forceScroll = () => {
+                    if (chatHistoryEl) chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+                };
+                forceScroll();
+                
+                // Track media loads for initial batch
+                const mediaElements = chatHistoryEl.querySelectorAll('img, video');
+                mediaElements.forEach(media => {
+                    if (!media.complete || media.readyState === 0) {
+                        media.addEventListener(media.tagName === 'IMG' ? 'load' : 'loadeddata', forceScroll, { once: true });
+                    }
+                });
+                
+                // Fallbacks for layout shifts
+                setTimeout(forceScroll, 100);
+                setTimeout(forceScroll, 500);
 
                 // Attach scroll listener for infinite loading
                 chatHistoryEl.onscroll = async () => {
@@ -1404,7 +1420,21 @@ window.initChatCore = function() {
         } else {
             history.appendChild(rowDiv);
             if (!skipScroll) {
-                history.scrollTop = history.scrollHeight;
+                const doScroll = () => { history.scrollTop = history.scrollHeight; };
+                doScroll();
+                
+                // Track media loads in new messages to ensure scroll is maintained
+                const mediaElements = rowDiv.querySelectorAll('img, video');
+                mediaElements.forEach(media => {
+                    if (!media.complete || media.readyState === 0) {
+                        media.addEventListener(media.tagName === 'IMG' ? 'load' : 'loadeddata', () => {
+                            // Only scroll if user hasn't heavily scrolled up
+                            const isNearBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 800;
+                            if (isNearBottom) doScroll();
+                        }, { once: true });
+                    }
+                });
+
                 // Trigger fade-in after DOM insertion
                 requestAnimationFrame(() => {
                     rowDiv.style.opacity = '1';
