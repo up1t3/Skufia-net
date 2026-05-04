@@ -1449,6 +1449,18 @@ window.initChatCore = function() {
             forwardDiv.onclick = (ev) => { ev.stopPropagation(); window.showForwardModal(cleanText); menu.remove(); };
             menu.appendChild(forwardDiv);
 
+            // Копировать
+            if (cleanText) {
+                const copyDiv = document.createElement('div');
+                copyDiv.innerHTML = '<span style="margin-right:8px">📋</span>Копировать';
+                copyDiv.onclick = (ev) => { 
+                    ev.stopPropagation(); 
+                    navigator.clipboard.writeText(cleanText).catch(() => {}); 
+                    menu.remove(); 
+                };
+                menu.appendChild(copyDiv);
+            }
+
             // Ответить
             const replyDiv = document.createElement('div');
             replyDiv.innerHTML = '<span style="margin-right:8px">↩️</span>Ответить';
