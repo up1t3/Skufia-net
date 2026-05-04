@@ -2727,6 +2727,15 @@ window.initChatCore = function() {
         });
     }
 
+    const chatCameraInput = /** @type {HTMLInputElement | null} */ (document.getElementById('chat-camera-input'));
+    if (chatCameraInput) {
+        chatCameraInput.addEventListener('change', () => {
+            if (chatCameraInput.files && chatCameraInput.files.length > 0) {
+                uploadChatFiles(chatCameraInput.files);
+            }
+        });
+    }
+
     // Attachment menu logic
     window.toggleAttachMenu = function(event) {
         if (event) event.stopPropagation();
@@ -2734,6 +2743,12 @@ window.initChatCore = function() {
         if (popup) {
             popup.style.display = (popup.style.display === 'none' || !popup.style.display) ? 'flex' : 'none';
         }
+    };
+
+    window.attachCamera = function() {
+        const popup = document.getElementById('attach-menu-popup');
+        if (popup) popup.style.display = 'none';
+        if (chatCameraInput) chatCameraInput.click();
     };
 
     window.attachMedia = function() {
