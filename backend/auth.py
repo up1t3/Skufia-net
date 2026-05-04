@@ -170,9 +170,9 @@ def send_recovery_email(to_email: str, code: str):
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, [to_email], msg.as_string())
         server.quit()
-        print(f"[SECURITY] Email с кодом сброса успешно отправлен на {to_email}")
+        print(f"[SECURITY] Email с кодом сброса успешно отправлен на {to_email}", flush=True)
     except Exception as e:
-        print(f"[ERROR] Ошибка отправки email: {e}")
+        print(f"[ERROR] Ошибка отправки email: {e}", flush=True)
 
 @router.post('/forgot-password', dependencies=[Depends(RateLimiter(limit=3, window=60))])
 def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
