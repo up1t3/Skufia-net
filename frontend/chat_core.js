@@ -3451,8 +3451,23 @@ window.initChatCore = function() {
             }, {passive: true});
 
             function handleSwipe() {
-                if (touchendX < touchstartX - 50) window.lightboxNext();
-                if (touchendX > touchstartX + 50) window.lightboxPrev();
+                const delta = touchendX - touchstartX;
+                if (delta < -50) {
+                    // Swipe left → next, or close if at end
+                    if (window._lightboxIndex < window._lightboxUrls.length - 1) {
+                        window.lightboxNext();
+                    } else {
+                        window.closeChatLightbox();
+                    }
+                }
+                if (delta > 50) {
+                    // Swipe right → prev, or close if at start
+                    if (window._lightboxIndex > 0) {
+                        window.lightboxPrev();
+                    } else {
+                        window.closeChatLightbox();
+                    }
+                }
             }
             
             // Keyboard navigation
@@ -3530,8 +3545,10 @@ window.initChatCore = function() {
     window.closeChatLightbox = function() {
         const modal = document.getElementById('chat-lightbox-modal');
         if (modal) modal.style.display = 'none';
+        // Remove the lightbox history entry without navigating away from chat
         if (history.state && history.state.lightbox) {
-            history.back(); // Remove the pushed state
+            // Replace the lightbox state with a neutral state so we stay in the chat
+            history.replaceState({ view: 'messages' }, '', window.location.pathname + window.location.search + '#messages');
         }
     };
 
