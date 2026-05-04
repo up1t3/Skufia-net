@@ -2580,36 +2580,50 @@ body.super-user .nav-btn.active {
     margin-left: 5px;
 }
 
-/* --- EMOJI PICKER & VOICE RECORDER --- */
-.emoji-picker {
-    position: absolute;
-    bottom: 100%;
-    right: 50px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 10px;
+/* --- EMOJI TOGGLE & INLINE PANEL --- */
+.emoji-toggle-btn {
+    flex-shrink: 0;
+}
+.emoji-toggle-btn svg {
+    transition: opacity 0.15s ease;
+}
+
+.emoji-panel {
+    flex-grow: 1;
+    min-width: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    width: 280px;
-    z-index: 1000;
-    box-shadow: 0 -4px 15px rgba(0,0,0,0.5);
-    margin-bottom: 20px;
-    backdrop-filter: var(--backdrop-blur);
-    max-height: 150px;
+    gap: 4px;
+    padding: 6px 4px;
+    max-height: 120px;
     overflow-y: auto;
+    align-content: flex-start;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
 }
-.emoji-picker span {
-    font-size: 24px;
+.emoji-panel::-webkit-scrollbar { width: 4px; }
+.emoji-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+.emoji-panel span {
+    font-size: 22px;
     cursor: pointer;
-    transition: transform 0.2s, background 0.2s;
+    transition: transform 0.15s ease, background 0.15s ease;
     border-radius: 6px;
-    padding: 2px;
+    padding: 3px 4px;
+    line-height: 1;
+    user-select: none;
 }
-.emoji-picker span:hover {
-    transform: scale(1.2);
+.emoji-panel span:hover {
+    transform: scale(1.25);
     background: rgba(255, 255, 255, 0.1);
+}
+.emoji-panel span:active {
+    transform: scale(0.95);
+}
+
+/* Legacy popup picker — hide if still in DOM */
+.emoji-picker {
+    display: none !important;
 }
 
 .mic-btn.recording svg {

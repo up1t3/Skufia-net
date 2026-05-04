@@ -277,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof VoiceRecorderService !== 'undefined') new VoiceRecorderService();
                 if (typeof VideoCircleService !== 'undefined') new VideoCircleService();
                 if (typeof EmojiPickerEngine !== 'undefined') new EmojiPickerEngine();
+                if (typeof InputBarController !== 'undefined') new InputBarController();
             } catch (e) {
                 console.error('Subsystem init failed:', e);
             }

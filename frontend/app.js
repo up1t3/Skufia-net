@@ -171,6 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
         new VoiceRecorderService();
         new VideoCircleService();
         new EmojiPickerEngine();
+        new InputBarController();
 
         addLog('Initializing Skufia Enterprise OS...', 'info');
         try {

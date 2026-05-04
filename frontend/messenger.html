@@ -695,24 +695,29 @@
                                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                                         </button>
                                     </div>
+
+                                    <!-- LEFT: Emoji / Keyboard toggle -->
+                                    <button class="capsule-btn emoji-toggle-btn" id="emoji-toggle-btn" title="Смайлы">
+                                        <svg class="icon-emoji" viewBox="0 0 24 24" width="20" height="20" stroke="#8e8e93" stroke-width="1.8" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                                        <svg class="icon-keyboard" viewBox="0 0 24 24" width="20" height="20" stroke="#8e8e93" stroke-width="1.8" fill="none" style="display:none;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><line x1="6" y1="8" x2="6.01" y2="8"></line><line x1="10" y1="8" x2="10.01" y2="8"></line><line x1="14" y1="8" x2="14.01" y2="8"></line><line x1="18" y1="8" x2="18.01" y2="8"></line><line x1="6" y1="12" x2="6.01" y2="12"></line><line x1="10" y1="12" x2="10.01" y2="12"></line><line x1="14" y1="12" x2="14.01" y2="12"></line><line x1="18" y1="12" x2="18.01" y2="12"></line><line x1="8" y1="16" x2="16" y2="16"></line></svg>
+                                    </button>
+                                    
+                                    <!-- CENTER: Text input (default) / Emoji panel (toggled) -->
+                                    <input type="text" id="chat-input" placeholder="Написать сообщение..." autocomplete="off">
+                                    <div id="emoji-panel" class="emoji-panel" style="display:none;"></div>
+
+                                    <!-- RIGHT: Attach → Video → Mic/Send -->
                                     <button id="chat-attach-btn" class="capsule-btn attach-btn" title="Вложение" onclick="window.toggleAttachMenu(event)">
                                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                                     </button>
-                                    
-                                    <input type="text" id="chat-input" placeholder="Написать сообщение..." autocomplete="off">
-                                    
-                                    <button class="capsule-btn emoji-btn" title="Emoji">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>
+                                    <button class="capsule-btn mic-btn" id="video-record-btn" title="Видеосообщение (кружок)">
+                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
                                     </button>
-                                    
                                     <div class="action-buttons">
                                         <button class="capsule-btn mic-btn" id="voice-record-btn" title="Голосовое сообщение">
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                                         </button>
-                                        <button class="capsule-btn mic-btn" id="video-record-btn" title="Видеосообщение (кружок)">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-                                        </button>
-                                        <button type="button" id="send-chat-btn" class="send-circle-btn" title="Отправить" onmousedown="event.preventDefault()" onclick="if(window.sendChatMsg) window.sendChatMsg()">
+                                        <button type="button" id="send-chat-btn" class="send-circle-btn" title="Отправить" style="display:none;" onmousedown="event.preventDefault()" onclick="if(window.sendChatMsg) window.sendChatMsg()">
                                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                                         </button>
                                     </div>

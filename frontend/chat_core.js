@@ -1550,7 +1550,10 @@ window.initChatCore = function() {
             const currentEditingId = state.chat.editingId;
             // --- OPTIMISTIC RENDER ---
             // Clear input immediately (optimistic) before API call
-            if (input) input.value = '';
+            if (input) {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
             localStorage.removeItem(`skuf_draft_${roomId}`);
             clearChatFile();
 
@@ -3214,42 +3217,110 @@ window.initChatCore = function() {
         }
     }
 
-    // [UX-201] Emoji Picker Engine
+    // [UX-201] Emoji Picker Engine — Telegram-style inline panel
     class EmojiPickerEngine {
         constructor() {
-            this.btn = document.querySelector('.emoji-btn');
+            this.toggleBtn = document.getElementById('emoji-toggle-btn');
             this.input = document.getElementById('chat-input');
-            if(!this.btn || !this.input) return;
-            
-            this.picker = document.createElement('div');
-            this.picker.className = 'emoji-picker premium-scroll';
-            this.picker.style.display = 'none';
-            
-            const emojis = ['😀','😂','🥰','😎','🤔','😡','👍','👎','❤️','🔥','🎉','👀','💯','🤡','🥺','💀','🤓','🧠','🍺','🍕'];
-            emojis.forEach(emo => {
-                const span = document.createElement('span');
-                span.textContent = emo;
-                span.onclick = () => {
-                    this.input.value += emo;
-                    this.picker.style.display = 'none';
-                    this.input.focus();
-                };
-                this.picker.appendChild(span);
+            this.panel = document.getElementById('emoji-panel');
+            if(!this.toggleBtn || !this.input || !this.panel) return;
+
+            this.iconEmoji = this.toggleBtn.querySelector('.icon-emoji');
+            this.iconKeyboard = this.toggleBtn.querySelector('.icon-keyboard');
+            this.isEmojiMode = false;
+
+            // Expanded emoji set categorised
+            const emojiSets = {
+                'Смайлы': ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐'],
+                'Жесты': ['👍','👎','👌','🤌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐','🖖','👋','🤝','🙏','💪','🫶'],
+                'Сердца': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝'],
+                'Объекты': ['🔥','⭐','💯','✨','🎉','🎊','🏆','🥇','🎯','💎','👑','🍺','🍻','🍕','🍔','☕','🎵','🎶','📱','💻','📷','🎮','🚀','✈️','🏠','💰','💊','🧠','💀','👻','🤡','💩','👽']
+            };
+
+            // Build panel content with category headers
+            Object.entries(emojiSets).forEach(([category, emojis]) => {
+                const header = document.createElement('div');
+                header.className = 'emoji-category-header';
+                header.textContent = category;
+                header.style.cssText = 'width:100%; font-size:11px; color:var(--text-dim); padding:6px 4px 2px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase;';
+                this.panel.appendChild(header);
+
+                emojis.forEach(emo => {
+                    const span = document.createElement('span');
+                    span.textContent = emo;
+                    span.onclick = (e) => {
+                        e.stopPropagation();
+                        this.input.value += emo;
+                        this.input.dispatchEvent(new Event('input', { bubbles: true }));
+                    };
+                    this.panel.appendChild(span);
+                });
             });
-            
-            // Append relative to the input row
-            const row = document.querySelector('.chat-input-row');
-            if(row) row.appendChild(this.picker);
-            
-            this.btn.addEventListener('click', (e) => {
+
+            // Toggle click
+            this.toggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this.picker.style.display = this.picker.style.display === 'none' ? 'flex' : 'none';
+                this.toggle();
             });
-            
-            document.addEventListener('click', () => {
-                if(this.picker) this.picker.style.display = 'none';
+
+            // Close emoji panel on outside click
+            document.addEventListener('click', (e) => {
+                if (this.isEmojiMode && !this.panel.contains(e.target) && !this.toggleBtn.contains(e.target)) {
+                    this.showInput();
+                }
             });
-            this.picker.addEventListener('click', e => e.stopPropagation());
+            this.panel.addEventListener('click', e => e.stopPropagation());
+        }
+
+        toggle() {
+            if (this.isEmojiMode) {
+                this.showInput();
+            } else {
+                this.showEmoji();
+            }
+        }
+
+        showEmoji() {
+            this.isEmojiMode = true;
+            this.input.style.display = 'none';
+            this.panel.style.display = 'flex';
+            if (this.iconEmoji) this.iconEmoji.style.display = 'none';
+            if (this.iconKeyboard) this.iconKeyboard.style.display = 'block';
+        }
+
+        showInput() {
+            this.isEmojiMode = false;
+            this.panel.style.display = 'none';
+            this.input.style.display = '';
+            if (this.iconEmoji) this.iconEmoji.style.display = 'block';
+            if (this.iconKeyboard) this.iconKeyboard.style.display = 'none';
+            this.input.focus();
+        }
+    }
+
+    // [UX-202] Input Bar Controller — mic/send toggle
+    class InputBarController {
+        constructor() {
+            this.input = document.getElementById('chat-input');
+            this.sendBtn = document.getElementById('send-chat-btn');
+            this.micBtn = document.getElementById('voice-record-btn');
+            if (!this.input || !this.sendBtn || !this.micBtn) return;
+
+            // Initial state
+            this.updateButtons();
+
+            this.input.addEventListener('input', () => this.updateButtons());
+        }
+
+        updateButtons() {
+            const hasText = this.input.value.trim().length > 0;
+            if (hasText) {
+                this.sendBtn.style.display = 'flex';
+                this.micBtn.style.display = 'none';
+            } else {
+                this.sendBtn.style.display = 'none';
+                this.micBtn.style.display = 'flex';
+            }
         }
     }
 
@@ -3312,6 +3383,7 @@ window.initChatCore = function() {
     window.VoiceRecorderService = VoiceRecorderService;
     window.VideoCircleService = VideoCircleService;
     window.EmojiPickerEngine = EmojiPickerEngine;
+    window.InputBarController = InputBarController;
 
     // --- IN-APP IMAGE LIGHTBOX ---
     window.openChatLightbox = function(url, galleryUrls, index) {
