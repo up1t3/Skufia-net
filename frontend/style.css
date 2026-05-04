@@ -2425,22 +2425,66 @@ body.super-user .nav-btn.active {
 }
 
 /* --- TELEGRAM-LIKE FEATURES --- */
-.reply-badge {
-    background: rgba(0, 0, 0, 0.2);
+
+/* Reply preview (inside message bubble) */
+.reply-preview-block {
+    background: rgba(0, 0, 0, 0.15);
     border-left: 3px solid var(--accent-cyan);
-    padding: 5px 8px;
-    margin-bottom: 5px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
     border-radius: 4px;
-    font-size: 11px;
-    color: #ccc;
     cursor: pointer;
+    transition: background 0.15s ease;
+    max-width: 100%;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+}
+.reply-preview-block:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+.reply-preview-block:active {
+    background: rgba(0, 0, 0, 0.4);
 }
 
-.reply-badge:hover {
-    background: rgba(0, 0, 0, 0.4);
+.reply-line {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+}
+
+.reply-sender {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.reply-text-snippet {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+/* Sent messages — slightly different accent on reply */
+.msg.sent .reply-preview-block {
+    border-left-color: rgba(255, 255, 255, 0.5);
+}
+.msg.sent .reply-sender {
+    color: rgba(255, 255, 255, 0.85);
+}
+.msg.sent .reply-text-snippet {
+    color: rgba(255, 255, 255, 0.55);
+}
+
+/* Legacy reply-badge — hide */
+.reply-badge {
+    display: none;
 }
 
 .msg-action-btn {

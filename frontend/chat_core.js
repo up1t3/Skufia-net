@@ -1245,13 +1245,74 @@ window.initChatCore = function() {
             bubble.appendChild(senderNameDiv);
         }
 
-        // Reply badge
+        // Reply preview (Telegram-style)
         if (msg.reply_to_id) {
-            const replyBadge = document.createElement('div');
-            replyBadge.className = 'reply-badge';
-            replyBadge.textContent = 'Ответ на сообщение';
-            replyBadge.onclick = () => document.getElementById(`msg-${msg.reply_to_id}`)?.scrollIntoView({behavior:'smooth'});
-            bubble.appendChild(replyBadge);
+            const replyBlock = document.createElement('div');
+            replyBlock.className = 'reply-preview-block';
+            replyBlock.onclick = () => document.getElementById(`msg-${msg.reply_to_id}`)?.scrollIntoView({behavior:'smooth', block:'center'});
+
+            // Try to find the original message in DOM
+            const origMsgEl = document.getElementById(`msg-${msg.reply_to_id}`);
+            let origSender = '';
+            let origText = '';
+
+            if (origMsgEl) {
+                // Extract sender name
+                const senderEl = origMsgEl.querySelector('.msg-sender-name');
+                if (senderEl) {
+                    origSender = senderEl.textContent || '';
+                } else {
+                    // If no sender name element, it's our own message
+                    origSender = 'Вы';
+                }
+
+                // Extract text content
+                const textEl = origMsgEl.querySelector('.msg-text');
+                const imgEl = origMsgEl.querySelector('.msg-file-img-preview, .gallery-item-image img');
+                const audioEl = origMsgEl.querySelector('.voice-msg-player, audio');
+                const videoEl = origMsgEl.querySelector('.video-circle-player, video');
+
+                if (textEl) {
+                    origText = textEl.textContent.trim();
+                }
+
+                // If no text but has media, show media type label
+                if (!origText || origText.length < 2) {
+                    if (videoEl) origText = '📹 Видеосообщение';
+                    else if (audioEl) origText = '🎤 Голосовое сообщение';
+                    else if (imgEl) origText = '📷 Фото';
+                }
+            }
+
+            // Fallback if original not found in DOM
+            if (!origSender && !origText) {
+                origSender = '';
+                origText = 'Сообщение';
+            }
+
+            // Truncate text
+            if (origText.length > 50) {
+                origText = origText.substring(0, 50) + '…';
+            }
+
+            // Build reply block content
+            const replyLine = document.createElement('div');
+            replyLine.className = 'reply-line';
+
+            if (origSender) {
+                const senderSpan = document.createElement('span');
+                senderSpan.className = 'reply-sender';
+                senderSpan.textContent = origSender;
+                replyLine.appendChild(senderSpan);
+            }
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'reply-text-snippet';
+            textSpan.textContent = origText;
+            replyLine.appendChild(textSpan);
+
+            replyBlock.appendChild(replyLine);
+            bubble.appendChild(replyBlock);
         }
 
         // Text (skip for pure media with standard labels — no text bubble needed)
