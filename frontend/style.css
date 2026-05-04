@@ -1408,6 +1408,7 @@ body.super-user .nav-btn.active {
     display: flex;
     flex-direction: column;
     max-width: 72%;
+    min-width: 0;
     position: relative;
 }
 .wrapper-received { align-items: flex-start; }
@@ -1416,11 +1417,14 @@ body.super-user .nav-btn.active {
 /* Bubble base */
 .msg-bubble {
     width: fit-content;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 8px 13px 6px;
     font-size: 14px;
     line-height: 1.5;
     position: relative;
     word-wrap: break-word;
+    word-break: break-word;
     box-shadow: 0 1px 4px rgba(0,0,0,0.2);
     user-select: none;
     -webkit-user-select: none;
@@ -2436,6 +2440,7 @@ body.super-user .nav-btn.active {
     cursor: pointer;
     transition: background 0.15s ease;
     max-width: 100%;
+    box-sizing: border-box;
     overflow: hidden;
 }
 .reply-preview-block:hover {
@@ -2527,6 +2532,15 @@ body.super-user .nav-btn.active {
     align-items: center;
     font-size: 11px;
     color: #ccc;
+    min-width: 0;
+}
+#reply-preview-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-grow: 1;
+    margin-right: 10px;
 }
 .reply-preview-container .close-btn {
     cursor: pointer;
