@@ -644,6 +644,20 @@ window.initChatCore = function() {
         state.chat.currentRoomType = type;
         state.chat.receiverId = receiverId;
         state.chat.currentMyRole = myRole;
+        state.chat.currentRoomMembers = []; // Reset members
+
+        // Fetch members for group/channel to enable @-mentions
+        if (type === 'group' || type === 'channel') {
+            apiRequest(`/chat/rooms/${roomId}/members`)
+                .then(res => {
+                    if (res && Array.isArray(res)) {
+                        state.chat.currentRoomMembers = res;
+                    } else if (res && res.members) {
+                        state.chat.currentRoomMembers = res.members;
+                    }
+                })
+                .catch(err => console.error('[selectChatRoom] Failed to fetch members:', err));
+        }
 
         if (chatInput) {
             const draft = localStorage.getItem(`skuf_draft_${roomId}`);
@@ -3727,5 +3741,98 @@ window.initChatCore = function() {
             }
         }
     });
+
+    window.openContactProfile = function() {
+        if (state.chat.currentRoomType === 'group' || state.chat.currentRoomType === 'channel') {
+            window.openRoomMembersModal();
+        }
+    };
+
+    window.openRoomMembersModal = async function() {
+        const roomId = state.chat.currentRoomId;
+        if (!roomId) return;
+        
+        document.getElementById('room-members-modal').style.display = 'flex';
+        document.getElementById('room-members-search').value = '';
+        const listContainer = document.getElementById('room-members-list');
+        listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка...</div>';
+        
+        try {
+            const members = await apiRequest(`/chat/rooms/${roomId}/members`);
+            // handle both array directly or nested in .members
+            let memberList = Array.isArray(members) ? members : (members.members || []);
+            
+            // Save to state for search filtering
+            state.chat.currentRoomMembersList = memberList;
+            window.renderRoomMembers(memberList);
+            
+            // Show add button if user is admin/creator
+            const addBtn = document.getElementById('room-members-add-btn');
+            if (state.chat.currentMyRole === 'creator' || state.chat.currentMyRole === 'admin') {
+                addBtn.style.display = 'block';
+            } else {
+                addBtn.style.display = 'none';
+            }
+            
+        } catch(e) {
+            console.error('Error fetching room members:', e);
+            listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:#ff3333;">Ошибка загрузки</div>';
+        }
+    };
+
+    window.filterRoomMembers = function() {
+        const query = document.getElementById('room-members-search').value.toLowerCase().trim();
+        if (!state.chat.currentRoomMembersList) return;
+        
+        if (!query) {
+            window.renderRoomMembers(state.chat.currentRoomMembersList);
+            return;
+        }
+        
+        const filtered = state.chat.currentRoomMembersList.filter(m => {
+            const name = (m.display_name || m.username || '').toLowerCase();
+            const username = (m.username || '').toLowerCase();
+            return name.includes(query) || username.includes(query);
+        });
+        
+        window.renderRoomMembers(filtered);
+    };
+
+    window.renderRoomMembers = function(members) {
+        const listContainer = document.getElementById('room-members-list');
+        listContainer.innerHTML = '';
+        
+        if (!members || members.length === 0) {
+            listContainer.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Участники не найдены</div>';
+            return;
+        }
+        
+        members.forEach(member => {
+            const div = document.createElement('div');
+            div.className = 'sidebar-item';
+            div.style.marginBottom = '5px';
+            div.style.cursor = 'default';
+            const initial = (member.display_name || member.username).charAt(0).toUpperCase();
+            
+            let roleBadge = '';
+            if (member.role === 'creator') {
+                roleBadge = '<span style="font-size: 10px; background: rgba(255, 215, 0, 0.2); color: #FFD700; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255, 215, 0, 0.4); margin-left: auto;">СОЗДАТЕЛЬ</span>';
+            } else if (member.role === 'admin') {
+                roleBadge = '<span style="font-size: 10px; background: rgba(0, 242, 255, 0.2); color: #00f2ff; padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(0, 242, 255, 0.4); margin-left: auto;">АДМИН</span>';
+            }
+            
+            div.innerHTML = `
+                <div class="sidebar-item-avatar">${member.avatar_url ? \`<img src="\${API_BASE_URL}\${member.avatar_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">\` : initial}</div>
+                <div class="sidebar-item-info" style="display: flex; align-items: center; width: 100%;">
+                    <div>
+                        <div class="sidebar-item-name">${member.display_name || member.username}</div>
+                        <div class="sidebar-item-last-msg" style="color: var(--text-dim); font-size: 11px;">@${member.username}</div>
+                    </div>
+                    ${roleBadge}
+                </div>
+            `;
+            listContainer.appendChild(div);
+        });
+    };
 
 };

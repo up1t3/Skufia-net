@@ -234,7 +234,7 @@
                     <span id="matrix-brand" class="scramble-text" data-text="Skufia-Net" style="color: var(--neon-cyan); font-weight: bold;">Skufia-Net</span>
                     <span class="scramble-text" data-text=". All rights reserved.">. All rights reserved.</span>
                     <a href="#" onclick="window.openCreatorPlaque(event)" style="color: var(--text-dim); text-decoration: underline;"><span class="scramble-text" data-text="By Vladimir Popov">By Vladimir Popov</span></a><br>
-                    <span id="app-version-tag" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:4px; background:rgba(0,242,255,0.1); border:1px solid rgba(0,242,255,0.3); color:var(--neon-cyan, #00f2ff); font-family:monospace; font-size:10px; letter-spacing:0.5px;">v2.2.0_05.05_18:57</span>
+                    <span id="app-version-tag" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:4px; background:rgba(0,242,255,0.1); border:1px solid rgba(0,242,255,0.3); color:var(--neon-cyan, #00f2ff); font-family:monospace; font-size:10px; letter-spacing:0.5px;">v2.2.3_06.05_04:05</span>
                 </div>
             </div>
             </div>
@@ -478,6 +478,30 @@
         </div>
     </div>
 
+    <!-- Room Members Modal -->
+    <div id="room-members-modal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px; padding: 25px;">
+            <div class="modal-header">
+                <h2>Участники группы</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('room-members-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 10px;">
+                <input type="text" id="room-members-search" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="Поиск участников..." oninput="window.filterRoomMembers()">
+            </div>
+            
+            <div id="room-members-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 8px; padding: 5px; margin-bottom: 15px;">
+                <!-- Members rendered here -->
+                <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка участников...</div>
+            </div>
+            
+            <!-- Admin button to add more members -->
+            <button id="room-members-add-btn" class="cyber-btn primary-btn" style="width: 100%; border-radius: 8px; display: none;" onclick="document.getElementById('room-members-modal').style.display='none'; window.openAddMemberModal();">+ ДОБАВИТЬ УЧАСТНИКА</button>
+        </div>
+    </div>
+
     <!-- Media Preview Modal -->
     <div id="media-preview-modal" style="display: none;">
         <div class="modal-content">
@@ -512,7 +536,7 @@
             </div>
             
             <!-- Center: Logo -->
-            <div class="logo" style="width: 34%; text-align: center;">SKUFIA <span class="version">v2.1.3_ENTERPRISE</span></div>
+            <div class="logo" style="width: 34%; text-align: center;">SKUFIA <span class="version">v2.2.3_ENTERPRISE</span></div>
             
             <!-- Right Controls: System Stats (Matrix Scramble) -->
             <div class="system-stats" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; width: 33%;">
@@ -1002,7 +1026,7 @@
 
         <footer class="system-footer">
             <div class="footer-left">CONN: SECURE // PROTOCOL: SKUF_NET_v2</div>
-            <div class="footer-right">© 2000-2026 SKUFIA ENTERPRISE SYSTEMS | <span id="app-version">v2.1.6_30.04_22:50</span></div>
+            <div class="footer-right">© 2000-2026 SKUFIA ENTERPRISE SYSTEMS | <span id="app-version">v2.2.3_06.05_04:05</span></div>
         </footer>
     </div>
     
