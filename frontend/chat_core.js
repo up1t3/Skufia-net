@@ -2731,6 +2731,14 @@ window.initChatCore = function() {
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); window.sendChatMsg(); }
         });
+
+        // Поддержка вставки картинок и файлов из буфера обмена
+        chatInput.addEventListener('paste', (e) => {
+            if (e.clipboardData && e.clipboardData.files && e.clipboardData.files.length > 0) {
+                e.preventDefault();
+                uploadChatFiles(e.clipboardData.files);
+            }
+        });
     }
     if (sendChatBtn) {
         // NOTE: send-chat-btn already has onclick in index.html — do NOT add duplicate listener.
