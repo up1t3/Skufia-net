@@ -10,7 +10,7 @@ const config = {
 
 const conn = new Client();
 conn.on('ready', () => {
-    conn.exec('cat /opt/skufia/frontend/chat-sw.js | head -n 2 && echo "---" && cat /opt/skufia/frontend/extract_messenger.js | grep "style.css?v="', (err, stream) => {
+    conn.exec('cat /opt/skufia/docker-compose.production.yml | grep pull', (err, stream) => {
         if (err) throw err;
         stream.on('close', () => {
             conn.end();

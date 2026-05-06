@@ -906,6 +906,15 @@ window.initChatCore = function() {
             chatInput.value = draft || '';
         }
 
+        // --- RESET UNREAD SCROLL BADGE ---
+        window._unreadWhileScrolled = 0;
+        const btnScroll = document.getElementById('scroll-bottom-btn');
+        const badgeScroll = document.getElementById('scroll-unread-badge');
+        if (btnScroll) btnScroll.style.display = 'none';
+        if (badgeScroll) {
+            badgeScroll.style.display = 'none';
+            badgeScroll.textContent = '0';
+        }
 
         const chatHistoryEl = document.getElementById('chat-history');
         
