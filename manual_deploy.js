@@ -5,7 +5,13 @@ const { Client } = require('ssh2');
 const filesToUpload = [
     'frontend/chat_core.js',
     'backend/routers/chat.py',
-    'frontend/chat-sw.js'
+    'frontend/chat-sw.js',
+    'frontend/messenger.html',
+    'frontend/extract_messenger.js',
+    'frontend/style.css',
+    'frontend/style-modal.css',
+    'frontend/messenger_app.js',
+    'frontend/index.html'
 ];
 
 console.log('=== STARTING MANUAL SFTP DEPLOY ===');
@@ -59,7 +65,7 @@ conn.on('ready', () => {
                         cd /opt/skufia
                         docker stop skufia-api-blue skufia-api-green || true
                         docker rm skufia-api-blue skufia-api-green || true
-                        docker compose -f docker-compose.production.yml up -d api-blue api-green
+                        docker compose -f docker-compose.production.yml up -d backend-blue backend-green
                         
                         echo "=== DEPLOYMENT COMPLETE ==="
                     `;
