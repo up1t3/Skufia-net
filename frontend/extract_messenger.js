@@ -50,7 +50,7 @@ ${scripts}
 </body>
 </html>`;
 
-messengerHtml = messengerHtml.replace('src="app.js?v=49"', 'src="messenger_app.js?v=49"');
+messengerHtml = messengerHtml.replace(/src="app\.js[^"]*"/, 'src="messenger_app.js?v=55"');
 messengerHtml = messengerHtml.replace('<div class="view" id="view-messages">', '<div class="view active" id="view-messages">');
 
 fs.writeFileSync('messenger.html', messengerHtml, 'utf-8');
