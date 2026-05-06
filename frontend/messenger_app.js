@@ -39,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.changeTheme === 'function') {
         window.changeTheme(savedTheme);
     }
+    
+    // Initialize Chat Background
+    if (typeof window.applyChatBackground === 'function') {
+        window.applyChatBackground();
+    }
 
     // --- State Management ---
     window.marketState = {
@@ -1084,6 +1089,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    window.applyChatBackground = function() {
+        const bg = localStorage.getItem('skufia_chat_bg');
+        const chatHistory = document.getElementById('chat-history');
+        if (!chatHistory) return;
+        
+        if (bg && bg !== 'default') {
+            chatHistory.style.backgroundImage = `url(${bg})`;
+            chatHistory.style.backgroundSize = 'cover';
+            chatHistory.style.backgroundPosition = 'center';
+            chatHistory.style.backgroundAttachment = 'fixed'; // or local if needed
+        } else {
+            chatHistory.style.backgroundImage = 'none';
+        }
+    };
+
+    window.setChatBackground = function(bgType) {
+        if (bgType === 'default') {
+            localStorage.setItem('skufia_chat_bg', 'default');
+            window.applyChatBackground();
+            if (typeof showToast === 'function') showToast('✅ Фон чата сброшен');
+        }
+    };
+
+    window.handleChatBgUpload = function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            localStorage.setItem('skufia_chat_bg', dataUrl);
+            window.applyChatBackground();
+            if (typeof showToast === 'function') showToast('✅ Фон чата обновлён');
+        };
+        reader.readAsDataURL(file);
+    };
+
     window.changeUserPassword = async function() {
         const oldPass = document.getElementById('settings-old-password').value;
         const newPass = document.getElementById('settings-new-password').value;
@@ -1518,10 +1560,59 @@ window.uploadCroppedAvatar = async function() {
     if (contactSearchInput) {
         contactSearchInput.addEventListener('input', function() {
             const query = this.value.toLowerCase().trim();
+            const resultsContainer = document.getElementById('global-search-results');
+            const roomsList = document.getElementById('chat-rooms-list');
+            
+            // Filter Chat Rooms List
             document.querySelectorAll('#chat-rooms-list .sidebar-item').forEach(item => {
                 const name = item.querySelector('.sidebar-item-name')?.textContent.toLowerCase() || '';
                 item.style.display = name.includes(query) ? '' : 'none';
             });
+
+            if (!query) {
+                if (resultsContainer) resultsContainer.style.display = 'none';
+                if (roomsList) roomsList.style.display = 'block';
+                return;
+            }
+
+            // Local Global Search in current chat messages
+            if (resultsContainer && window.state && window.state.chat && window.state.chat.messages) {
+                const matchedMsgs = window.state.chat.messages.filter(m => m.text && m.text.toLowerCase().includes(query));
+                
+                if (matchedMsgs.length > 0) {
+                    if (roomsList) roomsList.style.display = 'none';
+                    resultsContainer.style.display = 'block';
+                    
+                    let html = `<div style="padding: 10px 15px; font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;">Сообщения (${matchedMsgs.length})</div>`;
+                    
+                    matchedMsgs.slice(0, 20).forEach(m => {
+                        // Highlight match
+                        const text = m.text || '';
+                        const regex = new RegExp(`(${query})`, 'gi');
+                        const highlightedText = text.replace(regex, '<span style="color:var(--accent-cyan);background:rgba(0,175,255,0.15);">$1</span>');
+                        
+                        html += `
+                        <div class="sidebar-item" onclick="window.chatOptionAction('search'); document.getElementById('contact-search').value=''; toggleSidebarSearch(false);" style="padding: 10px 15px; border-bottom: 1px solid var(--border-metal); cursor: pointer;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                ${m.avatar_url ? `<img src="${m.avatar_url}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">` : `<div style="width:36px;height:36px;border-radius:50%;background:var(--accent-cyan);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;">${(m.sender||'?')[0].toUpperCase()}</div>`}
+                                <div style="flex:1; overflow:hidden;">
+                                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                                        <div style="font-weight:600; font-size:13px; color:var(--text-primary); text-overflow:ellipsis; white-space:nowrap; overflow:hidden;">${m.sender}</div>
+                                        <div style="font-size:11px; color:var(--text-dim);">${new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+                                    </div>
+                                    <div style="font-size:12px; color:var(--text-secondary); margin-top:2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">
+                                        ${highlightedText}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    resultsContainer.innerHTML = html;
+                } else {
+                    if (roomsList) roomsList.style.display = 'block';
+                    resultsContainer.style.display = 'none';
+                }
+            }
         });
     }
 
@@ -1530,6 +1621,9 @@ window.uploadCroppedAvatar = async function() {
         const defaultHeader = document.getElementById("sidebar-default-header");
         const searchHeader = document.getElementById("sidebar-active-search");
         const searchInput = document.getElementById("contact-search");
+        const resultsContainer = document.getElementById('global-search-results');
+        const roomsList = document.getElementById('chat-rooms-list');
+
         if (show) {
             if (defaultHeader) defaultHeader.style.display = "none";
             if (searchHeader) searchHeader.style.display = "flex";
@@ -1537,6 +1631,8 @@ window.uploadCroppedAvatar = async function() {
         } else {
             if (defaultHeader) defaultHeader.style.display = "flex";
             if (searchHeader) searchHeader.style.display = "none";
+            if (resultsContainer) resultsContainer.style.display = "none";
+            if (roomsList) roomsList.style.display = "block";
             if (searchInput) { searchInput.value = ""; searchInput.dispatchEvent(new Event("input")); }
         }
     };

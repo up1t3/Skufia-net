@@ -665,7 +665,8 @@ def list_room_members(
             continue
         result.append({
             "user_id": u.id,
-            "username": get_display_name(u),
+            "username": u.username,
+            "display_name": get_display_name(u),
             "handle": u.handle or u.username,
             "avatar_url": u.profile.avatar_url if u.profile else None,
             "role": m.role,
@@ -1401,8 +1402,17 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         # Trigger push notifications for ALL other members (mobile WS unreliable)
         for m in members:
             if m.user_id != current_user.id:
+                # Check if this user was mentioned
+                is_mentioned = False
+                if msg.content:
+                    member_user = db.query(User).filter(User.id == m.user_id).first()
+                    if member_user and member_user.username and f"@{member_user.username}" in msg.content:
+                        is_mentioned = True
+                
+                title = f"Вас упомянул {get_display_name(current_user)}" if is_mentioned else f"Новое сообщение от {get_display_name(current_user)}"
+                
                 push_payload = {
-                    "title": f"Новое сообщение от {get_display_name(current_user)}",
+                    "title": title,
                     "body": "Зашифрованное сообщение" if msg.encryption_iv else msg.content[:50] + ("..." if len(msg.content) > 50 else ""),
                     "data": {"roomId": room_id}
                 }

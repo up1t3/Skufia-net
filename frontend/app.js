@@ -857,7 +857,7 @@ const handleInput = document.getElementById('settings-handle');
         }
     });
 
-    // --- CONTACT PROFILE ---
+    // --- CONTACT PROFILE & MEDIA GALLERY ---
     window.openContactProfile = function() {
         const roomId = state.chat.currentRoomId;
         if (!roomId) return;
@@ -873,24 +873,60 @@ const handleInput = document.getElementById('settings-handle');
             modal.id = 'contact-profile-modal';
             modal.style.cssText = 'display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.7); align-items:flex-end; justify-content:center;';
             modal.innerHTML = `
-                <div style="background:var(--bg-panel); width:100%; max-width:600px; border-radius:16px 16px 0 0; padding:24px; border:1px solid var(--border-metal);">
-                    <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px;">
-                        <div id="cp-avatar" style="width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-dark);display:flex;align-items:center;justify-content:center;"></div>
-                        <div>
-                            <div id="cp-name" style="font-size:1.1rem;font-weight:700;color:var(--text-main);"></div>
-                            <div id="cp-status" style="font-size:0.85rem;color:var(--text-dim);"></div>
+                <div style="background:var(--bg-panel); width:100%; max-width:600px; height:80vh; max-height:800px; border-radius:16px 16px 0 0; border:1px solid var(--border-metal); display:flex; flex-direction:column; overflow:hidden;">
+                    
+                    <div style="padding:24px 24px 0 24px; flex-shrink:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                            <div style="display:flex; align-items:center; gap:16px;">
+                                <div id="cp-avatar" style="width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-dark);display:flex;align-items:center;justify-content:center;"></div>
+                                <div>
+                                    <div id="cp-name" style="font-size:1.3rem;font-weight:700;color:var(--text-main);"></div>
+                                    <div id="cp-status" style="font-size:0.9rem;color:var(--text-dim); margin-top:4px;"></div>
+                                </div>
+                            </div>
+                            <button class="icon-btn" onclick="document.getElementById('contact-profile-modal').style.display='none'" style="color:var(--text-dim);">
+                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        
+                        <div style="display:flex; gap:12px; margin-bottom:20px;">
+                            <button class="cyber-btn" style="flex:1; padding:8px;" onclick="window.skufengerCall(false); document.getElementById('contact-profile-modal').style.display='none';">📞 Вызов</button>
+                            <button class="cyber-btn" style="flex:1; padding:8px;" onclick="window.skufengerCall(true); document.getElementById('contact-profile-modal').style.display='none';">🎥 Видео</button>
+                            <button class="icon-btn" style="border:1px solid var(--border-metal); border-radius:8px; padding:0 12px;" onclick="window.chatOptionAction('search'); document.getElementById('contact-profile-modal').style.display='none';"><svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button>
+                        </div>
+                        
+                        <div style="display:flex; gap:20px; border-bottom:1px solid var(--border-metal); overflow-x:auto; scrollbar-width:none;" class="profile-tabs">
+                            <div class="profile-tab active" data-tab="media" style="padding-bottom:10px; cursor:pointer; font-weight:600; color:var(--accent-cyan); border-bottom:2px solid var(--accent-cyan); white-space:nowrap;">Медиа</div>
+                            <div class="profile-tab" data-tab="files" style="padding-bottom:10px; cursor:pointer; font-weight:600; color:var(--text-dim); border-bottom:2px solid transparent; white-space:nowrap;">Файлы</div>
+                            <div class="profile-tab" data-tab="audio" style="padding-bottom:10px; cursor:pointer; font-weight:600; color:var(--text-dim); border-bottom:2px solid transparent; white-space:nowrap;">Аудио</div>
+                            <div class="profile-tab" data-tab="links" style="padding-bottom:10px; cursor:pointer; font-weight:600; color:var(--text-dim); border-bottom:2px solid transparent; white-space:nowrap;">Ссылки</div>
                         </div>
                     </div>
-                    <div style="display:flex; gap:12px; margin-bottom:16px;">
-                        <button class="cyber-btn" style="flex:1;" onclick="window.skufengerCall(false); document.getElementById('contact-profile-modal').style.display='none';">📞 Позвонить</button>
-                        <button class="cyber-btn" style="flex:1;" onclick="window.skufengerCall(true); document.getElementById('contact-profile-modal').style.display='none';">🎥 Видео</button>
+                    
+                    <div id="cp-tab-content" class="premium-scroll" style="flex:1; padding:16px 24px; overflow-y:auto; background:rgba(0,0,0,0.2);">
+                        <!-- Tab content goes here -->
                     </div>
-                    <button class="cyber-btn" style="width:100%;background:rgba(255,50,50,0.15);border-color:rgba(255,100,100,0.3);" onclick="document.getElementById('contact-profile-modal').style.display='none'">✕ Закрыть</button>
                 </div>`;
+                
             modal.addEventListener('click', function(e) {
                 if (e.target === modal) modal.style.display = 'none';
             });
             document.body.appendChild(modal);
+            
+            // Setup tab listeners
+            modal.querySelectorAll('.profile-tab').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    modal.querySelectorAll('.profile-tab').forEach(t => {
+                        t.classList.remove('active');
+                        t.style.color = 'var(--text-dim)';
+                        t.style.borderBottom = '2px solid transparent';
+                    });
+                    e.target.classList.add('active');
+                    e.target.style.color = 'var(--accent-cyan)';
+                    e.target.style.borderBottom = '2px solid var(--accent-cyan)';
+                    window.renderProfileTab(e.target.dataset.tab);
+                });
+            });
         }
 
         // Populate
@@ -900,7 +936,129 @@ const handleInput = document.getElementById('settings-handle');
         if (cpAvatar) cpAvatar.innerHTML = avatarHtml;
         if (cpName) cpName.textContent = name;
         if (cpStatus) cpStatus.textContent = room ? (room.is_online ? '🟢 В сети' : '⚫ Не в сети') : '';
+        
         modal.style.display = 'flex';
+        
+        // Initial render of Media tab
+        window.renderProfileTab('media');
+    };
+    
+    window.renderProfileTab = function(tabName) {
+        const container = document.getElementById('cp-tab-content');
+        if (!container) return;
+        
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">Загрузка...</div>';
+        
+        // We filter from state.chat.messages
+        const messages = state.chat.messages || [];
+        
+        setTimeout(() => {
+            if (tabName === 'media') {
+                const mediaMsgs = messages.filter(m => m.file_url && /\.(jpg|jpeg|png|gif|webp|bmp|mp4|webm)$/i.test(m.file_url) && m.file_type !== 'video_circle');
+                if (mediaMsgs.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:40px 20px; color:var(--text-dim);">Нет фотографий или видео</div>';
+                    return;
+                }
+                
+                let html = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:4px;">';
+                const urls = mediaMsgs.map(m => window.API_BASE_URL + m.file_url);
+                
+                mediaMsgs.forEach((m, i) => {
+                    const isVideo = /\.(mp4|webm)$/i.test(m.file_url);
+                    const url = window.API_BASE_URL + m.file_url;
+                    
+                    if (isVideo) {
+                        html += `<div style="position:relative; aspect-ratio:1; cursor:pointer;" onclick="window.openChatLightbox('${url}', ['${url}'], 0)">
+                            <video src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;"></video>
+                            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; pointer-events:none;"><svg viewBox="0 0 24 24" width="24" height="24" stroke="white" stroke-width="2" fill="none"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></div>
+                        </div>`;
+                    } else {
+                        html += `<div style="aspect-ratio:1; cursor:pointer;" onclick="window.openChatLightbox('${url}', [${urls.map(u=>`'${u}'`).join(',')}], ${i})">
+                            <img src="${url}" style="width:100%; height:100%; object-fit:cover; border-radius:4px;">
+                        </div>`;
+                    }
+                });
+                html += '</div>';
+                container.innerHTML = html;
+                
+            } else if (tabName === 'files') {
+                const fileMsgs = messages.filter(m => m.file_url && !/\.(jpg|jpeg|png|gif|webp|bmp|mp4|webm|mp3|ogg|wav|flac|m4a|aac|opus)$/i.test(m.file_url) && m.file_type !== 'video_circle');
+                if (fileMsgs.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:40px 20px; color:var(--text-dim);">Нет файлов</div>';
+                    return;
+                }
+                
+                let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+                fileMsgs.forEach(m => {
+                    const fname = m.file_url.split('/').pop() || 'file';
+                    const date = new Date(m.created_at).toLocaleDateString();
+                    html += `
+                    <a href="${window.API_BASE_URL}${m.file_url}" target="_blank" download style="display:flex; align-items:center; gap:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; text-decoration:none; color:inherit;">
+                        <div style="width:40px; height:40px; border-radius:8px; background:rgba(0,242,255,0.1); color:var(--accent-cyan); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fname}</div>
+                            <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">${date}</div>
+                        </div>
+                    </a>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+                
+            } else if (tabName === 'audio') {
+                const audioMsgs = messages.filter(m => m.file_url && (/\.(mp3|ogg|wav|flac|m4a|aac|opus)$/i.test(m.file_url) || m.file_type === 'video_circle'));
+                if (audioMsgs.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:40px 20px; color:var(--text-dim);">Нет аудио сообщений</div>';
+                    return;
+                }
+                
+                let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+                audioMsgs.forEach(m => {
+                    const date = new Date(m.created_at).toLocaleDateString();
+                    const time = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const url = window.API_BASE_URL + m.file_url;
+                    
+                    html += `
+                    <div style="display:flex; align-items:center; gap:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                        <button onclick="const a=document.createElement('audio'); a.src='${url}'; a.play(); this.innerHTML='⏸'; a.onended=()=>this.innerHTML='▶';" style="width:40px; height:40px; border-radius:50%; background:var(--accent-cyan); color:#000; border:none; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;">▶</button>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:500; font-size:14px;">Голосовое сообщение</div>
+                            <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">${date} в ${time}</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+                
+            } else if (tabName === 'links') {
+                const linkMsgs = messages.filter(m => m.message && (m.message.includes('http://') || m.message.includes('https://')));
+                if (linkMsgs.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:40px 20px; color:var(--text-dim);">Нет ссылок</div>';
+                    return;
+                }
+                
+                let html = '<div style="display:flex; flex-direction:column; gap:12px;">';
+                linkMsgs.forEach(m => {
+                    const urlMatch = m.message.match(/(https?:\/\/[^\s]+)/);
+                    if (!urlMatch) return;
+                    const link = urlMatch[0];
+                    const date = new Date(m.created_at).toLocaleDateString();
+                    html += `
+                    <div style="display:flex; align-items:center; gap:16px; padding:12px; background:rgba(255,255,255,0.03); border-radius:8px;">
+                        <div style="width:40px; height:40px; border-radius:50%; background:rgba(0,242,255,0.1); color:var(--accent-cyan); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <a href="${link}" target="_blank" style="font-weight:500; font-size:14px; color:var(--accent-cyan); text-decoration:none; word-break:break-all; display:block;">${link}</a>
+                            <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">${date}</div>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            }
+        }, 100);
     };
 
     // --- CHAT OPTION ACTIONS ---

@@ -201,15 +201,34 @@ window.initChatCore = function() {
                     }
                 }
             } else if (data.type === 'typing_status') {
-                if (state.chat.currentRoomId === data.room_id && data.sender_id !== state.user.id) {
-                    const typingEl = document.getElementById('typing-indicator');
-                    if (typingEl) {
-                        typingEl.textContent = `${data.sender} печатает...`;
-                        typingEl.style.display = 'block';
-                        // @ts-ignore
-                        if (window.typingTimeout) clearTimeout(window.typingTimeout);
-                        // @ts-ignore
-                        window.typingTimeout = setTimeout(() => { typingEl.style.display = 'none'; }, 3000);
+                if (data.sender_id !== state.user.id) {
+                    // Update header if we are in this room
+                    if (state.chat.currentRoomId === data.room_id) {
+                        const typingEl = document.getElementById('typing-indicator');
+                        if (typingEl) {
+                            typingEl.textContent = `${data.sender} печатает...`;
+                            typingEl.style.display = 'block';
+                            if (window.typingTimeout) clearTimeout(window.typingTimeout);
+                            window.typingTimeout = setTimeout(() => { typingEl.style.display = 'none'; }, 3000);
+                        }
+                    }
+                    
+                    // Update chat list snippet
+                    const roomEl = document.getElementById(`room-item-${data.room_id}`);
+                    if (roomEl) {
+                        const snippetEl = roomEl.querySelector('.room-snippet');
+                        if (snippetEl) {
+                            if (!snippetEl.dataset.originalText) snippetEl.dataset.originalText = snippetEl.innerHTML;
+                            snippetEl.innerHTML = `<span style="color:var(--accent-cyan); font-style:italic;">${data.sender} печатает...</span>`;
+                            
+                            if (window[`typingTimeoutList_${data.room_id}`]) clearTimeout(window[`typingTimeoutList_${data.room_id}`]);
+                            window[`typingTimeoutList_${data.room_id}`] = setTimeout(() => {
+                                if (snippetEl.dataset.originalText) {
+                                    snippetEl.innerHTML = snippetEl.dataset.originalText;
+                                    delete snippetEl.dataset.originalText;
+                                }
+                            }, 3000);
+                        }
                     }
                 }
             } else if (data.type === 'status_update') {
@@ -493,6 +512,71 @@ window.initChatCore = function() {
 
 
 
+    window.openAddToFolderModal = function(roomId) {
+        if (!roomId) {
+            roomId = state.chat.currentRoomId;
+        }
+        if (!roomId) return;
+        
+        let modal = document.getElementById('add-to-folder-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'add-to-folder-modal';
+            modal.className = 'modal';
+            modal.style.cssText = 'display:none; z-index:10000; align-items:center; justify-content:center;';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width:400px; width:90%; border-radius:12px; padding:24px; background:var(--bg-panel); border:1px solid var(--border-metal);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 style="margin:0; font-size:18px;">Добавить в папку</h3>
+                        <button class="icon-btn" onclick="document.getElementById('add-to-folder-modal').style.display='none'">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div id="add-to-folder-list" style="display:flex; flex-direction:column; gap:8px; max-height:300px; overflow-y:auto;" class="premium-scroll">
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        
+        const list = document.getElementById('add-to-folder-list');
+        list.innerHTML = '';
+        
+        if (!state.chat.folders || state.chat.folders.length === 0) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-dim);">У вас пока нет папок.</div>';
+        } else {
+            state.chat.folders.forEach(folder => {
+                const isAlreadyInFolder = folder.rooms && folder.rooms.includes(roomId);
+                
+                const btn = document.createElement('button');
+                btn.className = 'cyber-btn';
+                btn.style.cssText = `width:100%; text-align:left; justify-content:flex-start; padding:12px; background:${isAlreadyInFolder ? 'rgba(0,242,255,0.1)' : 'var(--bg-dark)'}; border:1px solid var(--border-metal); opacity:${isAlreadyInFolder ? '0.6' : '1'}; cursor:${isAlreadyInFolder ? 'default' : 'pointer'};`;
+                btn.innerHTML = `<span style="margin-right:10px;">${folder.icon || '📁'}</span> ${folder.name} ${isAlreadyInFolder ? '<span style="float:right;color:var(--accent-cyan);">✓</span>' : ''}`;
+                
+                if (!isAlreadyInFolder) {
+                    btn.onclick = async () => {
+                        try {
+                            btn.textContent = 'Добавление...';
+                            await apiRequest(`/chat/folders/${folder.id}/members`, 'POST', { room_ids: [roomId] });
+                            if (window.addLog) window.addLog('Чат добавлен в папку', 'success');
+                            modal.style.display = 'none';
+                            // Reload folders
+                            if (window.loadFolders) await window.loadFolders();
+                            window.renderFoldersTabs();
+                        } catch (e) {
+                            if (window.addLog) window.addLog('Ошибка: ' + (e.message || ''), 'error');
+                            btn.innerHTML = `<span style="margin-right:10px;">${folder.icon || '📁'}</span> ${folder.name}`;
+                        }
+                    };
+                }
+                list.appendChild(btn);
+            });
+        }
+        
+        modal.style.display = 'flex';
+    };
+
+
     function renderChatRooms() {
         const list = document.getElementById('chat-rooms-list');
         if (!list) return;
@@ -506,11 +590,98 @@ window.initChatCore = function() {
             }
         }
 
+        // Pinned chats sorting
+        let pinnedChats = [];
+        try {
+            pinnedChats = JSON.parse(localStorage.getItem('skufenger_pinned_chats') || '[]');
+        } catch(e) {}
+        
+        roomsToRender.sort((a, b) => {
+            const isPinnedA = pinnedChats.includes(a.id);
+            const isPinnedB = pinnedChats.includes(b.id);
+            if (isPinnedA && !isPinnedB) return -1;
+            if (!isPinnedA && isPinnedB) return 1;
+            return 0; // Maintain existing order from backend
+        });
+
         // @ts-ignore
         roomsToRender.forEach(room => {
+            const isPinned = pinnedChats.includes(room.id);
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = 'sidebar-item-wrapper';
+            wrapper.id = `room-item-${room.id}`;
+            wrapper.style.cssText = 'position: relative; overflow: hidden; border-radius: 8px; margin-bottom: 5px;';
+
+            const actionsBg = document.createElement('div');
+            actionsBg.className = 'swipe-actions';
+            actionsBg.style.cssText = 'position: absolute; right: 0; top: 0; bottom: 0; width: 100%; display: flex; justify-content: flex-end; align-items: center; padding-right: 20px; background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0, 242, 255, 0.4) 100%); z-index: 1; border-radius: 8px;';
+            actionsBg.innerHTML = `<span style="color:var(--text-main); font-weight:bold; font-size:14px; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">${isPinned ? 'Открепить' : 'Закрепить'}</span>`;
+
             const div = document.createElement('div');
             div.className = `sidebar-item ${state.chat.currentRoomId === room.id ? 'active' : ''}`;
             div.dataset.name = (room.name || '').toLowerCase();
+            div.style.position = 'relative';
+            div.style.zIndex = '2';
+            div.style.transition = 'transform 0.2s ease';
+            div.style.marginBottom = '0'; // wrapper handles margin
+            
+            // Context menu for Pinning/Unpinning
+            div.oncontextmenu = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Remove existing menu
+                document.getElementById('chat-room-context-menu')?.remove();
+                
+                const menu = document.createElement('div');
+                menu.id = 'chat-room-context-menu';
+                menu.style.cssText = `position:fixed;top:${e.clientY}px;left:${e.clientX}px;background:var(--bg-panel);border:1px solid var(--border-metal);border-radius:8px;padding:8px;z-index:10000;box-shadow:0 8px 24px rgba(0,0,0,0.5);min-width:150px;`;
+                
+                const pinBtn = document.createElement('div');
+                pinBtn.style.cssText = 'padding:8px 12px; cursor:pointer; color:var(--text-main); font-size:14px; border-radius:4px; margin-bottom:4px;';
+                pinBtn.onmouseenter = () => pinBtn.style.background = 'rgba(255,255,255,0.05)';
+                pinBtn.onmouseleave = () => pinBtn.style.background = 'transparent';
+                pinBtn.textContent = isPinned ? '📌 Открепить' : '📌 Закрепить';
+                pinBtn.onclick = () => {
+                    let pinned = JSON.parse(localStorage.getItem('skufenger_pinned_chats') || '[]');
+                    if (isPinned) {
+                        pinned = pinned.filter(id => id !== room.id);
+                    } else {
+                        pinned.push(room.id);
+                    }
+                    localStorage.setItem('skufenger_pinned_chats', JSON.stringify(pinned));
+                    menu.remove();
+                    renderChatRooms();
+                };
+                
+                const folderBtn = document.createElement('div');
+                folderBtn.style.cssText = 'padding:8px 12px; cursor:pointer; color:var(--accent-cyan); font-size:14px; border-radius:4px;';
+                folderBtn.onmouseenter = () => folderBtn.style.background = 'rgba(0,242,255,0.1)';
+                folderBtn.onmouseleave = () => folderBtn.style.background = 'transparent';
+                folderBtn.textContent = '📁 В папку...';
+                folderBtn.onclick = () => {
+                    menu.remove();
+                    if (window.openAddToFolderModal) {
+                        window.openAddToFolderModal(room.id);
+                    }
+                };
+                
+                menu.appendChild(pinBtn);
+                menu.appendChild(folderBtn);
+                document.body.appendChild(menu);
+                
+                const closeMenu = (ev) => {
+                    if (!menu.contains(ev.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeMenu);
+                        document.removeEventListener('contextmenu', closeMenu);
+                    }
+                };
+                setTimeout(() => {
+                    document.addEventListener('click', closeMenu);
+                    document.addEventListener('contextmenu', closeMenu);
+                }, 10);
+            };
             
             const avatarDiv = document.createElement('div');
             avatarDiv.className = 'sidebar-item-avatar';
@@ -538,10 +709,10 @@ window.initChatCore = function() {
 
             const nameDiv = document.createElement('div');
             nameDiv.className = 'sidebar-item-name';
-            nameDiv.textContent = room.name;
+            nameDiv.innerHTML = `${room.name} ${isPinned ? '<span style="font-size:12px;opacity:0.8;margin-left:4px;">📌</span>' : ''}`;
 
             const lastMsgDiv = document.createElement('div');
-            lastMsgDiv.className = 'sidebar-item-last-msg';
+            lastMsgDiv.className = 'sidebar-item-last-msg room-snippet';
             lastMsgDiv.textContent = room.last_message || 'Нет сообщений';
 
             infoDiv.appendChild(nameDiv);
@@ -549,7 +720,6 @@ window.initChatCore = function() {
 
             const statusSpan = document.createElement('span');
             statusSpan.className = `status-dot ${room.is_online ? 'online' : ''}`;
-            // Show status dot only for private chats
             statusSpan.style.display = room.type === 'private' ? 'inline-block' : 'none';
 
             // Delete/Leave button (visible on hover)
@@ -580,21 +750,72 @@ window.initChatCore = function() {
                         if (chatMain) chatMain.classList.remove('active');
                     }
                     renderChatRooms();
-                    addLog('✅ Чат удалён', 'success');
+                    if (window.addLog) window.addLog('✅ Чат удалён', 'success');
                 } catch (err) {
-                    addLog(`❌ Ошибка: ${err.message}`, 'error');
+                    if (window.addLog) window.addLog(`❌ Ошибка: ${err.message}`, 'error');
                 }
             };
-            div.style.position = 'relative';
+            
             div.onmouseenter = () => { deleteBtn.style.display = 'block'; };
             div.onmouseleave = () => { deleteBtn.style.display = 'none'; };
+
+            // Touch Swipe Logic
+            let startX = 0;
+            let currentX = 0;
+            let isSwiping = false;
+
+            div.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                div.style.transition = 'none';
+                isSwiping = false;
+            }, { passive: true });
+            
+            div.addEventListener('touchmove', (e) => {
+                const diff = e.touches[0].clientX - startX;
+                if (diff < -5) { // swipe left (threshold to prevent accidental swipes on scroll)
+                    isSwiping = true;
+                    currentX = Math.max(diff, -100);
+                    div.style.transform = `translateX(${currentX}px)`;
+                }
+            }, { passive: true });
+            
+            div.addEventListener('touchend', (e) => {
+                div.style.transition = 'transform 0.2s ease';
+                if (currentX < -60) {
+                    // Trigger action (pin/unpin)
+                    let pinned = JSON.parse(localStorage.getItem('skufenger_pinned_chats') || '[]');
+                    if (isPinned) {
+                        pinned = pinned.filter(id => id !== room.id);
+                        if (window.addLog) window.addLog('Чат откреплен', 'info');
+                    } else {
+                        pinned.push(room.id);
+                        if (window.addLog) window.addLog('Чат закреплен', 'success');
+                    }
+                    localStorage.setItem('skufenger_pinned_chats', JSON.stringify(pinned));
+                    // Add a tiny delay so the swipe animation finishes before rendering
+                    setTimeout(() => renderChatRooms(), 250);
+                }
+                currentX = 0;
+                div.style.transform = `translateX(0)`;
+            });
 
             div.appendChild(avatarDiv);
             div.appendChild(infoDiv);
             div.appendChild(statusSpan);
             div.appendChild(deleteBtn);
-            div.onclick = () => selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role, room.avatar_url);
-            list.appendChild(div);
+            
+            div.onclick = (e) => {
+                if (isSwiping && currentX < -10) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return; // Don't open chat if just swiped
+                }
+                selectChatRoom(room.id, room.name, room.type, room.other_user_id, room.my_role, room.avatar_url);
+            };
+            
+            wrapper.appendChild(actionsBg);
+            wrapper.appendChild(div);
+            list.appendChild(wrapper);
         });
 
     }
@@ -666,6 +887,40 @@ window.initChatCore = function() {
 
 
         const chatHistoryEl = document.getElementById('chat-history');
+        
+        window.handleChatScroll = function(element) {
+            const btn = document.getElementById('scroll-bottom-btn');
+            const badge = document.getElementById('scroll-unread-badge');
+            if (!btn || !badge) return;
+            
+            // Check if scrolled up by more than 150px
+            const isScrolledUp = element.scrollHeight - element.scrollTop - element.clientHeight > 150;
+            
+            if (isScrolledUp) {
+                btn.style.display = 'flex';
+            } else {
+                btn.style.display = 'none';
+                badge.style.display = 'none';
+                badge.textContent = '0';
+                window._unreadWhileScrolled = 0;
+            }
+        };
+
+        window.scrollToBottom = function() {
+            const history = document.getElementById('chat-history');
+            if (history) {
+                history.scrollTo({ top: history.scrollHeight, behavior: 'smooth' });
+            }
+            const btn = document.getElementById('scroll-bottom-btn');
+            const badge = document.getElementById('scroll-unread-badge');
+            if (btn) btn.style.display = 'none';
+            if (badge) {
+                badge.style.display = 'none';
+                badge.textContent = '0';
+            }
+            window._unreadWhileScrolled = 0;
+        };
+
         const header = document.getElementById('chat-header');
 
         if (header) {
@@ -1151,25 +1406,49 @@ window.initChatCore = function() {
                     </div>`;
                 } else if (isSingleAudio) {
                     const audioId = `audio-${msg.id || Date.now()}`;
+                    
+                    // Generate deterministic waveform based on msg.id
+                    let waveSeed = msg.id || 123;
+                    if (typeof waveSeed === 'string') waveSeed = waveSeed.split('').reduce((a,b)=>a+b.charCodeAt(0), 0);
+                    let waveBars = '';
+                    for(let i=0; i<40; i++) {
+                        let h = 4 + (Math.sin(waveSeed + i*1.3) * Math.cos(waveSeed + i*0.8) * 0.5 + 0.5) * 16;
+                        waveBars += `<div style="flex:1; height:${h}px; background:var(--accent-cyan); border-radius:2px;"></div>`;
+                    }
+
                     fileHtml = `
                     <div class="msg-custom-audio-player" style="display:flex; align-items:center; background:transparent; padding:0; gap:12px; min-width:240px;">
-                        <button class="audio-play-btn" onclick="const a=document.getElementById('${audioId}'); if(a.paused){ document.querySelectorAll('audio').forEach(other=>other.pause()); a.playbackRate = window.globalAudioPlaybackRate || 1.0; a.play(); this.querySelector('.play-icon').style.display='none'; this.querySelector('.pause-icon').style.display='block';}else{a.pause(); this.querySelector('.play-icon').style.display='block'; this.querySelector('.pause-icon').style.display='none';}" style="background:var(--accent-cyan); border:none; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow: 0 0 8px rgba(0,255,255,0.4);">
-                            <svg class="play-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-dark)" style="margin-left:2px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                            <svg class="pause-icon" width="16" height="16" viewBox="0 0 24 24" fill="var(--bg-dark)" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        <button class="audio-play-btn" onclick="const a=document.getElementById('${audioId}'); if(a.paused){ document.querySelectorAll('audio').forEach(other=>other.pause()); a.playbackRate = window.globalAudioPlaybackRate || 1.0; a.play(); this.querySelector('.play-icon').style.display='none'; this.querySelector('.pause-icon').style.display='block';}else{a.pause(); this.querySelector('.play-icon').style.display='block'; this.querySelector('.pause-icon').style.display='none';}" style="background:var(--accent-cyan); border:none; width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; box-shadow: 0 4px 12px rgba(0,255,255,0.3); transition: transform 0.2s;">
+                            <svg class="play-icon" width="20" height="20" viewBox="0 0 24 24" fill="var(--bg-dark)" style="margin-left:3px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            <svg class="pause-icon" width="20" height="20" viewBox="0 0 24 24" fill="var(--bg-dark)" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                         </button>
-                        <div style="flex-grow:1; display:flex; flex-direction:column; gap:6px;">
-                            <div class="audio-timeline" style="height:3px; background:rgba(255,255,255,0.2); border-radius:2px; position:relative; cursor:pointer;" onclick="const a=document.getElementById('${audioId}'); const rect=this.getBoundingClientRect(); a.currentTime = a.duration * ((event.clientX - rect.left)/rect.width);">
-                                <div id="progress-${audioId}" style="height:100%; width:0%; background:var(--accent-cyan); position:absolute; left:0; top:0; border-radius:2px; transition:width 0.1s linear;"></div>
-                                <!-- Pseudo-waveform dots for aesthetics -->
-                                <div style="position:absolute; top:-2px; left:0; width:100%; height:7px; display:flex; justify-content:space-between; opacity:0.5; pointer-events:none;">
-                                    <div style="width:2px; height:4px; background:var(--accent-cyan); border-radius:1px; margin-top:1px;"></div><div style="width:2px; height:7px; background:var(--accent-cyan); border-radius:1px;"></div><div style="width:2px; height:3px; background:var(--accent-cyan); border-radius:1px; margin-top:2px;"></div><div style="width:2px; height:5px; background:var(--accent-cyan); border-radius:1px; margin-top:1px;"></div><div style="width:2px; height:2px; background:var(--accent-cyan); border-radius:1px; margin-top:2px;"></div>
+                        <div style="flex-grow:1; display:flex; flex-direction:column; gap:8px;">
+                            <div class="audio-timeline" style="height:24px; position:relative; cursor:pointer;" onclick="const a=document.getElementById('${audioId}'); const rect=this.getBoundingClientRect(); a.currentTime = a.duration * ((event.clientX - rect.left)/rect.width);">
+                                <!-- Base Waveform (Unplayed) -->
+                                <div style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; gap:2px; opacity:0.3; pointer-events:none;">
+                                    ${waveBars}
+                                </div>
+                                <!-- Active Waveform (Played) -->
+                                <div id="progress-clip-${audioId}" style="position:absolute; top:0; left:0; width:0%; height:100%; overflow:hidden; pointer-events:none; transition:width 0.1s linear;">
+                                    <div style="width: 100%; height:100%; display:flex; align-items:center; gap:2px;">
+                                        <!-- Note: inner container width must exactly match outer width to align. We use a trick: width of inner is fixed to the timeline width by relying on flex, but we'll use a safer approach: set the mask via JS or use a large fixed width. Actually, flex children shrink. We'll use a mask-image approach. -->
+                                    </div>
+                                </div>
+                                <!-- Real Active Waveform (Played) via clip-path -->
+                                <div style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;">
+                                    <div id="progress-mask-${audioId}" style="width:0%; height:100%; overflow:hidden; transition:width 0.1s linear;">
+                                        <div style="width:200px; height:100%; display:flex; align-items:center; gap:2px;" class="waveform-active-container">
+                                            ${waveBars.replace(/var\(--accent-cyan\)/g, 'var(--neon-cyan)')}
+                                        </div>
+                                    </div>
+                                    <script>setTimeout(() => { const container = document.getElementById('progress-mask-${audioId}'); if(container && container.parentElement) container.querySelector('.waveform-active-container').style.width = container.parentElement.offsetWidth + 'px'; }, 0);</script>
                                 </div>
                             </div>
                             <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-main); opacity:0.8; font-family:monospace; font-weight:600;">
                                 <span id="time-${audioId}">0:00</span>
                                 <div style="display:flex; align-items:center; gap:8px;">
                                     <span id="dur-${audioId}">...</span>
-                                    <div class="audio-speed-btn" onclick="if(!window.toggleAudioSpeed){ window.globalAudioPlaybackRate=1.0; window.toggleAudioSpeed=function(){ const rates=[1.0, 1.5, 2.0]; let idx=rates.indexOf(window.globalAudioPlaybackRate); idx=(idx+1)%rates.length; window.globalAudioPlaybackRate=rates[idx]; document.querySelectorAll('audio').forEach(a=>a.playbackRate=window.globalAudioPlaybackRate); document.querySelectorAll('.audio-speed-btn').forEach(b=>b.textContent=window.globalAudioPlaybackRate+'x'); }; } window.toggleAudioSpeed();" style="background:rgba(0,0,0,0.2); padding:2px 6px; border-radius:10px; cursor:pointer; font-size:10px; border:1px solid rgba(255,255,255,0.1); display:inline-block;" id="speed-${audioId}">1x</div>
+                                    <div class="audio-speed-btn" onclick="if(!window.toggleAudioSpeed){ window.globalAudioPlaybackRate=1.0; window.toggleAudioSpeed=function(){ const rates=[1.0, 1.5, 2.0]; let idx=rates.indexOf(window.globalAudioPlaybackRate); idx=(idx+1)%rates.length; window.globalAudioPlaybackRate=rates[idx]; document.querySelectorAll('audio').forEach(a=>a.playbackRate=window.globalAudioPlaybackRate); document.querySelectorAll('.audio-speed-btn').forEach(b=>b.textContent=window.globalAudioPlaybackRate+'x'); }; } window.toggleAudioSpeed();" style="background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:12px; cursor:pointer; font-size:11px; border:1px solid rgba(255,255,255,0.15); display:inline-block;" id="speed-${audioId}">1x</div>
                                     <script>setTimeout(()=>{document.getElementById('speed-${audioId}').textContent=(window.globalAudioPlaybackRate||1.0)+'x';}, 0);</script>
                                 </div>
                             </div>
@@ -1177,8 +1456,8 @@ window.initChatCore = function() {
                         <audio id="${audioId}" preload="metadata" 
                             onloadedmetadata="if(this.duration === Infinity || isNaN(this.duration)) { this.currentTime = 1e101; this.ontimeupdate = function() { this.ontimeupdate = null; this.currentTime = 0; }; } else { let d=this.duration; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); let el=document.getElementById('dur-${audioId}'); if(el) el.textContent=m+':'+s; }" 
                             ondurationchange="if(this.duration !== Infinity && !isNaN(this.duration)){ let d=this.duration; let m=Math.floor(d/60); let s=Math.floor(d%60).toString().padStart(2,'0'); let el=document.getElementById('dur-${audioId}'); if(el) el.textContent=m+':'+s; }" 
-                            ontimeupdate="let p=document.getElementById('progress-${audioId}'); let t=document.getElementById('time-${audioId}'); if(p && this.duration) p.style.width = (this.currentTime/this.duration*100)+'%'; let m=Math.floor(this.currentTime/60); let s=Math.floor(this.currentTime%60).toString().padStart(2,'0'); if(t) t.textContent=m+':'+s;" 
-                            onended="this.currentTime=0; document.getElementById('progress-${audioId}').style.width='0%'; this.parentElement.querySelector('.play-icon').style.display='block'; this.parentElement.querySelector('.pause-icon').style.display='none';" 
+                            ontimeupdate="let p=document.getElementById('progress-mask-${audioId}'); let t=document.getElementById('time-${audioId}'); if(p && this.duration) p.style.width = (this.currentTime/this.duration*100)+'%'; let m=Math.floor(this.currentTime/60); let s=Math.floor(this.currentTime%60).toString().padStart(2,'0'); if(t) t.textContent=m+':'+s;" 
+                            onended="this.currentTime=0; document.getElementById('progress-mask-${audioId}').style.width='0%'; this.parentElement.querySelector('.play-icon').style.display='block'; this.parentElement.querySelector('.pause-icon').style.display='none';" 
                             style="display:none;" 
                             onplay="this.playbackRate=window.globalAudioPlaybackRate||1.0;">
                             <source src="${BASE_URL}${fileUrl}" type="audio/${fileUrl.split('.').pop()}">
@@ -1376,6 +1655,14 @@ window.initChatCore = function() {
                 });
                 // Highlight mentions
                 safeText = safeText.replace(/(^|\s)@([a-zA-Zа-яА-Я0-9_]+)/g, '$1<span class="mention">@$2</span>');
+                
+                // Markdown Formatting
+                safeText = safeText.replace(/`{3}([\s\S]*?)`{3}/g, '<pre style="background:rgba(0,0,0,0.3);padding:8px;border-radius:4px;overflow-x:auto;font-family:monospace;margin:4px 0;"><code>$1</code></pre>');
+                safeText = safeText.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.3);padding:2px 4px;border-radius:4px;font-family:monospace;">$1</code>');
+                safeText = safeText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                safeText = safeText.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+                safeText = safeText.replace(/~([^~]+)~/g, '<del>$1</del>');
+                
                 textDiv.innerHTML = safeText;
             }
             bubble.appendChild(textDiv);
@@ -1519,20 +1806,33 @@ window.initChatCore = function() {
         } else {
             history.appendChild(rowDiv);
             if (!skipScroll) {
+                const isNearBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 150;
                 const doScroll = () => { history.scrollTop = history.scrollHeight; };
-                doScroll();
                 
-                // Track media loads in new messages to ensure scroll is maintained
-                const mediaElements = rowDiv.querySelectorAll('img, video');
-                mediaElements.forEach(media => {
-                    if (!media.complete || media.readyState === 0) {
-                        media.addEventListener(media.tagName === 'IMG' ? 'load' : 'loadeddata', () => {
-                            // Only scroll if user hasn't heavily scrolled up
-                            const isNearBottom = history.scrollHeight - history.scrollTop - history.clientHeight < 800;
-                            if (isNearBottom) doScroll();
-                        }, { once: true });
+                if (isMe || isNearBottom) {
+                    doScroll();
+                    
+                    // Track media loads in new messages to ensure scroll is maintained
+                    const mediaElements = rowDiv.querySelectorAll('img, video');
+                    mediaElements.forEach(media => {
+                        if (!media.complete || media.readyState === 0) {
+                            media.addEventListener(media.tagName === 'IMG' ? 'load' : 'loadeddata', () => {
+                                const nearBottomCheck = history.scrollHeight - history.scrollTop - history.clientHeight < 800;
+                                if (nearBottomCheck) doScroll();
+                            }, { once: true });
+                        }
+                    });
+                } else {
+                    // User is scrolled up, increment badge
+                    window._unreadWhileScrolled = (window._unreadWhileScrolled || 0) + 1;
+                    const badge = document.getElementById('scroll-unread-badge');
+                    const btn = document.getElementById('scroll-bottom-btn');
+                    if (badge && btn) {
+                        btn.style.display = 'flex';
+                        badge.style.display = 'block';
+                        badge.textContent = window._unreadWhileScrolled > 99 ? '99+' : window._unreadWhileScrolled;
                     }
-                });
+                }
 
                 // Trigger fade-in after DOM insertion
                 requestAnimationFrame(() => {
@@ -2027,6 +2327,16 @@ window.initChatCore = function() {
                 try {
                     const room = await apiRequest('/chat/rooms', 'POST', { name: 'Private', room_type: 'private', target_user_id: u.id });
                     addLog(room.is_existing ? 'Чат уже существует' : 'Личный чат создан', 'success');
+                    
+                    // Auto-add to active folder if applicable
+                    if (!room.is_existing && state.chat.currentFolderId && state.chat.currentFolderId !== 'all') {
+                        try {
+                            await apiRequest(`/chat/folders/${state.chat.currentFolderId}/members`, 'POST', { room_ids: [room.id] });
+                        } catch (e) {
+                            console.error('Failed to add new chat to current folder', e);
+                        }
+                    }
+
                     await window.loadChatRooms();
                     window.selectChatRoom(room.id, u.username, 'private', u.id, 'member', u.avatar_url);
                 } catch(e) {
@@ -2075,6 +2385,16 @@ window.initChatCore = function() {
             const payload = { name, room_type: rType, is_public: isPublic, description, initial_members: [] };
             const room = await apiRequest('/chat/groups', 'POST', payload);
             addLog(`✅ Создано: ${name}`, 'success');
+            
+            // Auto-add to active folder if applicable
+            if (room && room.id && state.chat.currentFolderId && state.chat.currentFolderId !== 'all') {
+                try {
+                    await apiRequest(`/chat/folders/${state.chat.currentFolderId}/members`, 'POST', { room_ids: [room.id] });
+                } catch (e) {
+                    console.error('Failed to add new group to current folder', e);
+                }
+            }
+
             await loadChatRooms();
             // Auto-open the new room
             if (room && room.id) {
@@ -2203,6 +2523,26 @@ window.initChatCore = function() {
                     ➕ Добавить участников
                 </button>
             </div>` : ''}
+
+            <!-- Media Gallery -->
+            ${(() => {
+                const mediaMsgs = state.chat.messages.filter(m => m.file_url && (m.file_url.match(/\.(jpeg|jpg|gif|png|webp|mp4|webm)$/i) || m.file_url.startsWith('data:image')));
+                if (mediaMsgs.length === 0) return '';
+                return `
+                <div style="padding:16px 20px;border-bottom:1px solid var(--border-metal);">
+                    <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:12px;">🖼️ МЕДИА (${mediaMsgs.length})</div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:8px;max-height: 200px;overflow-y: auto;padding-right: 4px;">
+                        ${mediaMsgs.map(m => {
+                            const isVideo = m.file_url.match(/\.(mp4|webm)$/i);
+                            const bg = isVideo ? '#000' : `url('${m.file_url}') center/cover no-repeat`;
+                            return \`
+                            <div onclick="window.openLightbox('\${m.file_url}')" style="aspect-ratio:1;border-radius:8px;background:\${bg};cursor:pointer;position:relative;overflow:hidden;border:1px solid var(--border-metal);transition: transform 0.2s; hover: {transform: scale(1.05)}">
+                                \${isVideo ? \`<video src="\${m.file_url}" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><span style="color:#fff;font-size:20px;">▶️</span></div>\` : ''}
+                            </div>\`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            })()}
 
             <!-- Members list -->
             <div>
