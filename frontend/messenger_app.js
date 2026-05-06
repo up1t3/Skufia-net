@@ -327,8 +327,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             bootStep('DATA', 'Loading chat rooms...');
-            if (window.loadChatRooms) await window.loadChatRooms();
-            if (window.loadFolders) await window.loadFolders();
+            // Wrap data loading in a timeout to prevent infinite hangs
+            const loadWithTimeout = (fn, ms) => {
+                return Promise.race([
+                    fn(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+                ]);
+            };
+            try {
+                if (window.loadChatRooms) await loadWithTimeout(() => window.loadChatRooms(), 15000);
+                if (window.loadFolders) await loadWithTimeout(() => window.loadFolders(), 10000);
+            } catch (dataErr) {
+                console.warn('Data loading issue:', dataErr.message);
+                bootStep('DATA', 'Partial load — ' + dataErr.message);
+            }
             
             // PHASE FINAL: Hide sync overlay, show the app
             showSyncOverlay(false);
@@ -452,6 +464,34 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (window.showToast) {
                     window.showToast('Ошибка подключения к серверу. Работа в автономном режиме.', 5000);
+                }
+            }
+        } finally {
+            // ALWAYS hide sync overlay and clear skeleton, regardless of success or failure
+            showSyncOverlay(false);
+            const roomsList = document.getElementById('chat-rooms-list');
+            if (roomsList) {
+                // Clear skeleton placeholders if they still remain
+                const skeleton = roomsList.querySelector('.skeleton');
+                if (skeleton) {
+                    roomsList.innerHTML = '';
+                    // Show retry button if no rooms were loaded
+                    if (!state.chat.rooms || state.chat.rooms.length === 0) {
+                        roomsList.innerHTML = `
+                            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; gap:16px; color:var(--text-dim);">
+                                <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none" opacity="0.4">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                </svg>
+                                <div style="text-align:center;">
+                                    <div style="font-size:15px; font-weight:600; margin-bottom:6px;">Не удалось загрузить чаты</div>
+                                    <div style="font-size:13px; opacity:0.7;">Проверьте подключение к сети</div>
+                                </div>
+                                <button onclick="if(window.loadChatRooms) window.loadChatRooms().then(()=>{}).catch(()=>{})" class="cyber-btn" style="padding:10px 24px; border-radius:10px; font-size:14px; cursor:pointer;">
+                                    ↻ Повторить
+                                </button>
+                            </div>
+                        `;
+                    }
                 }
             }
         }
@@ -999,7 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- SETTINGS & PROFILE ---
     const settingsModal = document.getElementById('settings-modal');
-    const openSettingsBtn = document.getElementById('open-settings-btn');
+    const openSettingsBtn = document.getElementById('sidebar-settings-btn');
     
     window.closeSettingsModal = () => {
         if (settingsModal) settingsModal.style.display = 'none';

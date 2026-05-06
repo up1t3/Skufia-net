@@ -257,7 +257,13 @@ window.initChatCore = function() {
             await loadChatFolders();
             
             renderChatRooms();
-        } catch (e) { addLog('Failed to load chat channels', 'error'); }
+        } catch (e) {
+            addLog('Failed to load chat channels', 'error');
+            // Clear skeleton placeholder so UI doesn't show "Синхронизация..." forever
+            const skeleton = list.querySelector('.skeleton');
+            if (skeleton) skeleton.remove();
+            throw e; // Re-throw so bootSystem can show retry UI
+        }
     }
 
     async function loadChatFolders() {
@@ -625,6 +631,7 @@ window.initChatCore = function() {
             div.style.zIndex = '2';
             div.style.transition = 'transform 0.2s ease';
             div.style.marginBottom = '0'; // wrapper handles margin
+            div.style.background = 'var(--bg-panel)'; // Hide swipe background
             
             // Context menu for Pinning/Unpinning
             div.oncontextmenu = (e) => {
@@ -761,20 +768,34 @@ window.initChatCore = function() {
 
             // Touch Swipe Logic
             let startX = 0;
+            let startY = 0;
             let currentX = 0;
             let isSwiping = false;
+            let isScrolling = false;
 
             div.addEventListener('touchstart', (e) => {
                 startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
                 div.style.transition = 'none';
                 isSwiping = false;
+                isScrolling = false;
             }, { passive: true });
             
             div.addEventListener('touchmove', (e) => {
-                const diff = e.touches[0].clientX - startX;
-                if (diff < -5) { // swipe left (threshold to prevent accidental swipes on scroll)
+                if (isScrolling) return; // Ignore if user is scrolling vertically
+                
+                const diffX = e.touches[0].clientX - startX;
+                const diffY = Math.abs(e.touches[0].clientY - startY);
+                
+                // If vertical movement is greater than horizontal initially, assume scrolling
+                if (!isSwiping && diffY > 5 && diffY > Math.abs(diffX)) {
+                    isScrolling = true;
+                    return;
+                }
+                
+                if (diffX < -5) { // swipe left
                     isSwiping = true;
-                    currentX = Math.max(diff, -100);
+                    currentX = Math.max(diffX, -100);
                     div.style.transform = `translateX(${currentX}px)`;
                 }
             }, { passive: true });
