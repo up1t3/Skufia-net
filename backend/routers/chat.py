@@ -1586,30 +1586,6 @@ async def react_to_message(message_id: int, req: ReactionUpdate, current_user: U
 
     return {"status": "success", "reactions": reactions}
 
-@router.get('/chat/rooms/{room_id}/members')
-def get_room_members(room_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    room = db.query(ChatRoom).filter(ChatRoom.id == room_id).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Room not found")
-
-    me = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id, ChatRoomMember.user_id == current_user.id).first()
-    if not me:
-        return {"invite_code": None, "my_role": None, "members": []}
-
-    members_db = db.query(ChatRoomMember, User).join(User, ChatRoomMember.user_id == User.id).filter(ChatRoomMember.room_id == room_id).all()
-
-    return {
-        "invite_code": room.invite_code,
-        "my_role": me.role,
-        "members": [{
-            "user_id": u.id,
-            "display_name": get_display_name(u),
-            "username": get_display_name(u),
-            "role": m.role,
-            "avatar_url": u.profile.avatar_url if u.profile else None
-        } for m, u in members_db]
-    }
-
 
 # --- PRIVATE CHAT MODULE ---
 class PrivateChatCreate(BaseModel):

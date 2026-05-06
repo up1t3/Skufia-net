@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -229,13 +229,17 @@
                         <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Установить приложение (PWA)
                     </button>
+                    <button onclick="navigator.serviceWorker.getRegistrations().then(function(registrations) { for(let registration of registrations) { registration.unregister(); } }); caches.keys().then(function(names) { for (let name of names) caches.delete(name); }); window.location.reload(true);" class="cyber-btn" style="width: 100%; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(255, 51, 51, 0.1); border-color: #ff3333; color: #ff3333;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                        СБРОСИТЬ КЭШ ПРИЛОЖЕНИЯ
+                    </button>
                 </div>
                 <div style="margin-top: 15px; text-align: center; color: var(--text-dim); font-size: 11px; line-height: 1.4; opacity: 0.7;">
                     © 2026 
                     <span id="matrix-brand" class="scramble-text" data-text="Skufia-Net" style="color: var(--neon-cyan); font-weight: bold;">Skufia-Net</span>
                     <span class="scramble-text" data-text=". All rights reserved.">. All rights reserved.</span>
                     <a href="#" onclick="window.openCreatorPlaque(event)" style="color: var(--text-dim); text-decoration: underline;"><span class="scramble-text" data-text="By Vladimir Popov">By Vladimir Popov</span></a><br>
-                    <span id="app-version-tag" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:4px; background:rgba(0,242,255,0.1); border:1px solid rgba(0,242,255,0.3); color:var(--neon-cyan, #00f2ff); font-family:monospace; font-size:10px; letter-spacing:0.5px;">v2.2.10_06.05_13:45</span>
+                    <span id="app-version-tag" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:4px; background:rgba(0,242,255,0.1); border:1px solid rgba(0,242,255,0.3); color:var(--neon-cyan, #00f2ff); font-family:monospace; font-size:10px; letter-spacing:0.5px;">v2.2.12_06.05_17:21</span>
                 </div>
             </div>
             </div>
@@ -1051,7 +1055,7 @@
     <script defer src="api.js?v=53"></script>
     <script defer src="crypto.js?v=53"></script>
     <script defer src="features.js?v=1777506872471"></script>
-    <script defer src="chat_core.js?v=59"></script>
+    <script defer src="chat_core.js?v=60"></script>
     <script defer src="app.js?v=55"></script>
 
     <!-- Event Detail Modal -->

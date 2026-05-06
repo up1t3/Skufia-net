@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v2.2.11_06.05_14:20';
+const CACHE_NAME = 'skufia-chat-v2.2.15_06.05_23:15';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',
@@ -62,6 +62,48 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+
+    // --- Web Share Target API Interceptor ---
+    if (event.request.method === 'POST' && url.pathname === '/share-target') {
+        event.respondWith((async () => {
+            try {
+                const formData = await event.request.formData();
+                const sharedData = {
+                    title: formData.get('shared_title') || '',
+                    text: formData.get('shared_text') || '',
+                    url: formData.get('shared_url') || '',
+                    files: formData.getAll('shared_files').filter(f => f && f.size > 0),
+                    timestamp: Date.now()
+                };
+
+                // Store in IndexedDB
+                await new Promise((resolve, reject) => {
+                    const request = indexedDB.open('SkufiaShareStore', 1);
+                    request.onupgradeneeded = e => {
+                        e.target.result.createObjectStore('shares', { keyPath: 'id' });
+                    };
+                    request.onsuccess = e => {
+                        const db = e.target.result;
+                        const tx = db.transaction('shares', 'readwrite');
+                        const store = tx.objectStore('shares');
+                        store.put({ id: 'latest_share', data: sharedData });
+                        tx.oncomplete = () => { db.close(); resolve(); };
+                        tx.onerror = () => reject(tx.error);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Redirect to messenger
+                return Response.redirect('/messenger.html?share_intent=1', 303);
+            } catch (err) {
+                console.error('[SW] Error handling share target:', err);
+                return Response.redirect('/messenger.html?share_error=1', 303);
+            }
+        })());
+        return;
+    }
+
     // Only intercept GET requests
     if (event.request.method !== 'GET') return;
 

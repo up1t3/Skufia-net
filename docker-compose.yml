@@ -1,5 +1,12 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "3"
+
 services:
   postgres:
+    logging: *default-logging
     image: postgres:16
     container_name: skufia-postgres
     environment:
@@ -11,11 +18,13 @@ services:
     restart: always
 
   redis:
+    logging: *default-logging
     image: redis:alpine
     container_name: skufia-redis
     restart: always
 
   celery:
+    logging: *default-logging
     build:
       context: ./backend
     container_name: skufia-celery
@@ -34,6 +43,7 @@ services:
     restart: always
 
   coturn:
+    logging: *default-logging
     image: coturn/coturn
     container_name: skufia-coturn
     restart: always
@@ -43,6 +53,7 @@ services:
     command: turnserver --use-auth-secret --static-auth-secret=${TURN_SECRET:-skufia_secret} --realm=${TURN_REALM:-skufia.local}
 
   backend-blue:
+    logging: *default-logging
     build:
       context: ./backend
     container_name: skufia-api-blue
@@ -61,6 +72,7 @@ services:
     restart: always
 
   backend-green:
+    logging: *default-logging
     build:
       context: ./backend
     container_name: skufia-api-green
@@ -79,6 +91,7 @@ services:
     restart: always
 
   frontend:
+    logging: *default-logging
     build:
       context: ./frontend
     container_name: skufia-web

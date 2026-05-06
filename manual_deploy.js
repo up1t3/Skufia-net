@@ -49,7 +49,7 @@ conn.on('ready', () => {
                         set -e
                         echo "-> Rebuilding Frontend..."
                         cd /opt/skufia/frontend
-                        docker build --no-cache -t ghcr.io/up1t3/skufia-frontend:latest .
+                        docker build -t ghcr.io/up1t3/skufia-frontend:latest .
                         
                         echo "-> Restarting Web Container..."
                         cd /opt/skufia
@@ -59,7 +59,7 @@ conn.on('ready', () => {
 
                         echo "-> Rebuilding Backend..."
                         cd /opt/skufia/backend
-                        docker build --no-cache -t ghcr.io/up1t3/skufia-backend:latest .
+                        docker build -t ghcr.io/up1t3/skufia-backend:latest .
                         
                         echo "-> Restarting API Containers..."
                         cd /opt/skufia

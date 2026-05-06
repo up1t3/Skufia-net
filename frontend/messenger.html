@@ -596,7 +596,7 @@
                                         <div id="chat-options-dropdown" class="chat-options-dropdown" style="display:none;">
                                             <button id="btn-add-to-folder" onclick="window.openAddToFolderModal()" style="color: #10b981;">📁 Добавить в папку</button>
                                             <button id="btn-add-member" onclick="window.openAddMemberModal()" style="display:none; color: var(--accent-cyan);">👥 Добавить участника</button>
-                                            <button id="btn-group-settings" onclick="window.openGroupSettings()" style="display:none; color: #f0b429;">⚙️ Управление группой</button>
+                                            <button id="btn-group-settings" onclick="alert('Клик зарегистрирован!'); window.openGroupSettings()" style="display:none; color: #f0b429;">⚙️ Управление группой</button>
                                             <button onclick="window.chatOptionAction('mute')">🔕 Без звука</button>
                                             <button onclick="window.chatOptionAction('search')">🔍 Поиск по чату</button>
                                             <button onclick="window.chatOptionAction('wallpaper')">🎨 Фон чата</button>
@@ -736,7 +736,7 @@
     <script defer src="api.js?v=53"></script>
     <script defer src="crypto.js?v=53"></script>
     <script defer src="features.js?v=1777506872471"></script>
-    <script defer src="chat_core.js?v=59"></script>
+    <script defer src="chat_core.js?v=62"></script>
     <script defer src="messenger_app.js?v=58"></script>
 
     <!-- Event Detail Modal -->

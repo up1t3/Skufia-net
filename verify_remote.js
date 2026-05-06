@@ -10,7 +10,12 @@ const config = {
 
 const conn = new Client();
 conn.on('ready', () => {
-    conn.exec('cat /opt/skufia/docker-compose.production.yml | grep pull', (err, stream) => {
+    const cmd = `
+        journalctl --vacuum-size=100M &&
+        sed -i 's/^#SystemMaxUse=.*/SystemMaxUse=100M/' /etc/systemd/journald.conf &&
+        systemctl restart systemd-journald
+    `;
+    conn.exec(cmd, (err, stream) => {
         if (err) throw err;
         stream.on('close', () => {
             conn.end();

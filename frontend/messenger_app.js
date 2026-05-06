@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // PWA Service Worker - Silent registration
             if ('serviceWorker' in navigator) {
                 console.log('Registering Service Worker...');
-                navigator.serviceWorker.register('chat-sw.js').then(reg => {
+                navigator.serviceWorker.register('chat-sw.js', { updateViaCache: 'none' }).then(reg => {
                     console.log('SW registered successfully');
                 }).catch(err => console.error('SW registration failed:', err));
 
@@ -494,6 +494,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+        }
+        
+        // --- Web Share Target API Handling ---
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('share_intent') === '1') {
+            try {
+                const request = indexedDB.open('SkufiaShareStore', 1);
+                request.onsuccess = e => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('shares')) return;
+                    const tx = db.transaction('shares', 'readwrite');
+                    const store = tx.objectStore('shares');
+                    const getReq = store.get('latest_share');
+                    getReq.onsuccess = () => {
+                        if (getReq.result && getReq.result.data) {
+                            setTimeout(() => {
+                                if (window.showForwardModal) {
+                                    window.showForwardModal(getReq.result.data);
+                                }
+                            }, 500); // Small delay to let the UI settle
+                            store.delete('latest_share');
+                        }
+                    };
+                };
+            } catch (err) {
+                console.error('[Web Share Target] Parsing failed:', err);
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     }
 

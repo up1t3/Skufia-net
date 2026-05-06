@@ -97,12 +97,12 @@ async function startDeploy() {
             
             echo "-> Building Frontend..."
             cd frontend
-            docker build --no-cache -t skufia-frontend:latest .
+            docker build -t skufia-frontend:latest .
             docker tag skufia-frontend:latest ghcr.io/up1t3/skufia-frontend:latest
             
             echo "-> Building Backend..."
             cd ../backend
-            docker build --no-cache -t skufia-backend:latest .
+            docker build -t skufia-backend:latest .
             docker tag skufia-backend:latest ghcr.io/up1t3/skufia-backend:latest
             
             echo "-> Restarting Containers..."

@@ -24,7 +24,7 @@ sed -i -E "s/id=\\"app-version\\">[^<]*/id=\\"app-version\\">$VERSION/" frontend
 sed -i -E "s/(id=\\"app-version-tag\\"[^>]*>)[^<]+(<\\/span>)/\\\\1$VERSION\\\\2/" frontend/messenger.html
 
 cd frontend
-docker build --no-cache -t skufia-frontend:latest .
+docker build -t skufia-frontend:latest .
 docker tag skufia-frontend:latest ghcr.io/up1t3/skufia-frontend:latest
 cd /opt/skufia
 docker stop skufia-web || true

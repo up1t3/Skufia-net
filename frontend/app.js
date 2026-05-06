@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Phase 5: PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('chat-sw.js').then(reg => {
+            navigator.serviceWorker.register('chat-sw.js', { updateViaCache: 'none' }).then(reg => {
                 addLog('Service Worker Connected (PWA Active)', 'system');
                 
                 // Explicitly check for updates on load

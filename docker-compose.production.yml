@@ -1,5 +1,12 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "50m"
+    max-file: "3"
+
 services:
   postgres:
+    logging: *default-logging
     image: postgres:16
     container_name: skufia-postgres
     environment:
@@ -11,6 +18,7 @@ services:
     restart: always
 
   redis:
+    logging: *default-logging
     image: redis:alpine
     container_name: skufia-redis
     extra_hosts:
@@ -18,6 +26,7 @@ services:
     restart: always
 
   celery:
+    logging: *default-logging
     image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest
     container_name: skufia-celery
     command: celery -A worker.celery_app worker --loglevel=info --concurrency=2
@@ -36,6 +45,7 @@ services:
     restart: always
 
   coturn:
+    logging: *default-logging
     image: coturn/coturn
     container_name: skufia-coturn
     restart: always
@@ -56,6 +66,7 @@ services:
       --simple-log
 
   backend-blue:
+    logging: *default-logging
     image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest
     container_name: skufia-api-blue
     ports:
@@ -74,6 +85,7 @@ services:
     restart: always
 
   backend-green:
+    logging: *default-logging
     image: ghcr.io/${GHCR_USER:-up1t3}/skufia-backend:latest
     container_name: skufia-api-green
     ports:
@@ -92,6 +104,7 @@ services:
     restart: always
 
   frontend:
+    logging: *default-logging
     image: ghcr.io/${GHCR_USER:-up1t3}/skufia-frontend:latest
     container_name: skufia-web
     ports:
@@ -106,6 +119,7 @@ services:
     restart: always
 
   smtp-proxy:
+    logging: *default-logging
     image: alpine/socat
     container_name: skufia-smtp-proxy
     network_mode: "host"

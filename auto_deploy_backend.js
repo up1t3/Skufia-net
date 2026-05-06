@@ -14,7 +14,7 @@ export GIT_HASH=$(git rev-parse --short HEAD)
 echo "=== Deploying BACKEND ==="
 
 cd backend
-docker build --no-cache -t skufia-backend:latest .
+docker build -t skufia-backend:latest .
 docker tag skufia-backend:latest ghcr.io/up1t3/skufia-backend:latest
 cd /opt/skufia
 

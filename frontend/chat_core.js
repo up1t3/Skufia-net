@@ -928,6 +928,11 @@ window.initChatCore = function() {
             
             if (isScrolledUp) {
                 btn.style.display = 'flex';
+                // Only show badge if there are actually unread messages
+                if (!window._unreadWhileScrolled || window._unreadWhileScrolled <= 0) {
+                    badge.style.display = 'none';
+                    badge.textContent = '0';
+                }
             } else {
                 btn.style.display = 'none';
                 badge.style.display = 'none';
@@ -1118,9 +1123,9 @@ window.initChatCore = function() {
                     }
                 }));
 
-                // Phase 2: Render all messages synchronously in one pass
+                // Phase 2: Render all messages synchronously in one pass, skipping scroll logic
                 for (const m of messages) {
-                    renderChatMessage(m);
+                    renderChatMessage(m, false, true);
                 }
                 
                 const forceScroll = () => {
@@ -1136,9 +1141,20 @@ window.initChatCore = function() {
                     }
                 });
                 
-                // Fallbacks for layout shifts
-                setTimeout(forceScroll, 100);
-                setTimeout(forceScroll, 500);
+                // Force-clear unread badge immediately after initial render
+                const clearBadge = () => {
+                    window._unreadWhileScrolled = 0;
+                    const _btn = document.getElementById('scroll-bottom-btn');
+                    const _badge = document.getElementById('scroll-unread-badge');
+                    if (_btn) _btn.style.display = 'none';
+                    if (_badge) { _badge.style.display = 'none'; _badge.textContent = '0'; }
+                };
+                clearBadge();
+
+                // Fallbacks for layout shifts — scroll down AND clear badge after each
+                setTimeout(() => { forceScroll(); clearBadge(); }, 100);
+                setTimeout(() => { forceScroll(); clearBadge(); }, 500);
+                setTimeout(clearBadge, 1000);
 
                 // Attach scroll listener for infinite loading
                 chatHistoryEl.onscroll = async () => {
@@ -2441,22 +2457,31 @@ window.initChatCore = function() {
      */
     // @ts-ignore
     window.openGroupSettings = async function() {
-        const roomId = state.chat.currentRoomId;
-        const myRole = state.chat.currentMyRole;
-        if (!roomId) return;
-        if (window.toggleChatOptions) window.toggleChatOptions();
-
-        // Fetch room info and members in parallel
-        let roomInfo = null, members = [];
         try {
-            [roomInfo, members] = await Promise.all([
-                apiRequest(`/chat/rooms/${roomId}/info`),
-                apiRequest(`/chat/rooms/${roomId}/members`)
-            ]);
-        } catch (e) {
-            addLog('Не удалось загрузить информацию о группе', 'error');
-            return;
-        }
+            if (window.addLog) window.addLog('Пытаемся открыть настройки группы...', 'info');
+            const roomId = state.chat.currentRoomId;
+            const myRole = state.chat.currentMyRole;
+            if (!roomId) {
+                alert('Ошибка: не выбран чат (roomId is null)');
+                return;
+            }
+            if (window.toggleChatOptions) window.toggleChatOptions();
+
+            // Fetch room info and members in parallel
+            let roomInfo = null, members = [];
+            try {
+                if (window.addLog) window.addLog('Загрузка данных с сервера...', 'info');
+                [roomInfo, members] = await Promise.all([
+                    apiRequest(`/chat/rooms/${roomId}/info`),
+                    apiRequest(`/chat/rooms/${roomId}/members`)
+                ]);
+                if (window.addLog) window.addLog('Данные загружены, рендерим окно...', 'success');
+            } catch (e) {
+                console.error('[openGroupSettings] API Error:', e);
+                alert('API Ошибка при загрузке информации о группе: ' + e.message);
+                addLog('Не удалось загрузить информацию о группе', 'error');
+                return;
+            }
 
         const isAdmin = ['owner', 'admin'].includes(myRole);
         const isOwner = myRole === 'owner';
@@ -2639,6 +2664,10 @@ window.initChatCore = function() {
         </div>`;
 
         document.body.appendChild(overlay);
+        } catch (err) {
+            console.error('[openGroupSettings] Fatal Error:', err);
+            alert('Критическая ошибка JS при открытии настроек группы:\n' + err.message + '\n' + err.stack);
+        }
     };
 
     // ─── Group management helper functions ──────────────────────────────────
@@ -2843,25 +2872,43 @@ window.initChatCore = function() {
         if(window.toggleChatOptions) window.toggleChatOptions(); // close dropdown
     };
 
+    let addMemberSearchTimeout = null;
     window.filterAddMemberContacts = function() {
-        const query = (document.getElementById('add-member-search').value || '').toLowerCase();
+        const query = (document.getElementById('add-member-search').value || '').trim();
         const list = document.getElementById('add-member-list');
         if (!list) return;
         
-        list.innerHTML = '';
-        const contacts = state.contacts || [];
-        const filtered = contacts.filter(c => 
-            (c.name && c.name.toLowerCase().includes(query)) ||
-            (c.phone && c.phone.includes(query)) ||
-            (c.username && c.username.toLowerCase().includes(query))
-        );
+        if (addMemberSearchTimeout) clearTimeout(addMemberSearchTimeout);
 
-        if (filtered.length === 0) {
+        if (!query) {
+            // Empty query: show initial list
+            renderAddMemberResults(state.contacts || []);
+            return;
+        }
+
+        list.innerHTML = '<div style="text-align:center; padding:15px; color:var(--text-dim);">Поиск...</div>';
+        
+        addMemberSearchTimeout = setTimeout(async () => {
+            try {
+                const results = await apiRequest(`/users/search/${encodeURIComponent(query)}`);
+                renderAddMemberResults(results || []);
+            } catch (e) {
+                list.innerHTML = '<div style="text-align:center; padding:15px; color:red;">Ошибка поиска</div>';
+            }
+        }, 500);
+    };
+
+    function renderAddMemberResults(contactsList) {
+        const list = document.getElementById('add-member-list');
+        if (!list) return;
+        list.innerHTML = '';
+        
+        if (!contactsList || contactsList.length === 0) {
             list.innerHTML = `<div style="text-align:center; padding:15px; color:var(--text-dim);">Ничего не найдено</div>`;
             return;
         }
 
-        filtered.forEach(c => {
+        contactsList.forEach(c => {
             const div = document.createElement('div');
             div.className = 'sidebar-item contact-item';
             div.style.display = 'flex';
@@ -3807,7 +3854,13 @@ window.initChatCore = function() {
 
 
 
-    window.showForwardModal = function(text) {
+    window.showForwardModal = function(data) {
+        let text = typeof data === 'string' ? data : '';
+        if (typeof data === 'object') {
+            text = [data.title, data.text, data.url].filter(Boolean).join('\n');
+        }
+        let files = (typeof data === 'object' && data.files) ? data.files : [];
+
         const modal = document.createElement('div');
         modal.className = 'modal auth-modal-custom';
         modal.style.display = 'flex';
@@ -3839,8 +3892,13 @@ window.initChatCore = function() {
                     setTimeout(() => {
                         const input = document.getElementById('chat-input');
                         if (input) {
-                            input.value = `>>> Пересланное сообщение:\n${text}\n\n`;
+                            if (text) {
+                                input.value = typeof data === 'string' ? `>>> Пересланное сообщение:\n${text}\n\n` : text;
+                            }
                             input.focus();
+                        }
+                        if (files && files.length > 0) {
+                            window.uploadChatFiles(files);
                         }
                     }, 500);
                 };
