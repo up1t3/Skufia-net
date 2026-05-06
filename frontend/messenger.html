@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SKUFenger | Messenger</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=44">
-    <link rel="stylesheet" href="style-modal.css?v=44">
+    <link rel="stylesheet" href="style.css?v=45">
+    <link rel="stylesheet" href="style-modal.css?v=45">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest-skufenger.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -220,7 +220,7 @@
                     <span id="matrix-brand" class="scramble-text" data-text="Skufia-Net" style="color: var(--neon-cyan); font-weight: bold;">Skufia-Net</span>
                     <span class="scramble-text" data-text=". All rights reserved.">. All rights reserved.</span>
                     <a href="#" onclick="window.openCreatorPlaque(event)" style="color: var(--text-dim); text-decoration: underline;"><span class="scramble-text" data-text="By Vladimir Popov">By Vladimir Popov</span></a><br>
-                    <span id="app-version-tag" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:4px; background:rgba(0,242,255,0.1); border:1px solid rgba(0,242,255,0.3); color:var(--neon-cyan, #00f2ff); font-family:monospace; font-size:10px; letter-spacing:0.5px;">v2.2.9_06.05_13:28</span>
+                    <span id="app-version-tag" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:4px; background:rgba(0,242,255,0.1); border:1px solid rgba(0,242,255,0.3); color:var(--neon-cyan, #00f2ff); font-family:monospace; font-size:10px; letter-spacing:0.5px;">v2.2.10_06.05_13:45</span>
                 </div>
             </div>
             </div>
@@ -728,269 +728,7 @@
                 </div>
             </div>
 
-                <!-- DASHBOARD VIEW -->
-                <div class="view" id="view-dashboard">
-                    <h2 class="view-title">👤 ЛИЧНЫЙ КАБИНЕТ</h2>
-                    <div class="profile-header">
-                    <div class="avatar-container" onclick="openAvatarModal()">
-                        <img id="dash-avatar" src="https://api.dicebear.com/7.x/pixel-art/svg?seed=S" alt="avatar">
-                        <div class="avatar-overlay">СМЕНИТЬ</div>
-                    </div>
-                    <div class="profile-info">
-                        <div class="id-row">REG_ID: <span id="dash-id" class="id-tag">---</span></div>
-                        <h2 id="dash-username-display">Скуф_Админ</h2>
-                        <div class="rank-row">СТАТУС: <span id="dash-rank" class="rank-badge">ВЕТЕРАН</span></div>
-                        <div class="karma-row">КАРМА: <span id="dash-karma" class="stat-value">9000</span></div>
-                    </div>
-                </div>
-
-                <div class="profile-details">
-                    <div class="input-group">
-                        <label>ПОЗЫВНОЙ (CALLSIGN)</label>
-                        <input type="text" id="dash-callsign-input" class="cyber-input" placeholder="Введите новый позывной">
-                    </div>
-                    <div class="input-group">
-                        <label>БИОГРАФИЯ (BIO)</label>
-                        <textarea id="dash-bio" class="cyber-textarea" placeholder="Расскажите о своих подвигах в 2007-м..."></textarea>
-                    </div>
-                    <button class="cyber-btn" onclick="saveProfile()">СОХРАНИТЬ ИЗМЕНЕНИЯ</button>
-                </div>
-                </div>
-
-                <!-- SETTINGS VIEW -->
-                <div class="view" id="view-settings">
-                    <h2 class="view-title">⚙️ КОНФИГ СИСТЕМЫ</h2>
-                    <div class="settings-list">
-                        <div class="setting-row"><span>Язык:</span> <span class="highlight">Русский (RU)</span></div>
-                        <div class="setting-row"><span>CRT Эффект:</span> <input type="checkbox" checked></div>
-                        <div class="setting-row">
-                            <span>Тема оформления:</span>
-                            <select id="theme-selector" class="input-text" style="width: auto;" onchange="changeTheme(this.value)">
-                                <option value="telegram">Telegram Modern</option>
-                                <option value="neon">Neon Glassmorphism</option>
-                                <option value="retro">Cyber Retro (Classic)</option>
-                                <option value="light-ios">Light (iOS Style)</option>
-                                <option value="gold">Cyber Gold</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SKUFenger VIEW (Skufia-Net) -->
-                <div class="view" id="view-messages">
-                    <h2 class="view-title" id="skufenger-heading">📡 SKUFenger // SECURE_HUB</h2>
-                    <div class="chat-layout">
-                        <div class="chat-sidebar">
-                            <!-- Premium Sidebar Header -->
-                            <div class="sidebar-header" id="sidebar-header-container">
-                                <!-- Default Mode -->
-                                <div class="sidebar-header-top" id="sidebar-default-header">
-                                    <span class="sidebar-title" style="display: flex; align-items: center; gap: 8px;">SKUFenger <img src="favicon.png" alt="Logo" style="width: 24px; height: 24px; margin-left: 4px; border-radius: 50%; object-fit: cover; background: #0a0e14; padding: 2px;"> <span id="global-status-indicator" class="status-dot online" style="position: static; margin-top: 2px;"></span></span>
-                                    <div class="sidebar-actions" style="display: flex; gap: 4px;">
-                                        <button class="icon-btn" id="install-pwa-btn" title="Установить приложение" style="display: none;">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                        </button>
-                                        <button class="icon-btn" id="sidebar-search-toggle-btn" title="Поиск" onclick="toggleSidebarSearch(true)">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                                        </button>
-                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8 1 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                <!-- Search Mode -->
-                                <div class="sidebar-search-compact" id="sidebar-active-search" style="display: none; padding: 4px 12px; border-radius: 20px; max-width: 65%; margin: 0 auto; animation: fadeIn 0.2s ease;">
-                                    <button class="icon-btn" style="margin-left: -8px; padding: 2px; color: var(--accent-cyan);" onclick="toggleSidebarSearch(false)">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                                    </button>
-                                    <input type="text" id="contact-search" placeholder="Поиск чатов..." autocomplete="off">
-                                </div>
-                            </div>
-                            
-                            <!-- Chat Folders Tabs -->
-                            <div class="chat-folders-tabs" id="chat-folders-tabs">
-                                <div class="folder-tab active" onclick="window.selectFolder('all', this)">Все чаты</div>
-                                <!-- Folders will be loaded here -->
-                                <button class="add-folder-btn" onclick="window.openFolderModal()" title="Создать папку">+</button>
-                            </div>
-                            
-                            <div id="chat-rooms-list" class="sidebar-list premium-scroll">
-                                <div class="skeleton">Синхронизация...</div>
-                            </div>
-                            <!-- Global Search Results -->
-                            <div id="global-search-results" class="sidebar-list premium-scroll" style="display: none;"></div>
-
-                            <button class="fab-create-btn" title="Новый чат" onclick="window.openFabHub()">
-                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                            </button>
-                        </div>
-                        <div class="chat-main">
-                            <!-- Premium Chat Header -->
-                            <div id="chat-header" class="chat-info">
-                                <button class="mobile-back-btn" onclick="event.stopPropagation(); closeChatMobile()">
-                                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                                </button>
-                                <div class="chat-header-profile" onclick="window.openContactProfile && window.openContactProfile()" style="cursor:pointer;">
-                                    <div class="header-avatar" id="header-avatar">?</div>
-                                    <div class="header-text-block">
-                                        <div style="display: flex; align-items: center; gap: 8px;">
-                                            <div id="chat-header-title">Выберите оператора...</div>
-                                            <span id="e2ee-indicator" style="display: none; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; background: rgba(255, 51, 51, 0.2); color: #ff3333; border: 1px solid #ff3333;">🔒 E2E</span>
-                                        </div>
-                                        <div class="header-status">
-                                            <span class="status-dot" style="display: none;"></span> <span id="chat-header-status">Ожидание</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="chat-header-actions">
-                                    <button class="icon-btn" id="btn-audio-call" title="Аудиозвонок" onclick="window.skufengerCall(false)">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                                    </button>
-                                    <button class="icon-btn" id="btn-video-call" title="Видеозвонок" onclick="window.skufengerCall(true)">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-                                    </button>
-                                    <div class="chat-options-wrapper">
-                                        <button class="icon-btn" id="btn-chat-options" title="Опции" onclick="window.toggleChatOptions(event)">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-                                        </button>
-                                        <div id="chat-options-dropdown" class="chat-options-dropdown" style="display:none;">
-                                            <button id="btn-add-to-folder" onclick="window.openAddToFolderModal()" style="color: #10b981;">📁 Добавить в папку</button>
-                                            <button id="btn-add-member" onclick="window.openAddMemberModal()" style="display:none; color: var(--accent-cyan);">👥 Добавить участника</button>
-                                            <button id="btn-group-settings" onclick="window.openGroupSettings()" style="display:none; color: #f0b429;">⚙️ Управление группой</button>
-                                            <button onclick="window.chatOptionAction('mute')">🔕 Без звука</button>
-                                            <button onclick="window.chatOptionAction('search')">🔍 Поиск по чату</button>
-                                            <button onclick="window.chatOptionAction('wallpaper')">🎨 Фон чата</button>
-                                            <button onclick="window.chatOptionAction('clear')">🗑️ Очистить историю</button>
-                                            <button onclick="window.chatOptionAction('encryption')">🔐 Шифрование</button>
-                                            <button onclick="document.getElementById('settings-modal').style.display='flex'; window.toggleChatOptions()">⚙️ Настройки</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div id="typing-indicator" class="typing-indicator" style="display:none; padding: 4px 16px; font-size: 12px; color: var(--accent-cyan); background: rgba(0, 0, 0, 0.2); border-bottom: 1px solid var(--border-color); text-align: center;">Ожидание сигнала...</div>
-
-                            
-                            <!-- Chat Messages Area -->
-                            <div id="chat-history" class="chat-messages premium-scroll" onscroll="window.handleChatScroll(this)">
-                                <div class="chat-placeholder">
-                                    <div class="skeleton-msg received"></div>
-                                    <div class="skeleton-msg sent"></div>
-                                    <div class="skeleton-msg received" style="width: 40%"></div>
-                                </div>
-                            </div>
-                            
-                            <!-- Scroll to Bottom Button -->
-                            <div id="scroll-bottom-btn" class="scroll-bottom-btn" style="display:none;" onclick="window.scrollToBottom()">
-                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                                <span id="scroll-unread-badge" class="scroll-unread-badge" style="display:none;">0</span>
-                            </div>
-                            
-                            <div id="reply-preview-container" class="reply-preview-container" style="display:none;">
-                                <div id="reply-preview-text">Ответ на...</div>
-                                <div class="close-btn" onclick="cancelReply()">✕</div>
-                            </div>
-                            
-                            <div class="chat-input-row premium-input-wrapper">
-                                <input type="file" id="chat-file-input" style="display:none;" accept="*/*" multiple>
-                                <input type="file" id="chat-media-input" style="display:none;" accept="image/*,video/*" multiple>
-                                <input type="file" id="chat-camera-input" style="display:none;" accept="image/*" capture="environment">
-                                
-                                <div id="attach-menu-popup" class="attach-menu-popup" style="display: none;">
-                                    <button class="attach-menu-item" onclick="window.attachCamera()">
-                                        <div class="attach-menu-icon camera-icon">
-                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                                        </div>
-                                        <span>Камера</span>
-                                    </button>
-                                    <button class="attach-menu-item" onclick="window.attachMedia()">
-                                        <div class="attach-menu-icon media-icon">
-                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                        </div>
-                                        <span>Фото или видео</span>
-                                    </button>
-                                    <button class="attach-menu-item" onclick="window.attachDocument()">
-                                        <div class="attach-menu-icon doc-icon">
-                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                        </div>
-                                        <span>Файл</span>
-                                    </button>
-                                    <button class="attach-menu-item" onclick="window.attachLocation()">
-                                        <div class="attach-menu-icon loc-icon">
-                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                        </div>
-                                        <span>Геопозиция</span>
-                                    </button>
-                                </div>
-
-                                <div class="chat-capsule" style="position: relative;">
-                                    <div id="recording-overlay" style="display:none; position:absolute; left:0; top:0; width:100%; height:100%; background:var(--bg-dark); border-radius:30px; align-items:center; z-index:10; padding:0 5px 0 15px; gap:10px; box-sizing:border-box;">
-                                        <button id="cancel-record-btn" title="Отменить" style="background:none; border:none; color:var(--accent-red, #ff4444); cursor:pointer; display:flex; align-items:center; padding:5px;">
-                                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </button>
-                                        <span id="recording-timer" style="color:var(--accent-red, #ff4444); font-weight:600; font-size: 14px; font-variant-numeric: tabular-nums; min-width: 35px;">0:00</span>
-                                        <canvas id="recording-visualizer" style="flex:1; height:24px; min-width:0;"></canvas>
-                                        <button id="send-record-btn" class="send-circle-btn" title="Отправить" style="margin-left:auto; transform: scale(0.9); flex-shrink:0;">
-                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                                        </button>
-                                    </div>
-
-                                    <!-- LEFT: Emoji / Keyboard toggle -->
-                                    <button class="capsule-btn emoji-toggle-btn" id="emoji-toggle-btn" title="Смайлы">
-                                        <svg class="icon-emoji" viewBox="0 0 24 24" width="20" height="20" stroke="#8e8e93" stroke-width="1.8" fill="none"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><circle cx="9" cy="9" r="1.2" fill="#8e8e93" stroke="none"></circle><circle cx="15" cy="9" r="1.2" fill="#8e8e93" stroke="none"></circle></svg>
-                                        <svg class="icon-keyboard" viewBox="0 0 24 24" width="20" height="20" stroke="#8e8e93" stroke-width="1.8" fill="none" style="display:none;"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><circle cx="6" cy="8" r="1" fill="#8e8e93" stroke="none"></circle><circle cx="10" cy="8" r="1" fill="#8e8e93" stroke="none"></circle><circle cx="14" cy="8" r="1" fill="#8e8e93" stroke="none"></circle><circle cx="18" cy="8" r="1" fill="#8e8e93" stroke="none"></circle><circle cx="6" cy="12" r="1" fill="#8e8e93" stroke="none"></circle><circle cx="10" cy="12" r="1" fill="#8e8e93" stroke="none"></circle><circle cx="14" cy="12" r="1" fill="#8e8e93" stroke="none"></circle><circle cx="18" cy="12" r="1" fill="#8e8e93" stroke="none"></circle><rect x="8" y="15.5" width="8" height="1.5" rx="0.75" fill="#8e8e93" stroke="none"></rect></svg>
-                                    </button>
-                                    
-                                    <!-- CENTER: Text input (default) / Emoji panel (toggled) -->
-                                    <input type="text" id="chat-input" placeholder="Написать сообщение..." autocomplete="off">
-                                    <div id="emoji-panel" class="emoji-panel" style="display:none;"></div>
-
-                                    <!-- RIGHT: Attach → Video → Mic/Send -->
-                                    <button id="chat-attach-btn" class="capsule-btn attach-btn" title="Вложение" onclick="window.toggleAttachMenu(event)">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                                    </button>
-                                    <button class="capsule-btn mic-btn" id="video-record-btn" title="Видеосообщение (кружок)">
-                                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-                                    </button>
-                                    <div class="action-buttons">
-                                        <button class="capsule-btn mic-btn" id="voice-record-btn" title="Голосовое сообщение">
-                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                        </button>
-                                        <button type="button" id="send-chat-btn" class="send-circle-btn" title="Отправить" style="display:none;" onmousedown="event.preventDefault()" onclick="if(window.sendChatMsg) window.sendChatMsg()">
-                                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-            </main>
-        </div>
-
-        <footer class="system-footer">
-            <div class="footer-left">CONN: SECURE // PROTOCOL: SKUF_NET_v2</div>
-            <div class="footer-right">© 2000-2026 SKUFIA ENTERPRISE SYSTEMS | <span id="app-version">v2.2.9_06.05_13:28</span></div>
-        </footer>
-    </div>
-    
-
-
-
-    
-    <script defer src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script defer src="db.js?v=56"></script>
-    <script defer src="rtcManager.js?v=55"></script>
-    <script defer src="ui.js?v=54"></script>
-    <script defer src="api.js?v=53"></script>
-    <script defer src="crypto.js?v=53"></script>
-    <script defer src="features.js?v=1777506872471"></script>
-    <script defer src="chat_core.js?v=59"></script>
-    <script defer src="messenger_app.js?v=56"></script>
-
-    <!-- Event Detail Modal -->
-    
+                
 <script defer src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <script defer src="db.js?v=56"></script>
     <script defer src="rtcManager.js?v=55"></script>
@@ -999,7 +737,7 @@
     <script defer src="crypto.js?v=53"></script>
     <script defer src="features.js?v=1777506872471"></script>
     <script defer src="chat_core.js?v=59"></script>
-    <script defer src="app.js?v=55"></script>
+    <script defer src="messenger_app.js?v=57"></script>
 
     <!-- Event Detail Modal -->
     <div id="event-detail-modal" class="modal" style="display: none;">

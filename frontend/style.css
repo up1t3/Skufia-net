@@ -1116,6 +1116,8 @@ body.super-user .nav-btn.active {
 .sidebar-list {
     flex-grow: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
     padding: 8px 10px;
     display: flex;
     flex-direction: column;
@@ -1131,6 +1133,7 @@ body.super-user .nav-btn.active {
     border-radius: 10px;
     border: 1px solid transparent;
     transition: background 0.2s, border-color 0.2s;
+    touch-action: pan-y;
 }
 
 .sidebar-item:hover {
@@ -1342,6 +1345,8 @@ body.super-user .nav-btn.active {
     flex-grow: 1;
     min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
     padding: 16px 20px;
     display: flex;
     flex-direction: column;

@@ -617,7 +617,7 @@ window.initChatCore = function() {
             const wrapper = document.createElement('div');
             wrapper.className = 'sidebar-item-wrapper';
             wrapper.id = `room-item-${room.id}`;
-            wrapper.style.cssText = 'position: relative; overflow: hidden; border-radius: 8px; margin-bottom: 5px;';
+            wrapper.style.cssText = 'position: relative; overflow-x: clip; overflow-y: visible; border-radius: 8px; margin-bottom: 2px;';
 
             const actionsBg = document.createElement('div');
             actionsBg.className = 'swipe-actions';

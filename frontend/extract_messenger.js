@@ -17,7 +17,7 @@ const viewMessages = content.substring(viewMessagesStart, viewMessagesEnd);
 const avatarModalStart = content.indexOf('<div id="avatar-modal"');
 let avatarModal = '';
 if (avatarModalStart !== -1) {
-    const nextModal = content.indexOf('<div id="event-detail-modal"', avatarModalStart);
+    const nextModal = content.indexOf('<!-- DASHBOARD VIEW -->', avatarModalStart);
     if (nextModal !== -1) {
         avatarModal = content.substring(avatarModalStart, nextModal);
     }
@@ -34,8 +34,8 @@ let messengerHtml = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SKUFenger | Messenger</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=44">
-    <link rel="stylesheet" href="style-modal.css?v=44">
+    <link rel="stylesheet" href="style.css?v=45">
+    <link rel="stylesheet" href="style-modal.css?v=45">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest-skufenger.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -60,7 +60,7 @@ ${scripts}
 </body>
 </html>`;
 
-messengerHtml = messengerHtml.replace(/src="app\.js[^"]*"/, 'src="messenger_app.js?v=56"');
+messengerHtml = messengerHtml.replace(/src="app\.js[^"]*"/, 'src="messenger_app.js?v=57"');
 messengerHtml = messengerHtml.replace('<div class="view" id="view-messages">', '<div class="view active" id="view-messages">');
 
 fs.writeFileSync('messenger.html', messengerHtml, 'utf-8');
