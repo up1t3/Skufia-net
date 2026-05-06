@@ -1,4 +1,4 @@
-const CACHE_NAME = 'skufia-chat-v2.2.6_06.05_12:15';
+const CACHE_NAME = 'skufia-chat-v2.2.7_06.05_12:35';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

@@ -2535,10 +2535,10 @@ window.initChatCore = function() {
                         ${mediaMsgs.map(m => {
                             const isVideo = m.file_url.match(/\.(mp4|webm)$/i);
                             const bg = isVideo ? '#000' : `url('${m.file_url}') center/cover no-repeat`;
-                            return \`
-                            <div onclick="window.openLightbox('\${m.file_url}')" style="aspect-ratio:1;border-radius:8px;background:\${bg};cursor:pointer;position:relative;overflow:hidden;border:1px solid var(--border-metal);transition: transform 0.2s; hover: {transform: scale(1.05)}">
-                                \${isVideo ? \`<video src="\${m.file_url}" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><span style="color:#fff;font-size:20px;">▶️</span></div>\` : ''}
-                            </div>\`;
+                            return `
+                            <div onclick="window.openLightbox('${m.file_url}')" style="aspect-ratio:1;border-radius:8px;background:${bg};cursor:pointer;position:relative;overflow:hidden;border:1px solid var(--border-metal);transition: transform 0.2s; hover: {transform: scale(1.05)}">
+                                ${isVideo ? `<video src="${m.file_url}" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><span style="color:#fff;font-size:20px;">▶️</span></div>` : ''}
+                            </div>`;
                         }).join('')}
                     </div>
                 </div>`;
@@ -4170,7 +4170,7 @@ window.initChatCore = function() {
             }
             
             div.innerHTML = `
-                <div class="sidebar-item-avatar">${member.avatar_url ? \`<img src="\${API_BASE_URL}\${member.avatar_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">\` : initial}</div>
+                <div class="sidebar-item-avatar">${member.avatar_url ? `<img src="${API_BASE_URL}${member.avatar_url}" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">` : initial}</div>
                 <div class="sidebar-item-info" style="display: flex; align-items: center; width: 100%;">
                     <div>
                         <div class="sidebar-item-name">${member.display_name || member.username}</div>
