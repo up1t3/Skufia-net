@@ -2579,26 +2579,6 @@ window.initChatCore = function() {
                 </button>
             </div>` : ''}
 
-            <!-- Media Gallery -->
-            ${(() => {
-                const mediaMsgs = state.chat.messages.filter(m => m.file_url && (m.file_url.match(/\.(jpeg|jpg|gif|png|webp|mp4|webm)$/i) || m.file_url.startsWith('data:image')));
-                if (mediaMsgs.length === 0) return '';
-                return `
-                <div style="padding:16px 20px;border-bottom:1px solid var(--border-metal);">
-                    <div style="font-size:11px;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:12px;">🖼️ МЕДИА (${mediaMsgs.length})</div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:8px;max-height: 200px;overflow-y: auto;padding-right: 4px;">
-                        ${mediaMsgs.map(m => {
-                            const isVideo = m.file_url.match(/\.(mp4|webm)$/i);
-                            const bg = isVideo ? '#000' : `url('${m.file_url}') center/cover no-repeat`;
-                            return `
-                            <div onclick="window.openLightbox('${m.file_url}')" style="aspect-ratio:1;border-radius:8px;background:${bg};cursor:pointer;position:relative;overflow:hidden;border:1px solid var(--border-metal);transition: transform 0.2s; hover: {transform: scale(1.05)}">
-                                ${isVideo ? `<video src="${m.file_url}" style="width:100%;height:100%;object-fit:cover;"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.3);"><span style="color:#fff;font-size:20px;">▶️</span></div>` : ''}
-                            </div>`;
-                        }).join('')}
-                    </div>
-                </div>`;
-            })()}
-
             <!-- Members list -->
             <div>
                 <div style="padding:12px 20px 8px;font-size:11px;letter-spacing:0.1em;color:var(--text-dim);">
