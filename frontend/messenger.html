@@ -5,12 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SKUFenger | Messenger</title>
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
-    <link rel="stylesheet" href="style.css?v=60">
-    <link rel="stylesheet" href="style-modal.css?v=60">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <script type="module" src="https://unpkg.com/emoji-picker-element@1.22.8/index.js"></script>
+    <link rel="stylesheet" href="style.css?v=43">
+    <link rel="stylesheet" href="style-modal.css?v=43">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest-skufenger.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -23,533 +19,43 @@
     <div class="crt-overlay"></div>
     <div class="scanline"></div>
 
-<!-- Auth Overlay -->
-    <div id="auth-overlay" class="modal auth-modal-custom" style="display: none;">
-        <div class="modal-content auth-content">
-            <div class="modal-header">
-                <h2 id="auth-title">АВТОРИЗАЦИЯ</h2>
-            </div>
-            
-            <!-- Login Form -->
-            <form id="login-form">
-                <div class="form-group">
-                    <label>ПОЗЫВНОЙ (USERNAME)</label>
-                    <input type="text" id="login-username" required>
-                </div>
-                <div class="form-group">
-                    <label>ПАРОЛЬ ДЛЯ СВЯЗИ</label>
-                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
-                        <input type="password" id="login-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('login-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
-                    </div>
-                </div>
-                <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-                <button type="submit" class="cyber-btn primary-btn auth-main-btn">ВОЙТИ В СЕТЬ</button>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; font-size: 13px;">
-                    <a href="#" id="toggle-to-forgot" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Забыли пароль?</a>
-                    <span>Нет доступа? <a href="#" id="toggle-to-register" style="color: var(--accent-cyan); text-decoration: none;">Получить ID</a></span>
-                </div>
-            </form>
-
-            <!-- Unlock Vault Form (hidden by default) -->
-            <form id="unlock-form" style="display: none;">
-                <p style="color: var(--text-dim); margin-bottom: 15px; font-size: 14px; text-align: center;">
-                    Сессия активна. Введите ваш пароль для доступа к защищенным сообщениям.
-                </p>
-                <div class="form-group">
-                    <label>ПАРОЛЬ ДЛЯ СВЯЗИ</label>
-                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
-                        <input type="password" id="unlock-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('unlock-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
-                    </div>
-                </div>
-                <div id="unlock-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-                <button type="submit" class="cyber-btn primary-btn auth-main-btn">РАЗБЛОКИРОВАТЬ ВАЛТ</button>
-                <div style="display: flex; justify-content: center; margin-top: 15px; font-size: 13px;">
-                    <a href="#" id="toggle-to-login-from-unlock" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Сменить пользователя</a>
-                </div>
-            </form>
-
-            <!-- Register Form (hidden by default) -->
-            <form id="register-form" style="display: none;">
-                <div class="form-group">
-                    <label>ПОЗЫВНОЙ (USERNAME)</label>
-                    <input type="text" id="reg-username" required>
-                </div>
-                <div class="form-group">
-                    <label>ПОЧТА (EMAIL)</label>
-                    <input type="email" id="reg-email" required>
-                </div>
-                <div class="form-group">
-                    <label>ПАРОЛЬ (ЗАПОМНИ!)</label>
-                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
-                        <input type="password" id="reg-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reg-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
-                    </div>
-                </div>
-                <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-
-                <!-- ФЗ-152: Personal Data Consent -->
-                <div style="background: rgba(0,242,255,0.05); border: 1px solid rgba(0,242,255,0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 12px; color: var(--text-dim); line-height: 1.5;">
-                        <input type="checkbox" id="reg-pd-consent" style="width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--accent-cyan);" onchange="document.getElementById('reg-submit-btn').disabled = !this.checked;">
-                        <span>Я даю согласие на обработку моих персональных данных в соответствии с 
-                            <strong style="color: var(--accent-cyan);">Федеральным законом № 152-ФЗ</strong>
-                            «О персональных данных». Данные используются исключительно для обеспечения работы платформы Skufia-Net и не передаются третьим лицам.
-                        </span>
-                    </label>
-                </div>
-
-                <button type="submit" id="reg-submit-btn" class="cyber-btn primary-btn auth-main-btn" disabled style="opacity: 0.5; cursor: not-allowed; transition: opacity 0.3s;">АКТИВИРОВАТЬ АККАУНТ</button>
-                <div style="text-align: center; margin-top: 15px; font-size: 13px;">
-                    Уже есть ID? <a href="#" id="toggle-to-login-from-reg" style="color: var(--accent-cyan); text-decoration: none;">Авторизация</a>
-                </div>
-            </form>
-
-            <!-- Forgot Password Form (hidden by default) -->
-            <form id="forgot-password-form" style="display: none;">
-                <p style="color: var(--text-dim); margin-bottom: 15px; font-size: 14px; text-align: center;">
-                    Укажите позывной или email. Код восстановления будет отправлен.
-                </p>
-                <div class="form-group">
-                    <label>ПОЗЫВНОЙ ИЛИ EMAIL</label>
-                    <input type="text" id="forgot-username" required>
-                </div>
-                <div id="forgot-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-                <div id="forgot-success" class="error-msg" style="color: #00ff41; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-                <button type="submit" id="forgot-submit-btn" class="cyber-btn primary-btn auth-main-btn">ОТПРАВИТЬ КОД</button>
-                <div style="text-align: center; margin-top: 15px; font-size: 13px;">
-                    <a href="#" id="toggle-to-login-from-forgot" style="color: var(--text-dim); text-decoration: none;">Вернуться к входу</a>
-                </div>
-            </form>
-
-            <!-- Reset Password Form (hidden by default) -->
-            <form id="reset-password-form" style="display: none;">
-                <div style="background: rgba(255, 51, 51, 0.1); border: 1px solid rgba(255, 51, 51, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                    <p style="color: #ff3333; font-size: 12px; margin: 0; text-align: center;">
-                        <strong>ВНИМАНИЕ:</strong> Сброс пароля уничтожит ваши текущие E2E ключи шифрования. История секретных чатов станет недоступной.
-                    </p>
-                </div>
-                <div class="form-group">
-                    <label>КОД ВОССТАНОВЛЕНИЯ</label>
-                    <input type="text" id="reset-code" required style="letter-spacing: 2px; text-align: center;">
-                </div>
-                <div class="form-group">
-                    <label>НОВЫЙ ПАРОЛЬ</label>
-                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
-                        <input type="password" id="reset-new-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
-                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reset-new-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
-                    </div>
-                </div>
-                <div id="reset-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-                <div id="reset-success" class="error-msg" style="color: #00ff41; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
-                <button type="submit" id="reset-submit-btn" class="cyber-btn primary-btn auth-main-btn" style="background: rgba(255, 51, 51, 0.1); border-color: var(--accent-red); color: var(--accent-red);">СБРОСИТЬ ПАРОЛЬ</button>
-                <div style="text-align: center; margin-top: 15px; font-size: 13px;">
-                    <a href="#" id="toggle-to-login-from-reset" style="color: var(--text-dim); text-decoration: none;">Вернуться к входу</a>
-                </div>
-            </form>
-        </div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SKUFIA | Enterprise Command Center</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
+    <link rel="stylesheet" href="style.css?v=60">
+    <link rel="stylesheet" href="style-modal.css?v=60">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script type="module" src="https://unpkg.com/emoji-picker-element@1.22.8/index.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@300;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        if (window.location.search.includes('app=messenger') || window.location.search.includes('app=skufenger') || window.location.hash.includes('messenger')) {
+            window.location.replace('messenger.html' + window.location.search + window.location.hash);
+        } else {
+            document.write('<link rel="manifest" href="manifest.json">');
+        }
+    </script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Skufia">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0a0e14" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#0a0e14">
+</head>
+<body data-theme="telegram">
+    <div id="pwa-update-banner" style="display: none; position: fixed; top: 0; left: 0; width: 100%; background: var(--accent-blue, #007bff); color: white; z-index: 10000; padding: 10px 20px; box-sizing: border-box; align-items: center; justify-content: space-between; font-family: 'Inter', sans-serif; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+        <div>Доступно обновление приложения.</div>
+        <button id="pwa-update-btn" style="background: white; color: var(--accent-blue, #007bff); border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Обновить</button>
     </div>
+    <div class="crt-overlay"></div>
+    <div class="scanline"></div>
 
-    <!-- Boot Sync Overlay — shown during background initialization -->
-    <div id="boot-sync-overlay" style="display: none; position: fixed; inset: 0; z-index: 9998; background: var(--bg-main, #0a0e14); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
-        <div style="width: 48px; height: 48px; border: 3px solid rgba(0,242,255,0.15); border-top-color: var(--accent-cyan, #00f2ff); border-radius: 50%; animation: boot-spin 0.8s linear infinite;"></div>
-        <div id="boot-sync-status" style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim, #8a94a2); letter-spacing: 1px;">СИНХРОНИЗАЦИЯ...</div>
-        <style>
-            @keyframes boot-spin {
-                to { transform: rotate(360deg); }
-            }
-        </style>
-    </div>
     
-    <!-- Avatar Crop Modal -->
-    <div id="avatar-crop-modal" class="modal" style="display: none; z-index: 10000;">
-        <div class="modal-content" style="max-width: 500px; padding: 20px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px;">
-            <div class="modal-header">
-                <h2>Кадрирование фото</h2>
-                <button class="close-btn-svg" onclick="window.closeCropModal()">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="crop-container" style="width: 100%; height: 350px; background: #000; border-radius: 12px; overflow: hidden; position: relative;">
-                <img id="crop-image-target" style="display: block; max-width: 100%;">
-            </div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 5px;">
-                <button class="cyber-btn" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; border-radius: 8px; padding: 10px 20px;" onclick="window.closeCropModal()">ОТМЕНА</button>
-                <button class="cyber-btn primary-btn" style="border-radius: 8px; padding: 10px 20px;" onclick="window.uploadCroppedAvatar()">СОХРАНИТЬ</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 16px;">
-            <div class="modal-header">
-                <h2>Настройки</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('settings-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
-                
-                <!-- Avatar Upload Section -->
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <div class="avatar-upload-container" style="position: relative; cursor: pointer; transition: transform 0.2s ease;" onclick="document.getElementById('settings-avatar-upload').click()" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                        <img id="settings-avatar-preview" src="https://ui-avatars.com/api/?name=Admin&background=1f2937&color=00f2ff" alt="Avatar" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-cyan); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                        <div class="avatar-overlay" style="position: absolute; bottom: 0; right: 0; background: var(--accent-cyan); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">
-                            <svg viewBox="0 0 24 24" width="14" height="14" stroke="#000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                        </div>
-                    </div>
-                    <input type="file" id="settings-avatar-upload" accept="image/*" style="display: none;" onchange="window.previewAvatar(this)">
-                    <span style="font-size: 12px; color: var(--text-dim); font-weight: 500;">Установить фото профиля</span>
-                </div>
-
-                <!-- Formally had theme select here, moved to dedicated modal -->
-
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="settings-handle" style="font-size: 14px; margin-bottom: 5px; display: block; color: var(--text-dim);">Короткое имя (Handle)</label>
-                    <div style="display: flex; align-items: stretch; background: var(--bg-accent); border: 1px solid var(--border-metal); border-radius: 8px; overflow: hidden; height: 44px; transition: border-color 0.2s;">
-                        <span style="display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); padding: 0 15px; color: var(--text-dim); font-size: 16px; border-right: 1px solid var(--border-metal);">@</span>
-                        <input type="text" id="settings-handle" style="width: 100%; border: none; background: transparent; color: var(--text-main); font-size: 15px; padding: 0 15px; outline: none;" placeholder="username">
-                    </div>
-                    <small style="color: var(--text-dim); font-size: 11px; margin-top: 4px; display: block;">По этой ссылке вас смогут найти другие.</small>
-                    <button id="btn-save-profile" class="cyber-btn primary-btn" style="width: 100%; margin-top: 10px; border-radius: 8px; padding: 12px;" onclick="window.saveProfileHandle()">СОХРАНИТЬ ИМЯ</button>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 15px; background: var(--bg-accent); border: 1px solid var(--border-metal); border-radius: 8px; padding: 15px;">
-                    <label style="font-size: 14px; margin-bottom: 10px; display: block; color: var(--text-main); font-weight: 500;">Смена пароля</label>
-                    <input type="password" id="settings-old-password" class="cyber-input" style="width: 100%; border-radius: 8px; margin-bottom: 10px; padding: 10px 15px; font-size: 14px;" placeholder="Старый пароль">
-                    <input type="password" id="settings-new-password" class="cyber-input" style="width: 100%; border-radius: 8px; margin-bottom: 10px; padding: 10px 15px; font-size: 14px;" placeholder="Новый пароль">
-                    <button id="btn-change-password" class="cyber-btn" style="width: 100%; border-radius: 8px; padding: 10px; border-color: var(--accent-red); color: var(--accent-red); background: rgba(255, 68, 68, 0.1);" onclick="window.changeUserPassword()">ИЗМЕНИТЬ ПАРОЛЬ</button>
-                    <div id="settings-password-msg" style="margin-top: 10px; font-size: 12px; text-align: center;"></div>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <button onclick="document.getElementById('settings-modal').style.display='none'; document.getElementById('theme-switcher-modal').style.display='flex';" class="cyber-btn" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(0, 242, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">
-                        🎨 Выбрать цветовую тему
-                    </button>
-                </div>
-
-                <!-- Toggles Section -->
-                <div style="background: var(--bg-accent); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 12px; border: 1px solid var(--border-metal);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 14px; color: var(--text-main);">Push-уведомления</span>
-                        <label class="switch">
-                            <input type="checkbox" id="push-notifications-toggle">
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                        <label style="margin: 0; font-size: 14px;">Звуковые уведомления</label>
-                        <input type="checkbox" id="settings-sound-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                        <label style="margin: 0; font-size: 14px;">Отправка по Enter</label>
-                        <input type="checkbox" id="settings-enter-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-                    
-                    <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between;">
-                        <label style="margin: 0; font-size: 14px;">Автозагрузка медиа</label>
-                        <input type="checkbox" id="settings-media-toggle" checked style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-                </div>
-
-
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <!-- Sync Contacts Hidden -->
-                </div>
-
-                
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <button onclick="window.location.href='skufenger.html'" class="cyber-btn" style="width: 100%; margin-top: 10px; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(0, 242, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Установить приложение (PWA)
-                    </button>
-                </div>
-
-                <div class="form-group" style="margin-top: 15px; margin-bottom: 0;">
-                    <button id="logout-btn" class="cyber-btn" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: rgba(255, 51, 51, 0.1); border-color: var(--accent-red, #ff3333); color: var(--accent-red, #ff3333);">
-                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                        Выйти из аккаунта
-                    </button>
-                </div>
-                <div style="margin-top: 15px; text-align: center; color: var(--text-dim); font-size: 11px; line-height: 1.4; opacity: 0.7;">
-                    © 2026 
-                    <span id="matrix-brand" class="scramble-text" data-text="Skufia-Net" style="color: var(--neon-cyan); font-weight: bold;">Skufia-Net</span>
-                    <span class="scramble-text" data-text=". All rights reserved.">. All rights reserved.</span>
-                    <a href="#" onclick="window.openCreatorPlaque(event)" style="color: var(--text-dim); text-decoration: underline;"><span class="scramble-text" data-text="By Vladimir Popov">By Vladimir Popov</span></a><br>
-                    <span id="app-version-tag" style="display:inline-block; margin-top:4px; padding:2px 8px; border-radius:4px; background:rgba(0,242,255,0.1); border:1px solid rgba(0,242,255,0.3); color:var(--neon-cyan, #00f2ff); font-family:monospace; font-size:10px; letter-spacing:0.5px;">v2.2.0_05.05_18:57</span>
-                </div>
-            </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Theme Switcher Modal -->
-    <div id="theme-switcher-modal" class="modal" style="display: none; z-index: 9999;">
-        <div class="modal-content glass-panel" style="max-width: 450px; padding: 25px; border-radius: 16px;">
-            <div class="modal-header">
-                <h2>Выбор Темы</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('theme-switcher-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="theme-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                <div class="theme-card" onclick="window.setAndCloseTheme('cyber')" style="cursor:pointer; background: #001111; border: 2px solid var(--accent-cyan); border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(0, 242, 255, 0.2); transition: transform 0.2s ease;">
-                    <div style="font-size: 24px; margin-bottom: 10px;">🟢</div>
-                    <div style="color: #00f2ff; font-weight: bold;">Skufia Cyber</div>
-                    <small style="color: #448888;">Neon/Glass</small>
-                </div>
-                <div class="theme-card" onclick="window.setAndCloseTheme('telegram')" style="cursor:pointer; background: #1c242d; border: 2px solid #5b6571; border-radius: 12px; padding: 15px; text-align: center; transition: transform 0.2s ease;">
-                    <div style="font-size: 24px; margin-bottom: 10px;">🌙</div>
-                    <div style="color: #e4e6eb; font-weight: bold;">Telegram Dark</div>
-                    <small style="color: #8c96a3;">Classic App</small>
-                </div>
-                <div class="theme-card" onclick="window.setAndCloseTheme('light-ios')" style="cursor:pointer; background: #ffffff; border: 2px solid #d1d1d6; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); transition: transform 0.2s ease;">
-                    <div style="font-size: 24px; margin-bottom: 10px;">☀️</div>
-                    <div style="color: #000000; font-weight: bold;">Light OS</div>
-                    <small style="color: #8e8e93;">Apple Style</small>
-                </div>
-                <div class="theme-card" onclick="window.setAndCloseTheme('gold')" style="cursor:pointer; background: #1a1500; border: 2px solid #ffcc00; border-radius: 12px; padding: 15px; text-align: center; box-shadow: 0 0 10px rgba(255, 204, 0, 0.2); transition: transform 0.2s ease;">
-                    <div style="font-size: 24px; margin-bottom: 10px;">👑</div>
-                    <div style="color: #ffcc00; font-weight: bold;">Cyber Gold</div>
-                    <small style="color: #a38b22;">Premium</small>
-                </div>
-            </div>
-            <style>
-                .theme-card:hover { transform: translateY(-3px); }
-            </style>
-        </div>
-    </div>
-    <div id="creator-plaque-modal" class="modal" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
-        <div class="modal-content glass-panel" style="max-width: 320px; padding: 0; border-radius: 16px; overflow: hidden; border: 1px solid rgba(0, 242, 255, 0.3); box-shadow: 0 0 20px rgba(0, 242, 255, 0.15);">
-            <div style="background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(0,0,0,0)); padding: 25px 20px 15px; text-align: center; position: relative;">
-                <button class="close-btn-svg" onclick="document.getElementById('creator-plaque-modal').style.display='none'" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); border-radius: 50%;">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-                <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 15px; border: 2px solid var(--neon-cyan); display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 0 15px rgba(0,242,255,0.4);">
-                    <svg viewBox="0 0 24 24" width="40" height="40" stroke="var(--neon-cyan)" stroke-width="1.5" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                </div>
-                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #fff;">Vladimir Popov</h3>
-                <div style="margin-top: 8px; display: inline-flex; align-items: center; gap: 5px; background: rgba(0, 242, 255, 0.15); border: 1px solid rgba(0, 242, 255, 0.3); padding: 4px 10px; border-radius: 12px; font-size: 11px; color: var(--neon-cyan); letter-spacing: 0.5px;">
-                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-                    SUPER ADMIN
-                </div>
-            </div>
-            <div style="padding: 20px; background: var(--bg-surface);">
-                <p style="font-size: 13px; color: var(--text-dim); text-align: center; margin-top: 0; margin-bottom: 20px; line-height: 1.5;">
-                    Создатель и Хранитель платформы Skufia-Net. Enterprise Edition.
-                </p>
-                <a href="https://t.me/up1t3rV" target="_blank" class="cyber-btn primary-btn" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; text-decoration: none; padding: 12px;">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    Связаться в Telegram
-                </a>
-                <div style="margin-top: 15px; text-align: center;">
-                    <span style="font-size: 12px; color: var(--neon-cyan); font-family: monospace; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">@up1t3rV</span>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Main Folder Creation Modal -->
-    <div id="folder-modal" class="modal" style="display: none; z-index: 10000;">
-        <div class="modal-content" style="max-width: 400px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg-secondary); border: 1px solid var(--border-metal);">
-            <div class="modal-header" style="padding: 20px 25px; border-bottom: 1px solid rgba(255,255,255,0.05); background: var(--bg-tertiary);">
-                <h2 style="margin: 0; font-size: 18px;">Новая папка</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('folder-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <div style="padding: 25px; display: flex; flex-direction: column; gap: 20px;">
-                <!-- Folder Name Input -->
-                <div class="form-group" style="margin: 0;">
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(0, 242, 255, 0.1); border: 1px solid var(--accent-cyan); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan); flex-shrink: 0;">
-                            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-                        </div>
-                        <input type="text" id="folder-name-input" class="cyber-input" style="width: 100%; border-radius: 10px; padding: 12px 15px; font-size: 15px; margin: 0;" placeholder="Название папки...">
-                    </div>
-                </div>
-
-                <!-- Included Chats Section -->
-                <div class="form-group" style="margin: 0;">
-                    <label style="font-size: 13px; color: var(--text-dim); margin-bottom: 10px; display: block; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px;">Включенные чаты</label>
-                    <button onclick="window.openFolderAddChatsModal()" class="cyber-btn" style="width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 15px; border-radius: 10px; background: var(--bg-tertiary); border: 1px dashed var(--border-metal); color: var(--accent-cyan); justify-content: center; margin-bottom: 10px; transition: all 0.2s;">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        Добавить чаты
-                    </button>
-                    
-                    <div id="folder-selected-chats-container" class="premium-scroll" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
-                        <!-- Selected chats will appear here as .folder-selected-chip -->
-                    </div>
-                </div>
-            </div>
-            
-            <div style="padding: 20px 25px; border-top: 1px solid rgba(255,255,255,0.05); background: var(--bg-tertiary);">
-                <button class="cyber-btn primary-btn" style="width: 100%; border-radius: 10px; padding: 12px; font-weight: 600; letter-spacing: 0.5px;" onclick="window.submitFolderCreate()">СОЗДАТЬ ПАПКУ</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sub-modal: Select Chats -->
-    <div id="folder-add-chats-modal" class="modal" style="display: none; z-index: 10005;">
-        <div class="modal-content" style="max-width: 400px; padding: 0; border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg-secondary); border: 1px solid var(--border-metal); height: 500px;">
-            <div class="modal-header" style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); background: var(--bg-tertiary);">
-                <div style="display: flex; align-items: center; gap: 15px; width: 100%;">
-                    <button class="close-btn-svg" onclick="document.getElementById('folder-add-chats-modal').style.display='none'" style="margin: 0;">
-                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
-                    </button>
-                    <h2 style="margin: 0; font-size: 16px;">Добавить чаты</h2>
-                </div>
-            </div>
-            
-            <div style="padding: 15px 20px; background: var(--bg-tertiary); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <div class="search-bar" style="margin: 0; width: 100%;">
-                    <input type="text" id="folder-chats-search" class="cyber-input" style="width: 100%; border-radius: 8px; padding: 10px 15px 10px 40px; margin: 0; font-size: 14px;" placeholder="Поиск чатов..." onkeyup="window.filterFolderChats(this.value)">
-                    <svg class="search-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                </div>
-            </div>
-
-            <div id="folder-all-chats-list" class="premium-scroll" style="flex: 1; overflow-y: auto; padding: 10px 0;">
-                <!-- Full chat list rendered here -->
-            </div>
-            
-            <div style="padding: 15px 20px; border-top: 1px solid rgba(255,255,255,0.05); background: var(--bg-tertiary);">
-                <button id="folder-chats-confirm-btn" class="cyber-btn primary-btn" style="width: 100%; border-radius: 10px; padding: 12px;" onclick="window.confirmFolderChatsSelection()">ДОБАВИТЬ</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Universal FAB Hub -->
-    <div id="fab-hub-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px; padding: 25px;">
-            <div class="modal-header">
-                <h2>Новый чат</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('fab-hub-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <div class="action-menu-items" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;">
-                <button class="menu-action-btn" onclick="window.openCreateRoomModal('channel')">
-                    <div class="icon-circle" style="background: rgba(255, 215, 0, 0.15); color: #FFD700;">
-                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                    </div>
-                    <span>Создать канал</span>
-                </button>
-                <button class="menu-action-btn" onclick="window.openCreateRoomModal('group')">
-                    <div class="icon-circle" style="background: rgba(0, 242, 255, 0.15); color: #00f2ff;">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    </div>
-                    <span>Создать группу</span>
-                </button>
-                <button class="menu-action-btn" onclick="document.getElementById('fab-contact-search').focus()">
-                    <div class="icon-circle" style="background: rgba(255, 140, 0, 0.15); color: #FF8C00;">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    </div>
-                    <span>Приватный чат</span>
-                </button>
-                <button class="menu-action-btn" onclick="document.getElementById('fab-hub-modal').style.display='none'; window.openJoinByInviteModal()">
-                    <div class="icon-circle" style="background: rgba(0, 255, 65, 0.12); color: #00ff41;">
-                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                    </div>
-                    <span>🔗 Вступить по ссылке</span>
-                </button>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 10px;">
-                <input type="text" id="fab-contact-search" class="cyber-input" style="width: 100%; border-radius: 6px;" placeholder="Имя, @ник, номер телефона..." oninput="window.filterFabContacts()">
-            </div>
-            
-            <div id="fab-contacts-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 6px; padding: 5px;">
-                <!-- Contacts rendered here -->
-                <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Create Room (Channel/Group) Modal -->
-    <div id="create-room-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 350px; padding: 25px;">
-            <div class="modal-header">
-                <h2 id="create-room-title">Создать</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('create-room-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            <div class="settings-body" style="display: flex; flex-direction: column; gap: 15px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label id="create-room-label">Название</label>
-                    <input type="text" id="create-room-input" class="cyber-input" style="width: 100%; margin-top: 5px; border-radius: 8px;" placeholder="Введите название...">
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label style="font-size: 12px; color: var(--text-dim);">Описание (необязательно)</label>
-                    <input type="text" id="create-room-desc" class="cyber-input" style="width: 100%; margin-top: 5px; border-radius: 8px;" placeholder="О чём эта группа?">
-                </div>
-                <div class="form-group" style="margin-bottom: 0; display: flex; align-items: center; justify-content: space-between; background: var(--bg-accent); border-radius: 8px; padding: 12px; border: 1px solid var(--border-metal);">
-                    <div>
-                        <label style="margin: 0; font-size: 14px;">Публичный доступ</label>
-                        <div style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">🔒 Выключено — только по инвайту</div>
-                    </div>
-                    <input type="checkbox" id="create-room-public" style="width: 18px; height: 18px; cursor: pointer;">
-                </div>
-                <input type="hidden" id="create-room-type" value="group">
-                <button id="create-room-confirm-btn" class="cyber-btn" style="width: 100%; border-radius: 8px;" onclick="window.confirmCreateRoom()">🔒 Создать приватную группу</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Member Modal -->
-    <div id="add-member-modal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 400px; padding: 25px;">
-            <div class="modal-header">
-                <h2>Добавить участника</h2>
-                <button class="close-btn-svg" onclick="document.getElementById('add-member-modal').style.display='none'">
-                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 10px;">
-                <input type="text" id="add-member-search" class="cyber-input" style="width: 100%; border-radius: 8px;" placeholder="Поиск контактов..." oninput="window.filterAddMemberContacts()">
-            </div>
-            
-            <div id="add-member-list" class="sidebar-list premium-scroll" style="max-height: 300px; overflow-y:auto; border: 1px solid var(--border-metal); border-radius: 8px; padding: 5px; margin-bottom: 15px;">
-                <!-- Contacts rendered here -->
-                <div style="text-align:center; padding:15px; color:var(--text-dim);">Загрузка контактов...</div>
-            </div>
-            
-            <button id="add-member-confirm-btn" class="cyber-btn" style="width: 100%; border-radius: 8px;" onclick="window.submitAddMembers()">ДОБАВИТЬ ВЫБРАННЫХ</button>
-        </div>
-    </div>
-
-    <!-- Media Preview Modal -->
-    <div id="media-preview-modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Предпросмотр</h2>
-            </div>
-            
-            <div id="media-preview-container">
-                <button class="media-cancel-btn" onclick="window.closeMediaPreview()" title="Отмена">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-                <!-- Image / video / audio preview injected here -->
-            </div>
-            
-            <div class="media-preview-footer">
-                <input type="text" id="media-preview-caption" class="cyber-input" placeholder="Добавить подпись...">
-                <button id="media-preview-send-btn" class="media-send-btn" onclick="window.sendMediaPreview()" title="Отправить">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-
     <div id="global-alert-banner" class="hidden"></div>
     <div class="app-container">
         <main class="viewport" id="viewport">
@@ -570,8 +76,8 @@
                                         <button class="icon-btn" id="sidebar-search-toggle-btn" title="Поиск" onclick="toggleSidebarSearch(true)">
                                             <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                                         </button>
-                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'" style="padding: 0; overflow: hidden; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; background: var(--surface-light); border: 1px solid var(--border-metal); margin-left: 4px;">
-                                            <div id="dash-avatar" style="width: 100%; height: 100%; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; color: var(--text-bright);">?</div>
+                                        <button class="icon-btn" id="sidebar-settings-btn" title="Настройки" onclick="document.getElementById('settings-modal').style.display='flex'">
+                                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.8 1 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                                         </button>
                                     </div>
                                 </div>
@@ -594,6 +100,9 @@
                             <div id="chat-rooms-list" class="sidebar-list premium-scroll">
                                 <div class="skeleton">Синхронизация...</div>
                             </div>
+                            <!-- Global Search Results -->
+                            <div id="global-search-results" class="sidebar-list premium-scroll" style="display: none;"></div>
+
                             <button class="fab-create-btn" title="Новый чат" onclick="window.openFabHub()">
                                 <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                             </button>
@@ -646,12 +155,18 @@
 
                             
                             <!-- Chat Messages Area -->
-                            <div id="chat-history" class="chat-messages premium-scroll">
+                            <div id="chat-history" class="chat-messages premium-scroll" onscroll="window.handleChatScroll(this)">
                                 <div class="chat-placeholder">
                                     <div class="skeleton-msg received"></div>
                                     <div class="skeleton-msg sent"></div>
                                     <div class="skeleton-msg received" style="width: 40%"></div>
                                 </div>
+                            </div>
+                            
+                            <!-- Scroll to Bottom Button -->
+                            <div id="scroll-bottom-btn" class="scroll-bottom-btn" style="display:none;" onclick="window.scrollToBottom()">
+                                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                <span id="scroll-unread-badge" class="scroll-unread-badge" style="display:none;">0</span>
                             </div>
                             
                             <div id="reply-preview-container" class="reply-preview-container" style="display:none;">
@@ -660,7 +175,7 @@
                             </div>
                             
                             <div class="chat-input-row premium-input-wrapper">
-                                <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar,application/*,text/*" multiple>
+                                <input type="file" id="chat-file-input" style="display:none;" accept="*/*" multiple>
                                 <input type="file" id="chat-media-input" style="display:none;" accept="image/*,video/*" multiple>
                                 <input type="file" id="chat-camera-input" style="display:none;" accept="image/*" capture="environment">
                                 
@@ -739,16 +254,40 @@
     </div>
 
 <script defer src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <script defer src="db.js?v=60"></script>
-    <script defer src="rtcManager.js?v=60"></script>
-    <script defer src="ui.js?v=60"></script>
-    <script defer src="api.js?v=60"></script>
-    <script defer src="crypto.js?v=60"></script>
-    <script defer src="features.js?v=60"></script>
-    <script defer src="lightbox.js?v=60"></script>
-    <script defer src="chat_core.js?v=60"></script>
+    <script defer src="db.js?v=56"></script>
+    <script defer src="rtcManager.js?v=55"></script>
+    <script defer src="ui.js?v=54"></script>
+    <script defer src="api.js?v=53"></script>
+    <script defer src="crypto.js?v=53"></script>
+    <script defer src="features.js?v=1777506872471"></script>
+    <script defer src="chat_core.js?v=59"></script>
+    <script defer src="app.js?v=55"></script>
 
-    <script defer src="messenger_app.js?v=60"></script>
+    <!-- Event Detail Modal -->
+    <div id="event-detail-modal" class="modal" style="display: none;">
+        <div class="modal-content glass-panel event-detail-modal" style="max-width: 500px; width: 90%;">
+            <div class="modal-header">
+                <h2 id="event-detail-title" class="glitch-text">ДЕТАЛИ СОБЫТИЯ</h2>
+                <button class="close-btn-svg" onclick="document.getElementById('event-detail-modal').style.display='none'">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="event-detail-body premium-scroll" style="padding: 20px 0;">
+                <div class="event-detail-info">
+                    <div id="event-detail-date" class="info-item">📅 --.--.----</div>
+                    <div id="event-detail-location" class="info-item">📍 Локация</div>
+                    <div id="event-detail-countdown" class="event-countdown detailed">Ожидание...</div>
+                </div>
+                <div class="event-detail-description">
+                    <label>ОПИСАНИЕ:</label>
+                    <p id="event-detail-desc">Данные загружаются...</p>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                <button class="cyber-btn primary-btn" onclick="document.getElementById('event-detail-modal').style.display='none'">ЗАКРЫТЬ</button>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
