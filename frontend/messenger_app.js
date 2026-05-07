@@ -243,6 +243,18 @@ document.addEventListener('DOMContentLoaded', () => {
             state.user.username = me.username;
             state.user.profile = me;
             
+            // Apply synced wallpaper if present and not default
+            if (me.wallpaper_idx && me.wallpaper_idx !== '0') {
+                localStorage.setItem('skufia_chat_bg', me.wallpaper_idx);
+                if (window.applyChatBackground) window.applyChatBackground();
+            } else if (me.wallpaper_idx === '0' || !me.wallpaper_idx) {
+                // If the user has a local background but the server says '0', we can sync up.
+                const localBg = localStorage.getItem('skufia_chat_bg');
+                if (localBg && localBg !== 'default') {
+                    apiRequest('/me/update', 'POST', { wallpaper_idx: localBg }).catch(() => {});
+                }
+            }
+            
             // Re-hydrate my avatars across the app
             const baseUrl = window.BASE_URL || '';
             let aUrl = null;
@@ -1157,6 +1169,100 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    window.compressImageHelper = async function(file, maxDim = 1920, quality = 0.85) {
+        if (!file) return file;
+        
+        let isImage = false;
+        let isHeic = false;
+        if (file.type && file.type.startsWith('image/')) {
+            isImage = true;
+            if (file.type === 'image/heic' || file.type === 'image/heif') isHeic = true;
+        } else if (file.name) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (['jpg', 'jpeg', 'png', 'webp', 'heic'].includes(ext)) {
+                isImage = true;
+                if (ext === 'heic') isHeic = true;
+            }
+        }
+
+        if (!isImage) {
+            console.log("Compression bypassed: not an image or no type", file);
+            return file;
+        }
+        
+        // Convert HEIC to JPEG using heic2any before compressing
+        if (isHeic) {
+            try {
+                console.log("HEIC format detected. Converting to JPEG...");
+                if (typeof heic2any === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+                const blob = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.85 });
+                const resultBlob = Array.isArray(blob) ? blob[0] : blob;
+                const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                file = new File([resultBlob], newName, { type: 'image/jpeg', lastModified: Date.now() });
+                console.log("HEIC successfully converted to JPEG", file);
+            } catch (err) {
+                console.error("HEIC conversion failed:", err);
+                // Continue with original file if conversion fails
+            }
+        }
+
+        // Do not compress GIFs, otherwise animation is lost
+        if (file.type === 'image/gif') {
+            console.log("Compression bypassed: GIF image");
+            return file;
+        }
+
+        return new Promise((resolve) => {
+            const img = new Image();
+            const objectUrl = URL.createObjectURL(file);
+            img.onload = () => {
+                let width = img.width;
+                let height = img.height;
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                canvas.toBlob(blob => {
+                    URL.revokeObjectURL(objectUrl);
+                    if (blob) {
+                        // Change extension to .jpg if it was something else like heic/png
+                        const newName = file.name.replace(/\.[^/.]+$/, "") + ".jpg";
+                        console.log("Compression successful. Original size:", file.size, "New size:", blob.size);
+                        resolve(new File([blob], newName, { type: 'image/jpeg', lastModified: Date.now() }));
+                    } else {
+                        console.warn("Canvas toBlob failed, returning original file");
+                        resolve(file); // fallback
+                    }
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = () => {
+                console.error("Image load error during compression, returning original file. Format might be unsupported (e.g., raw HEIC).");
+                URL.revokeObjectURL(objectUrl);
+                resolve(file);
+
+            };
+            img.src = objectUrl;
+        });
+    };
+
     window.applyChatBackground = function() {
         const bg = localStorage.getItem('skufia_chat_bg');
         const chatHistory = document.getElementById('chat-history');
@@ -1177,21 +1283,35 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('skufia_chat_bg', 'default');
             window.applyChatBackground();
             if (typeof showToast === 'function') showToast('✅ Фон чата сброшен');
+            
+            // Sync with backend
+            apiRequest('/me/update', 'POST', { wallpaper_idx: 'default' }).catch(e => console.error('Failed to sync bg', e));
         }
     };
 
-    window.handleChatBgUpload = function(event) {
+    window.handleChatBgUpload = async function(event) {
         const file = event.target.files[0];
         if (!file) return;
 
+        if (typeof showToast === 'function') showToast('⏳ Обработка фона...');
+
+        // Compress the image down to a reasonable size (e.g. 1080p) to fit in DB as base64
+        const compressedFile = await window.compressImageHelper(file, 1080, 0.8);
+        
         const reader = new FileReader();
         reader.onload = function(e) {
             const dataUrl = e.target.result;
             localStorage.setItem('skufia_chat_bg', dataUrl);
             window.applyChatBackground();
             if (typeof showToast === 'function') showToast('✅ Фон чата обновлён');
+            
+            // Sync with backend
+            apiRequest('/me/update', 'POST', { wallpaper_idx: dataUrl }).catch(e => {
+                console.error('Failed to sync bg', e);
+                if (typeof showToast === 'function') showToast('⚠️ Фон установлен локально, ошибка синхронизации');
+            });
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressedFile);
     };
 
     window.changeUserPassword = async function() {

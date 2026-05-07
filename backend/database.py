@@ -62,6 +62,7 @@ class Profile(Base):
     bio = Column(Text, nullable=True)
     is_online = Column(Boolean, default=False)
     last_seen = Column(DateTime, default=datetime.utcnow)
+    wallpaper_idx = Column(String, default='0')
     user = relationship('User', backref=backref('profile', uselist=False))
 
 class PushSubscription(Base):

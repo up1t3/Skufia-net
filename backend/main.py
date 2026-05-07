@@ -119,7 +119,7 @@ run_migrations()
 app = FastAPI(
     title="Skufia API",
     description="Backend for the Skufia community portal - Cyber-Industrial Forum",
-    version="0.1.0"
+    version="6.63"
 )
 
 # Ensure uploads directory exists

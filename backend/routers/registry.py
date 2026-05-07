@@ -101,6 +101,7 @@ class ProfileUpdate(BaseModel):
     bio: str = None
     rank: str = None
     avatar_url: str = None
+    wallpaper_idx: str = None
 
 class PublicKeyUpdate(BaseModel):
     public_key: str
@@ -176,7 +177,8 @@ def get_my_profile(current_user: User = Depends(get_current_user), db: Session =
         "rank": profile.rank if profile else "Новичок",
         "karma": profile.karma if profile else 0,
         "bio": profile.bio if profile else "",
-        "avatar_url": profile.avatar_url if profile else ""
+        "avatar_url": profile.avatar_url if profile else "",
+        "wallpaper_idx": profile.wallpaper_idx if profile else "0"
     }
 
 @router.post('/me/update')
@@ -224,6 +226,7 @@ def update_my_profile(data: ProfileUpdate, background_tasks: BackgroundTasks, cu
     if data.nickname is not None: profile.nickname = data.nickname
     if data.bio is not None: profile.bio = data.bio
     if data.avatar_url is not None: profile.avatar_url = data.avatar_url
+    if data.wallpaper_idx is not None: profile.wallpaper_idx = data.wallpaper_idx
 
     try:
         db.commit()
@@ -243,7 +246,8 @@ def update_my_profile(data: ProfileUpdate, background_tasks: BackgroundTasks, cu
                 "username": user_db.username,
                 "handle": user_db.handle if user_db.handle else "",
                 "nickname": profile.nickname,
-                "avatar_url": profile.avatar_url
+                "avatar_url": profile.avatar_url,
+                "wallpaper_idx": profile.wallpaper_idx
             }
             background_tasks.add_task(asyncio.run, notify_profile_update(user_db.id, user_data))
         except Exception as e:
@@ -261,7 +265,8 @@ def update_my_profile(data: ProfileUpdate, background_tasks: BackgroundTasks, cu
         "rank": profile.rank,
         "karma": profile.karma,
         "bio": profile.bio,
-        "avatar_url": profile.avatar_url
+        "avatar_url": profile.avatar_url,
+        "wallpaper_idx": profile.wallpaper_idx
     }
 
 class AvatarUpdate(BaseModel):

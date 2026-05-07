@@ -1231,10 +1231,14 @@ window.initChatCore = function() {
         const container = document.createElement('div');
         container.className = 'emoji-picker-container';
         
+        // Safeguard coordinates
+        const safeY = (typeof y === 'number' && !isNaN(y)) ? y : window.innerHeight / 2;
+        const safeX = (typeof x === 'number' && !isNaN(x)) ? x : window.innerWidth / 2;
+        
         // Default positioning for desktop
-        container.style.top = `${Math.min(y, window.innerHeight - 400)}px`;
+        container.style.top = `${Math.min(safeY, window.innerHeight - 400)}px`;
         const maxLeft = window.innerWidth - 350;
-        container.style.left = `${Math.min(Math.max(x - 150, 10), maxLeft)}px`;
+        container.style.left = `${Math.min(Math.max(safeX - 150, 10), maxLeft)}px`;
         
         const emojiSets = {
             'Смайлы': ['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','☺️','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'],
@@ -1244,7 +1248,8 @@ window.initChatCore = function() {
         };
 
         const picker = document.createElement('div');
-        picker.style.cssText = 'background:var(--bg-panel); border:1px solid var(--border-main); border-radius:12px; padding:12px; display:flex; flex-wrap:wrap; gap:6px; width:320px; max-height:300px; overflow-y:auto; overflow-x:hidden; flex-direction:row; align-content:flex-start; box-shadow:0 10px 30px rgba(0,0,0,0.5); backdrop-filter:blur(10px);';
+        // Removed backdrop-filter:blur(10px) to fix iOS WebKit invisible container bug
+        picker.style.cssText = 'background:var(--bg-panel); border:1px solid var(--border-main); border-radius:12px; padding:12px; display:flex; flex-wrap:wrap; gap:6px; width:320px; max-height:300px; overflow-y:auto; overflow-x:hidden; flex-direction:row; align-content:flex-start; box-shadow:0 10px 30px rgba(0,0,0,0.5);';
         
         Object.entries(emojiSets).forEach(([category, emojis]) => {
             const header = document.createElement('div');
@@ -1290,7 +1295,7 @@ window.initChatCore = function() {
             // Add mobile swipe indicator
             const handle = document.createElement('div');
             handle.style.cssText = 'width:40px; height:4px; background:var(--border-main); border-radius:2px; position:absolute; top:8px; left:50%; transform:translateX(-50%);';
-            picker.appendChild(handle);
+            picker.insertBefore(handle, picker.firstChild);
         }
         
         overlay.addEventListener('click', () => {
@@ -1697,8 +1702,8 @@ window.initChatCore = function() {
             bubble.appendChild(replyBlock);
         }
 
-        // Text (skip for pure media with standard labels — no text bubble needed)
-        const isMediaOnly = (isVideoCircle || isSingleAudio || isSingleImage) && (!rawText.trim() || /^[📹📷🎤🎵🔊🎧\s]*(Голосовое сообщение.*|Voice message.*)?$/i.test(rawText.trim()));
+        const hasGallery = fileUrlRaw && fileUrlRaw.includes(',');
+        const isMediaOnly = (isVideoCircle || isSingleAudio || isSingleImage || hasGallery) && (!rawText.trim() || /^[📹📷🎤🎵🔊🎧\s]*(Голосовое сообщение.*|Voice message.*)?$/i.test(rawText.trim()));
         // File attachment FIRST (media above text like Telegram)
         if (fileHtml) {
             const fileContainer = document.createElement('div');
@@ -2249,9 +2254,15 @@ window.initChatCore = function() {
         }
 
         try {
-            // 1. Upload files
+            // 1. Compress files if image
+            let compressedFiles = files;
+            if (window.compressImageHelper) {
+                compressedFiles = await Promise.all(files.map(f => window.compressImageHelper(f, 1920, 0.85)));
+            }
+
+            // 2. Upload files
             const formData = new FormData();
-            files.forEach(f => formData.append('files', f)); // Expects 'files' array in backend
+            compressedFiles.forEach(f => formData.append('files', f)); // Expects 'files' array in backend
             
             const token = state.user.token;
             const headers = {};
@@ -2279,7 +2290,11 @@ window.initChatCore = function() {
             window.closeMediaPreview();
         } catch (e) {
             const errorMsg = e instanceof Error ? e.message : 'unknown';
-            if (window.showToast) window.showToast(`Ошибка: ${errorMsg}`);
+            let displayMsg = errorMsg;
+            if (errorMsg.includes('Failed to fetch')) {
+                displayMsg = 'Ошибка сети. Возможно, файл слишком большой или интернет-соединение нестабильно.';
+            }
+            if (window.showToast) window.showToast(`Ошибка: ${displayMsg}`);
             addLog(`Ошибка отправки медиа: ${errorMsg}`, 'error');
         } finally {
             if (sendBtn) {
@@ -2640,7 +2655,7 @@ window.initChatCore = function() {
                 <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px;">
                     <img id="group-edit-avatar-preview" src="${roomInfo.avatar_url ? (roomInfo.avatar_url.startsWith('/') || roomInfo.avatar_url.startsWith('http') ? roomInfo.avatar_url : window.API_BASE_URL + '/' + roomInfo.avatar_url) : `https://api.dicebear.com/7.x/identicon/svg?seed=${roomInfo.name}`}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-metal);">
                     <div>
-                        <input type="file" id="group-edit-avatar" style="display:none;" accept="image/*" onchange="window.uploadGroupAvatar(this)">
+                        <input type="file" id="group-edit-avatar" style="display:none;" accept="image/jpeg, image/png, image/webp" onchange="window.uploadGroupAvatar(this)">
                         <button onclick="document.getElementById('group-edit-avatar').click()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border-metal);color:var(--text-primary);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;">Изменить аватарку</button>
                         <input type="hidden" id="group-edit-avatar-url" value="${roomInfo.avatar_url || ''}">
                     </div>
