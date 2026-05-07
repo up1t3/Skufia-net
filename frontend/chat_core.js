@@ -1236,20 +1236,62 @@ window.initChatCore = function() {
         const maxLeft = window.innerWidth - 350;
         container.style.left = `${Math.min(Math.max(x - 150, 10), maxLeft)}px`;
         
-        const picker = document.createElement('emoji-picker');
-        picker.style.setProperty('--background', 'var(--bg-panel)');
-        picker.style.setProperty('--border-color', 'var(--border-main)');
-        picker.style.setProperty('--text-color', 'var(--text-main)');
-        picker.style.setProperty('--indicator-color', 'var(--accent-cyan)');
+        const emojiSets = {
+            'Смайлы': ['😀','😃','😄','😁','😆','😅','😂','🤣','🥲','☺️','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🥸','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'],
+            'Жесты': ['👍','👎','👌','🤌','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐','🖖','👋','🤝','🙏','💪','🫶'],
+            'Сердца': ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝'],
+            'Объекты': ['🔥','⭐','💯','✨','🎉','🎊','🏆','🥇','🎯','💎','👑','🍺','🍻','🍕','🍔','☕','🎵','🎶','📱','💻','📷','🎮','🚀','✈️','🏠','💰','💊','🧠','💀','👻','🤡','💩','👽']
+        };
+
+        const picker = document.createElement('div');
+        picker.style.cssText = 'background:var(--bg-panel); border:1px solid var(--border-main); border-radius:12px; padding:12px; display:flex; flex-wrap:wrap; gap:6px; width:320px; max-height:300px; overflow-y:auto; overflow-x:hidden; flex-direction:row; align-content:flex-start; box-shadow:0 10px 30px rgba(0,0,0,0.5); backdrop-filter:blur(10px);';
         
-        picker.addEventListener('emoji-click', async event => {
-            const emoji = event.detail.unicode;
-            overlay.remove();
-            container.remove();
-            try {
-                await apiRequest(`/chat/message/${message_id}/react`, 'POST', { emoji });
-            } catch(e) { console.error('React failed', e); }
+        Object.entries(emojiSets).forEach(([category, emojis]) => {
+            const header = document.createElement('div');
+            header.textContent = category;
+            header.style.cssText = 'width:100%; font-size:12px; color:var(--text-dim); padding:8px 4px 4px; font-weight:600; letter-spacing:0.5px; text-transform:uppercase; border-bottom:1px solid var(--border-light); margin-bottom:4px;';
+            picker.appendChild(header);
+
+            emojis.forEach(emo => {
+                const span = document.createElement('span');
+                span.textContent = emo;
+                span.style.cssText = 'font-size:26px; cursor:pointer; user-select:none; border-radius:8px; transition:0.2s; display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; line-height:1;';
+                span.onmouseover = () => span.style.background = 'rgba(255,255,255,0.1)';
+                span.onmouseout = () => span.style.background = 'transparent';
+                span.onclick = async (e) => {
+                    e.stopPropagation();
+                    overlay.remove();
+                    container.remove();
+                    try {
+                        await apiRequest(`/chat/message/${message_id}/react`, 'POST', { emoji: emo });
+                    } catch(err) { console.error('React failed', err); }
+                };
+                picker.appendChild(span);
+            });
         });
+
+        // Mobile optimization adjustments
+        if (window.innerWidth <= 768) {
+            container.style.top = 'auto';
+            container.style.bottom = '0px';
+            container.style.left = '0px';
+            container.style.width = '100%';
+            
+            picker.style.width = '100%';
+            picker.style.maxWidth = '100%';
+            picker.style.maxHeight = '45vh';
+            picker.style.border = 'none';
+            picker.style.borderTop = '1px solid var(--border-main)';
+            picker.style.borderRadius = '24px 24px 0 0';
+            picker.style.padding = '20px 12px 40px 12px';
+            picker.style.justifyContent = 'space-evenly';
+            picker.style.gap = '8px';
+            
+            // Add mobile swipe indicator
+            const handle = document.createElement('div');
+            handle.style.cssText = 'width:40px; height:4px; background:var(--border-main); border-radius:2px; position:absolute; top:8px; left:50%; transform:translateX(-50%);';
+            picker.appendChild(handle);
+        }
         
         overlay.addEventListener('click', () => {
             overlay.remove();
@@ -1260,6 +1302,7 @@ window.initChatCore = function() {
         document.body.appendChild(overlay);
         document.body.appendChild(container);
     };
+
 
     window.renderReactionsOnMessage = function(bubbleEl, reactions, message_id) {
         // Find bubbleWrapper if the passed element is a msg-row
