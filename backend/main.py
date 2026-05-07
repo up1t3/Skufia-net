@@ -357,14 +357,25 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                         room_id = data.get('room_id')
                         if room_id:
                             db = SessionLocal()
-                            from database import ChatRoomMember
+                            from database import ChatRoomMember, User
+                            
                             members = db.query(ChatRoomMember).filter(ChatRoomMember.room_id == room_id).all()
                             uids = [m.user_id for m in members if m.user_id != user_id]
+                            
+                            user = db.query(User).filter(User.id == user_id).first()
+                            sender_name = "Аноним"
+                            if user:
+                                if user.profile and user.profile.first_name:
+                                    sender_name = user.profile.first_name
+                                else:
+                                    sender_name = user.username
+                                    
                             db.close()
                             
                             relay_msg = {
                                 "type": "typing_status",
                                 "sender_id": user_id,
+                                "sender": sender_name,
                                 "room_id": room_id,
                                 "is_typing": data.get('status', True)
                             }
