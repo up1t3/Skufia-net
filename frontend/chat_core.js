@@ -1463,7 +1463,7 @@ window.initChatCore = function() {
                 // Gallery Mode
                 let gridHtml = '';
                 urls.forEach(url => {
-                    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url);
+                    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)$/i.test(url);
                     const isVideo = /\.(mp4|webm)$/i.test(url);
                     if (isImage) {
                         gridHtml += `<a href="javascript:void(0)" onclick="window.openChatLightbox('${BASE_URL}${url}', [${urls.map(u => `'${BASE_URL}${u}'`).join(', ')}], ${urls.indexOf(url)})" class="gallery-item-image" style="display:block;width:100%;height:100%;"><img src="${BASE_URL}${url}" alt="attachment" style="width:100%; height:100%; object-fit:cover;"></a>`;
@@ -1483,7 +1483,7 @@ window.initChatCore = function() {
             } else {
                 // Single File Mode
                 const fileUrl = urls[0];
-                isSingleImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(fileUrl);
+                isSingleImage = /\.(jpg|jpeg|png|gif|webp|bmp|svg|heic|heif)$/i.test(fileUrl);
                 isSingleAudio = /\.(mp3|ogg|wav|webm|flac|m4a|aac|opus)(\?.*)?$/i.test(fileUrl);
                 const isVideo = /\.(mp4)$/i.test(fileUrl) || msg.file_type === 'video_circle' || (msg.file_url && msg.file_url.includes('/video/'));
                 
