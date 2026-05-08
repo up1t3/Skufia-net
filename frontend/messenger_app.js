@@ -896,7 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        username: document.getElementById('login-username').value,
+                        username: document.getElementById('login-username').value.trim(),
                         password: document.getElementById('login-password').value
                     })
                 });

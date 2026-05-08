@@ -31,6 +31,8 @@
     box-shadow: var(--panel-shadow) !important;
     animation: scaleInModal 0.3s forwards cubic-bezier(0.16, 1, 0.3, 1) !important;
     color: var(--text-main);
+    max-height: 85vh !important;
+    overflow-y: auto !important;
 }
 @keyframes scaleInModal {
     from { transform: scale(0.95) translateY(10px); }
