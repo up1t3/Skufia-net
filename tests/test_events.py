@@ -1,8 +1,8 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 def test_create_event(client, auth_headers):
-    event_date = (datetime.utcnow() + timedelta(days=7)).isoformat()
+    event_date = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
     payload = {
         "title": "Cyber-Industrial Meetup",
         "event_date": event_date,
@@ -17,7 +17,7 @@ def test_create_event(client, auth_headers):
 
 def test_get_events(client, auth_headers):
     # Ensure there's an event
-    event_date = (datetime.utcnow() + timedelta(days=1)).isoformat()
+    event_date = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
     client.post("/api/events", json={
         "title": "Upcoming Event",
         "event_date": event_date,

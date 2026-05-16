@@ -25,7 +25,7 @@ from database import SessionLocal, User, Profile, Category, Topic, Post, WikiArt
 from auth import get_current_user, oauth2_scheme
 from typing import List, Optional
 from pydantic import BaseModel, Field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ws_manager import manager
 router = APIRouter()
@@ -875,7 +875,7 @@ def create_invite_link(
     code = secrets.token_urlsafe(16)
     expires_at = None
     if req.expires_hours:
-        expires_at = datetime.utcnow() + timedelta(hours=req.expires_hours)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=req.expires_hours)
 
     invite = RoomInvite(
         room_id=room_id,
@@ -956,7 +956,7 @@ def join_by_invite(
             raise HTTPException(status_code=404, detail="Инвайт-ссылка не найдена или устарела")
 
         # Validate invite
-        if invite.expires_at and invite.expires_at < datetime.utcnow():
+        if invite.expires_at and invite.expires_at < datetime.now(timezone.utc):
             raise HTTPException(status_code=410, detail="Инвайт-ссылка истекла")
         if invite.max_uses and invite.uses >= invite.max_uses:
             raise HTTPException(status_code=410, detail="Лимит использований исчерпан")
@@ -1388,7 +1388,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
         "file_type": msg.file_type,
         "reply_to_id": msg.reply_to_id,
         "is_edited": False,
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "room_id": room_id,
         "avatar_url": current_user.profile.avatar_url if current_user.profile else None
     }
@@ -1450,7 +1450,7 @@ async def send_message_v2(room_id: int, msg: MessageCreate, current_user: User =
             "file_url": None,
             "reply_to_id": db_msg.id,
             "is_edited": False,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             "room_id": room_id
         }
         if room_id:
@@ -1950,7 +1950,7 @@ def generate_invite(current_user: User = Depends(get_current_user)):
     _invite_store[code] = {
         "invited_by_id": current_user.id,
         "invited_by": current_user.username,
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "uses_left": 1  # Single-use by default
     }
     return {

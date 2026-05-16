@@ -278,7 +278,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                                             rooms_query = db.query(Room.id).filter(Room.type == 'private').join(RoomMember).filter(RoomMember.user_id.in_([u_id, t_id])).group_by(Room.id).having(func.count(Room.id) == 2).all()
                                             if rooms_query:
                                                 r_id = rooms_query[0][0]
-                                                msg = Message(room_id=r_id, sender_id=u_id, message_type='missed_call', content="Пропущенный вызов", created_at=datetime.datetime.utcnow())
+                                                msg = Message(room_id=r_id, sender_id=u_id, message_type='missed_call', content="Пропущенный вызов", created_at=datetime.datetime.datetime.now(datetime.timezone.utc))
                                                 db.add(msg)
                                                 db.commit()
                                                 db.refresh(msg)

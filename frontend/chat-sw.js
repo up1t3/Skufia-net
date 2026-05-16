@@ -270,17 +270,9 @@ self.addEventListener('pushsubscriptionchange', function(event) {
             })
             .then(newSubscription => {
                 console.log('[Service Worker] Re-subscribed:', newSubscription);
-                // Send updated subscription to server
-                return fetch('/api/notifications/subscribe', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        endpoint: newSubscription.endpoint,
-                        keys: {
-                            p256dh: btoa(String.fromCharCode(...new Uint8Array(newSubscription.getKey('p256dh')))),
-                            auth: btoa(String.fromCharCode(...new Uint8Array(newSubscription.getKey('auth'))))
-                        }
-                    })
+                // Notify clients to send the new subscription to the server with their auth token
+                return self.clients.matchAll().then(clients => {
+                    clients.forEach(client => client.postMessage({ type: 'PUSH_CHANGED' }));
                 });
             })
             .catch(err => console.error('[SW] pushsubscriptionchange error:', err))

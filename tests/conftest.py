@@ -50,7 +50,16 @@ def client(db):
         finally:
             pass
 
+    from routers import chat, registry, market, forum, events, notifications, wiki
     main.app.dependency_overrides[get_db] = override_get_db
+    main.app.dependency_overrides[chat.get_db] = override_get_db
+    main.app.dependency_overrides[registry.get_db] = override_get_db
+    main.app.dependency_overrides[market.get_db] = override_get_db
+    main.app.dependency_overrides[forum.get_db] = override_get_db
+    main.app.dependency_overrides[events.get_db] = override_get_db
+    main.app.dependency_overrides[notifications.get_db] = override_get_db
+    main.app.dependency_overrides[wiki.get_db] = override_get_db
+    
     with TestClient(main.app) as c:
         yield c
     main.app.dependency_overrides.clear()

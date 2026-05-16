@@ -5,14 +5,14 @@
   "scripts": {
     "deploy": "node deploy.js",
     "deploy:skip-tests": "node deploy.js --skip-tests",
-    "test:unit": ".venv/Scripts/python -m pytest tests/backend/unit -v",
-    "test:unit:chat": ".venv/Scripts/python -m pytest tests/backend/unit/test_chat_pipeline.py -v --noconftest",
-    "test:api": ".venv/Scripts/python -m pytest tests/backend/integration -v",
-    "test:api:chat": ".venv/Scripts/python -m pytest tests/backend/integration/test_chat_api.py -v",
+    "test:unit": "python -m pytest tests/backend/unit -v",
+    "test:unit:chat": "python -m pytest tests/backend/unit/test_chat_pipeline.py -v --noconftest",
+    "test:api": "python -m pytest tests/backend/integration -v",
+    "test:api:chat": "python -m pytest tests/backend/integration/test_chat_api.py -v",
     "test:e2e": "npx playwright test --config=tests/e2e/playwright.config.ts",
     "test:e2e:chat": "npx playwright test tests/e2e/chat-pipeline.spec.ts --config=tests/e2e/playwright.config.ts",
     "test:e2e:ui": "npx playwright test tests/e2e/chat-pipeline.spec.ts --config=tests/e2e/playwright.config.ts --headed",
-    "test:pyramid": ".venv/Scripts/python -m pytest tests/backend/unit/test_chat_pipeline.py --noconftest -q && npx playwright test tests/e2e/chat-pipeline.spec.ts --config=tests/e2e/playwright.config.ts"
+    "test:pyramid": "npm run test:unit:chat && npm run test:e2e:chat"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

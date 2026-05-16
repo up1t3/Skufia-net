@@ -45,12 +45,17 @@ def client(db_session):
         finally:
             pass
 
-    from routers import chat, registry
+    from routers import chat, registry, market, forum, events, notifications, wiki
 
     # Here we override the dependency from auth.py and other routers
     main.app.dependency_overrides[auth.get_db] = override_get_db
     main.app.dependency_overrides[chat.get_db] = override_get_db
     main.app.dependency_overrides[registry.get_db] = override_get_db
+    main.app.dependency_overrides[market.get_db] = override_get_db
+    main.app.dependency_overrides[forum.get_db] = override_get_db
+    main.app.dependency_overrides[events.get_db] = override_get_db
+    main.app.dependency_overrides[notifications.get_db] = override_get_db
+    main.app.dependency_overrides[wiki.get_db] = override_get_db
     with TestClient(main.app, base_url="http://testserver/api") as c:
         yield c
     

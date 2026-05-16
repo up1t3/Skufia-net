@@ -3,7 +3,7 @@ from database import (SessionLocal, User, Profile, Category, Topic, Post,
     WikiArticle, MarketListing, Event, Base, engine, ChatRoom, ChatRoomMember,
     Message, ChatFolder, ChatFolderMember, UserContact, ListingImage,
     ListingFavorite, PostLike, WikiLike, FCMToken, GlobalNotification)
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from auth import get_password_hash
 
 DEFAULT_PASSWORD = get_password_hash('password123')
@@ -118,7 +118,7 @@ def seed_data():
         topic = db.query(Topic).filter(Topic.title == item['title']).first()
         if not topic:
             # Random starting date within last 60 days
-            start_date = datetime.utcnow() - timedelta(days=60)
+            start_date = datetime.now(timezone.utc) - timedelta(days=60)
             topic = Topic(title=item['title'], category_id=cat_map[item['cat']].id, author_id=user.id, created_at=start_date)
             db.add(topic)
             db.commit()
@@ -127,7 +127,7 @@ def seed_data():
             # Generate 15-20 posts over time
             for i in range(random.randint(15, 25)):
                 post_date = start_date + timedelta(days=i * 2 + random.uniform(0, 1))
-                if post_date > datetime.utcnow(): post_date = datetime.utcnow()
+                if post_date > datetime.now(timezone.utc): post_date = datetime.now(timezone.utc)
                 random_user = db.query(User).filter(User.username != "System_Overseer").all()
                 poster = random.choice(random_user)
                 post = Post(topic_id=topic.id, author_id=poster.id, content=random.choice(messages), created_at=post_date)
@@ -185,7 +185,7 @@ def seed_data():
     event = Event(
         title="Великий Сбор в Гаражах",
         description="Обсуждение будущего интернета при отключении всех облаков.",
-        event_date=datetime.utcnow() + timedelta(days=10),
+        event_date=datetime.now(timezone.utc) + timedelta(days=10),
         location="Гаражный кооператив 'Заря', бокс 42",
         organizer_id=admin.id
     )

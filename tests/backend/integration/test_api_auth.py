@@ -5,12 +5,15 @@ def test_register_and_login_flow(client):
     reg_response = client.post("/auth/register", json={
         "username": "test_agent",
         "email": "test_agent@example.com",
-        "password": "strongPassword123!"
+        "password": "strongPassword123!",
+        "accepted_pd": True
     })
     
-    assert reg_response.status_code == 200
+    assert reg_response.status_code == 201
     user_data = reg_response.json()
-    assert user_data["username"] == "test_agent"
+    # The register endpoint returns {"message": "...", "user_id": ...} 
+    # not the user data directly. So we should just check the message.
+    assert "user_id" in user_data
     
     # 2. Login
     login_response = client.post("/auth/login", json={
@@ -37,7 +40,8 @@ def test_login_wrong_password(client):
     client.post("/auth/register", json={
         "username": "test_fail",
         "email": "test_fail@example.com",
-        "password": "password"
+        "password": "password",
+        "accepted_pd": True
     })
     
     # Login with wrong pw

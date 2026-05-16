@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -25,7 +25,7 @@ def get_password_hash(password):
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=15))
     to_encode.update({'exp': expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -198,7 +198,7 @@ def forgot_password(req: ForgotPasswordRequest, background_tasks: BackgroundTask
     reset_record = PasswordResetCode(
         user_id=user.id,
         code=code,
-        expires_at=datetime.utcnow() + timedelta(minutes=15)
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=15)
     )
     db.add(reset_record)
     db.commit()
@@ -214,7 +214,7 @@ def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
     # Find valid code
     reset_record = db.query(PasswordResetCode).filter(
         PasswordResetCode.code == req.code,
-        PasswordResetCode.expires_at > datetime.utcnow()
+        PasswordResetCode.expires_at > datetime.now(timezone.utc)
     ).first()
     
     if not reset_record:

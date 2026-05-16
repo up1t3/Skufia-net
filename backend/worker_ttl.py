@@ -20,7 +20,7 @@ app.conf.timezone = 'UTC'
 def delete_expired_messages():
     db = SessionLocal()
     try:
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
         # Find messages that have a TTL and are not already deleted
         messages = db.query(Message).filter(
             Message.ttl_seconds.isnot(None),

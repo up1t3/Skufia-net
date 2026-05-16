@@ -4,7 +4,7 @@ from sqlalchemy.types import JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import sessionmaker, relationship, backref
 
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 
 # Database URL - using PostgreSQL as per blueprint
@@ -39,7 +39,7 @@ class User(Base):
     phone_number = Column(String, unique=True, index=True, nullable=True)
     accepted_pd = Column(Boolean, default=False)
     is_superadmin = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class UserContact(Base):
     __tablename__ = 'user_contacts'
@@ -48,7 +48,7 @@ class UserContact(Base):
     contact_name = Column(String, nullable=False)
     contact_phone = Column(String, nullable=False)
     linked_user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Profile(Base):
@@ -61,7 +61,7 @@ class Profile(Base):
     avatar_url = Column(String, nullable=True)
     bio = Column(Text, nullable=True)
     is_online = Column(Boolean, default=False)
-    last_seen = Column(DateTime, default=datetime.utcnow)
+    last_seen = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     wallpaper_idx = Column(String, default='0')
     user = relationship('User', backref=backref('profile', uselist=False))
 
@@ -72,7 +72,7 @@ class PushSubscription(Base):
     endpoint = Column(String, unique=True, nullable=False)
     p256dh = Column(String, nullable=False)
     auth = Column(String, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Category(Base):
     __tablename__ = 'categories'
@@ -87,7 +87,7 @@ class Topic(Base):
     title = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey('categories.id'))
     author_id = Column(Integer, ForeignKey('users.id'))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     category = relationship('Category', backref='topics')
     author = relationship('User', backref='topics')
@@ -98,7 +98,7 @@ class Post(Base):
     topic_id = Column(Integer, ForeignKey('topics.id'))
     author_id = Column(Integer, ForeignKey('users.id'))
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     topic = relationship('Topic', backref='posts')
     author = relationship('User', backref='posts')
@@ -115,7 +115,7 @@ class ChatRoom(Base):
     owner_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     invite_code = Column(String, unique=True, nullable=True) # Primary invite link
     avatar_url = Column(String, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class RoomInvite(Base):
     """One-time or unlimited invite links for private rooms."""
@@ -127,7 +127,7 @@ class RoomInvite(Base):
     max_uses = Column(Integer, nullable=True)  # None = unlimited
     uses = Column(Integer, default=0)
     expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class PasswordResetCode(Base):
     __tablename__ = 'password_reset_codes'
@@ -135,7 +135,7 @@ class PasswordResetCode(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), index=True)
     code = Column(String, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ChatRoomMember(Base):
@@ -145,7 +145,7 @@ class ChatRoomMember(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     role = Column(String, default='member') # admin, member, banned
     unread_count = Column(Integer, default=0)
-    joined_at = Column(DateTime, default=datetime.utcnow)
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class ChatFolder(Base):
     __tablename__ = 'chat_folders'
@@ -154,14 +154,14 @@ class ChatFolder(Base):
     name = Column(String, nullable=False)
     icon = Column(String, nullable=True) # Emoji icon or SVG ref
     order_index = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class ChatFolderMember(Base):
     __tablename__ = 'chat_folder_members'
     id = Column(Integer, primary_key=True, index=True)
     folder_id = Column(Integer, ForeignKey('chat_folders.id', ondelete='CASCADE'))
     room_id = Column(Integer, ForeignKey('chat_rooms.id', ondelete='CASCADE'))
-    added_at = Column(DateTime, default=datetime.utcnow)
+    added_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 # --- ENTERPRISE MODULES ---
 
@@ -172,8 +172,8 @@ class WikiArticle(Base):
     content = Column(Text, nullable=False)
     category = Column(String, default='Общее')
     author_id = Column(Integer, ForeignKey('users.id'))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_verified = Column(Boolean, default=False)
 
 class MarketListing(Base):
@@ -189,8 +189,8 @@ class MarketListing(Base):
     seller = relationship("User")
     status = Column(String, default='active')
     views_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
     __table_args__ = (
@@ -203,7 +203,7 @@ class ListingImage(Base):
     listing_id = Column(Integer, ForeignKey('market_listings.id', ondelete='CASCADE'))
     image_url = Column(String, nullable=False)
     position = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     listing = relationship('MarketListing', backref='images')
 
 class ListingFavorite(Base):
@@ -211,7 +211,7 @@ class ListingFavorite(Base):
     id = Column(Integer, primary_key=True, index=True)
     listing_id = Column(Integer, ForeignKey('market_listings.id', ondelete='CASCADE'))
     user_id = Column(Integer, ForeignKey('users.id'))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         UniqueConstraint('listing_id', 'user_id', name='uix_user_listing_fav'),
@@ -226,7 +226,7 @@ class Event(Base):
     location = Column(String)
     organizer_id = Column(Integer, ForeignKey('users.id'))
     organizer = relationship("User")
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class Message(Base):
     __tablename__ = 'messages'
@@ -238,7 +238,7 @@ class Message(Base):
     file_url = Column(String, nullable=True) # Attached file URL
     encryption_iv = Column(String, nullable=True) # Initialization Vector for AES
     key_version = Column(Integer, nullable=True, default=1)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_read = Column(Boolean, default=False)
     
     reply_to_id = Column(Integer, ForeignKey('messages.id'), nullable=True)
@@ -260,7 +260,7 @@ class FCMToken(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     token = Column(String, unique=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship('User', backref='fcm_tokens')
 
@@ -269,7 +269,7 @@ class GlobalNotification(Base):
     id = Column(Integer, primary_key=True, index=True)
     message = Column(Text, nullable=False)
     level = Column(String, default='info') # info, warning, critical
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_active = Column(Boolean, default=True)
 
 class PostLike(Base):
@@ -277,14 +277,14 @@ class PostLike(Base):
     id = Column(Integer, primary_key=True, index=True)
     post_id = Column(Integer, ForeignKey('posts.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class WikiLike(Base):
     __tablename__ = 'wiki_likes'
     id = Column(Integer, primary_key=True, index=True)
     article_id = Column(Integer, ForeignKey('wiki_articles.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 class RoomKeyBundle(Base):
     """
@@ -301,8 +301,8 @@ class RoomKeyBundle(Base):
     wrapped_key = Column(Text, nullable=False)
     key_version = Column(Integer, default=1, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         UniqueConstraint('room_id', 'user_id', 'key_version', name='uix_room_user_key_version'),

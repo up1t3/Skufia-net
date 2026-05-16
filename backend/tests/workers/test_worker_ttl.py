@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from worker_ttl import delete_expired_messages
 
 @patch('worker_ttl.SessionLocal')
@@ -11,7 +11,7 @@ def test_delete_expired_messages_success(mock_datetime, mock_session_local):
     mock_session_local.return_value = mock_db
 
     current_time = datetime(2023, 1, 1, 12, 0, 0)
-    mock_datetime.utcnow.return_value = current_time
+    mock_lambda: datetime.now(timezone.utc).return_value = current_time
 
     # Message 1: Expired (created 2 hours ago, ttl 1 hour)
     msg1 = MagicMock()
@@ -53,7 +53,7 @@ def test_delete_expired_messages_none_expired(mock_datetime, mock_session_local)
     mock_session_local.return_value = mock_db
 
     current_time = datetime(2023, 1, 1, 12, 0, 0)
-    mock_datetime.utcnow.return_value = current_time
+    mock_lambda: datetime.now(timezone.utc).return_value = current_time
 
     # Message: Not expired
     msg1 = MagicMock()
