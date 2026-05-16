@@ -358,6 +358,11 @@ document.addEventListener('DOMContentLoaded', () => {
             showSyncOverlay(false);
             bootStep('DONE', 'System boot complete');
 
+            // Sync push subscription with server now that we are authenticated
+            if (typeof window.syncPushSubscriptionState === 'function') {
+                window.syncPushSubscriptionState().catch(e => console.warn('Push sync failed:', e));
+            }
+
             // --- CHECK FOR BACKGROUND CALL INTENT ---
             if (window.location.hash.includes('call_action=')) {
                 const params = new URLSearchParams(window.location.hash.substring(1));
@@ -402,7 +407,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // Listen for updates from SW — with reload-loop guard
                 navigator.serviceWorker.addEventListener('message', (event) => {
-                    if (event.data && event.data.type === 'SW_UPDATED') {
+                    if (event.data && event.data.type === 'PUSH_CHANGED') {
+                        console.log('[SW] Push subscription changed. Re-syncing with server...');
+                        if (typeof registerPushSubscription === 'function') {
+                            registerPushSubscription();
+                        }
+                    } else if (event.data && event.data.type === 'SW_UPDATED') {
                         console.log('[SW] New version detected:', event.data.version);
                         
                         // Guard against infinite reload loops
@@ -475,7 +485,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else {
                 if (window.showToast) {
-                    window.showToast('Ошибка подключения к серверу. Работа в автономном режиме.', 5000);
+                    if (window.state && window.state.chat && window.state.chat.socket && window.state.chat.socket.readyState === WebSocket.OPEN) {
+                        window.showToast('⚠️ Ошибка загрузки данных, но чат работает', 3000);
+                    } else {
+                        window.showToast('Ошибка подключения к серверу. Работа в автономном режиме.', 5000);
+                    }
                 }
             }
         } finally {
@@ -762,7 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Auto-subscribe if user previously granted permission and opted in
-    (async () => {
+    window.syncPushSubscriptionState = async () => {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
         const savedPref = localStorage.getItem('skufia_push');
         if (pushToggle) {
@@ -786,7 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch(e) { console.warn('[Push] Auto-subscribe check failed:', e); }
         }
-    })();
+    };
 
     if (pushToggle) {
         pushToggle.addEventListener('change', async (e) => {
@@ -1210,7 +1224,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("HEIC successfully converted to JPEG", file);
             } catch (err) {
                 console.error("HEIC conversion failed:", err);
-                // Continue with original file if conversion fails
+                if (window.showToast) window.showToast('❌ Ошибка: Не удалось обработать HEIC фото. Загрузите JPG/PNG.', 'error');
+                throw new Error("HEIC conversion failed"); // Abort upload
             }
         }
 

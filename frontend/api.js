@@ -15,17 +15,19 @@ window.apiRequest = async function apiRequest(endpoint, method = 'GET', body = n
         headers['X-Idempotency-Key'] = Date.now().toString() + '-' + Math.random().toString(36).substr(2, 9);
     }
     
+    const controller = new AbortController();
+    const timeoutMs = (body instanceof FormData) ? 60000 : 15000;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
         const fetchOptions = {
             method,
             headers,
             body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
-            cache: 'no-store'
+            cache: 'no-store',
+            signal: controller.signal
         };
-        // Removed keepalive: true as it causes fetch promises to hang indefinitely on certain mobile browsers
-
-
         const res = await fetch(`${window.API_BASE_URL}${endpoint}`, fetchOptions);
+        clearTimeout(timeoutId);
         if (res.status === 401) {
             console.warn('[API] 401 Unauthorized detected. Clearing session.');
             localStorage.removeItem('skuf_token');
