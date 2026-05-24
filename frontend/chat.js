@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('skuf_token')}`
                     },
                     body: JSON.stringify({name: name, room_type: 'group'})
                 });
@@ -321,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const res = await fetch(`/api/chat/rooms/${roomId}/members`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('skuf_token')}`
                 }
             });
 
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     itemDiv.appendChild(nameSpan);
 
                     // Kick button logic
-                    if (myRole === 'admin' && member.user_id !== parseJwt(localStorage.getItem('token'))?.user_id) {
+                    if (myRole === 'admin' && member.user_id !== parseJwt(localStorage.getItem('token') || localStorage.getItem('skuf_token'))?.user_id) {
                         const kickBtn = document.createElement('button');
                         kickBtn.className = 'kick-btn';
                         kickBtn.textContent = 'Kick ❌';
@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (confirm(`Kick ${member.display_name}?`)) {
                                 await fetch(`/api/chat/rooms/${roomId}/members/${member.user_id}`, {
                                     method: 'DELETE',
-                                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('skuf_token')}` }
                                 });
                                 loadRoomMembers(roomId);
                             }
@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return JSON.parse(jsonPayload);
     }
 function connectWebSocket() {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('token') || localStorage.getItem('skuf_token');
         if (!token) {
             console.warn("No token found for WebSocket");
             return;
@@ -491,7 +491,7 @@ function connectWebSocket() {
             try {
                 const res = await fetch(`/api/chat/join/${code}`, {
                     method: 'GET',
-                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('skuf_token')}` }
                 });
                 if (res.ok) {
                     const data = await res.json();
@@ -616,7 +616,7 @@ function connectWebSocket() {
             const response = await fetch('/chat/upload_audio', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('token') || localStorage.getItem('skuf_token')}`
                 },
                 body: formData
             });

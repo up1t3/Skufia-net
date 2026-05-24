@@ -5,8 +5,8 @@
       "origin": "https://localhost:8444",
       "localStorage": [
         {
-          "name": "skufia_theme",
-          "value": "telegram"
+          "name": "skuf_draft_1268",
+          "value": ""
         },
         {
           "name": "skufia_ios_install_dismissed",
@@ -14,11 +14,11 @@
         },
         {
           "name": "skuf_token",
-          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMmVfYWxpY2VfMTc3OTY0MTEyODU3NSIsInVzZXJfaWQiOjI0NDAsImV4cCI6MTc4MDI0NTkzNn0.wxS7O6oCNmW47aAylh30WEMs2HW6Unau0fGL0spzDkM"
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMmVfYWxpY2VfMTc3OTY1MTAwOTM5OCIsInVzZXJfaWQiOjI2MTQsImV4cCI6MTc4MDI1NTgyM30.CHM4CfbiSELHzQMvgHoUvI9FuUvYC4B5CTYJnrZ8yqY"
         },
         {
-          "name": "skuf_draft_1182",
-          "value": ""
+          "name": "skufia_theme",
+          "value": "telegram"
         }
       ]
     }

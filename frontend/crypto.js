@@ -412,8 +412,8 @@
                             const { privateKey, publicKey } = await CryptoManager.importIdentityWithPassword(myKeys.encrypted_private_key, password);
                             
                             // Save to IDB
-                            await vaultPut(IDB_STORE_KEYS, 'pub_base64', publicKey);
-                            await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', privateKey);
+                            await vaultPut(IDB_STORE_KEYS, 'pub_base64', publicKey).catch(e => console.warn('vaultPut pub failed:', e));
+                            await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', privateKey).catch(e => console.warn('vaultPut priv failed:', e));
                             
                             // Load to memory
                             state.chat.keys.publicKey = await CryptoManager.importPublicKey(publicKey);
@@ -451,8 +451,8 @@
         state.chat.keyFingerprint = await CryptoManager.keyFingerprint(pubBase64);
 
         // Save to IDB
-        await vaultPut(IDB_STORE_KEYS, 'pub_base64', pubBase64);
-        await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', pair.privateKey);
+        await vaultPut(IDB_STORE_KEYS, 'pub_base64', pubBase64).catch(e => console.warn('vaultPut pub failed:', e));
+        await vaultPut(IDB_STORE_KEYS, 'priv_cryptokey', pair.privateKey).catch(e => console.warn('vaultPut priv failed:', e));
 
         // Upload to server
         const password = state.user.password;
@@ -553,8 +553,22 @@
             }
             const wrappedForRecipient = await CryptoManager.wrapKey(recipientPubKey, sessionKey);
 
-            const myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
-            if (!myPubBase64) throw new Error("Public key not found in vault");
+            let myPubBase64 = null;
+            try {
+                myPubBase64 = await vaultGet(IDB_STORE_KEYS, 'pub_base64');
+            } catch (e) {
+                console.warn('Failed to get public key from IDB, using memory fallback:', e);
+            }
+
+            if (!myPubBase64 && state.chat.keys.publicKey) {
+                try {
+                    myPubBase64 = await CryptoManager.exportPublicKey(state.chat.keys.publicKey);
+                } catch (e) {
+                    console.error('Failed to export public key from memory:', e);
+                }
+            }
+
+            if (!myPubBase64) throw new Error("Public key not found in vault or memory");
             
             const myPubKey = await CryptoManager.importPublicKey(myPubBase64);
             const wrappedForSelf = await CryptoManager.wrapKey(myPubKey, sessionKey);
