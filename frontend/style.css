@@ -6,6 +6,7 @@
     --bg-message-other: color-mix(in srgb, #222b36 70%, transparent);
     --accent-cyan: #00f2ff;
     --accent-amber: #ffb800;
+    --accent-red: #ff4444;
     --accent-gradient: linear-gradient(135deg, #00f2ff, #7000ff);
     --text-main: #e0e6ed;
     --text-dim: #8a94a2;
@@ -29,6 +30,7 @@
     --bg-message-other: #182533;
     --accent-cyan: #5288c1;
     --accent-amber: #f59e0b;
+    --accent-red: #ec3b3b;
     --accent-gradient: linear-gradient(135deg, #5288c1, #2b5278);
     --text-main: #ffffff;
     --text-dim: #7f91a4;
@@ -49,6 +51,7 @@
     --bg-message-other: color-mix(in srgb, #27272a 70%, transparent);
     --accent-cyan: #22d3ee; 
     --accent-amber: #d946ef; 
+    --accent-red: #f43f5e;
     --accent-gradient: linear-gradient(135deg, #22d3ee, #d946ef);
     --text-main: #fafafa;
     --text-dim: #a1a1aa;
@@ -69,6 +72,7 @@
     --bg-message-other: color-mix(in srgb, #E5E5EA 90%, transparent);
     --accent-cyan: #007AFF; 
     --accent-amber: #FF3B30; 
+    --accent-red: #FF3B30;
     --accent-gradient: linear-gradient(135deg, #007AFF, #5856D6);
     --text-main: #000000;
     --text-dim: #8E8E93;
@@ -89,6 +93,7 @@
     --bg-message-other: color-mix(in srgb, #332d16 70%, transparent);
     --accent-cyan: #FFD700; 
     --accent-amber: #FF8C00; 
+    --accent-red: #ff4d4d;
     --accent-gradient: linear-gradient(135deg, #FFD700, #FF8C00);
     --text-main: #FFF8DC;
     --text-dim: #D4AF37;
@@ -332,7 +337,7 @@ nav {
 
 .cyber-input:focus, .cyber-textarea:focus {
     border-color: var(--accent-cyan);
-    box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent-cyan) 20%, transparent);
 }
 
 .cyber-textarea {
@@ -2264,8 +2269,8 @@ body.super-user .nav-btn.active {
 }
 
 #auth-overlay {
-    backdrop-filter: blur(10px);
-    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: var(--backdrop-blur);
+    background: color-mix(in srgb, var(--bg-dark) 85%, transparent);
     z-index: 10000;
 }
 
@@ -2637,7 +2642,7 @@ body.super-user .nav-btn.active {
     border-radius: 12px;
     padding: 6px 0;
     z-index: 10000;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+    box-shadow: var(--panel-shadow), 0 0 0 1px var(--border-metal);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     min-width: 160px;
@@ -3037,7 +3042,6 @@ body.skufenger-fullscreen .app-container {
     margin: 0 !important;
     height: var(--app-height, 100dvh);
     max-height: var(--app-height, 100dvh);
-    transform: translateY(var(--app-offset, 0px));
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -3362,6 +3366,54 @@ body.skufenger-fullscreen .chat-layout {
     body.skufenger-fullscreen .mobile-back-btn {
         display: flex;
     }
+
+    .sidebar-header,
+    body.skufenger-fullscreen .sidebar-header {
+        padding-top: env(safe-area-inset-top, 0px) !important;
+        height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+        padding-left: calc(16px + env(safe-area-inset-left, 0px)) !important;
+        padding-right: calc(16px + env(safe-area-inset-right, 0px)) !important;
+    }
+
+    .chat-info,
+    body.skufenger-fullscreen .chat-info {
+        padding-top: env(safe-area-inset-top, 0px) !important;
+        height: calc(60px + env(safe-area-inset-top, 0px)) !important;
+        padding-left: calc(20px + env(safe-area-inset-left, 0px)) !important;
+        padding-right: calc(20px + env(safe-area-inset-right, 0px)) !important;
+    }
+
+    .chat-sidebar {
+        padding-left: env(safe-area-inset-left, 0px);
+        padding-right: env(safe-area-inset-right, 0px);
+    }
+
+    .chat-folders-tabs {
+        padding-left: calc(16px + env(safe-area-inset-left, 0px));
+        padding-right: calc(16px + env(safe-area-inset-right, 0px));
+    }
+
+    .chat-messages,
+    body.skufenger-fullscreen .chat-messages {
+        padding-left: calc(20px + env(safe-area-inset-left, 0px)) !important;
+        padding-right: calc(20px + env(safe-area-inset-right, 0px)) !important;
+    }
+
+    .premium-input-wrapper,
+    body.skufenger-fullscreen .premium-input-wrapper {
+        padding-left: calc(16px + env(safe-area-inset-left, 0px)) !important;
+        padding-right: calc(16px + env(safe-area-inset-right, 0px)) !important;
+        transition: padding-bottom 0.1s ease-out;
+    }
+
+    .attach-menu-popup {
+        left: calc(10px + env(safe-area-inset-left, 0px)) !important;
+    }
+
+    .scroll-bottom-btn {
+        bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+        right: calc(20px + env(safe-area-inset-right, 0px)) !important;
+    }
 }
 
 /* FIX: In fullscreen PWA, always show back button regardless of screen width */
@@ -3491,6 +3543,7 @@ body.skufenger-fullscreen .mobile-back-btn {
     --bg-message-other: color-mix(in srgb, #222b36 70%, transparent);
     --accent-cyan: #00f2ff;
     --accent-amber: #ffb800;
+    --accent-red: #ff4444;
     --accent-gradient: linear-gradient(135deg, #00f2ff, #7000ff);
     --text-main: #e0e6ed;
     --text-dim: #8a94a2;
@@ -3715,7 +3768,7 @@ body.skufenger-fullscreen .mobile-back-btn {
     padding: 10px 16px;
     font-size: 14px;
     cursor: pointer;
-    color: #e0e0e0;
+    color: var(--text-main);
     display: flex;
     align-items: center;
     transition: background 0.15s ease;
@@ -3728,16 +3781,16 @@ body.skufenger-fullscreen .mobile-back-btn {
     border-radius: 0 0 12px 12px;
 }
 .msg-context-menu div:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--bg-accent);
 }
 .msg-context-menu div:active {
-    background: rgba(0, 242, 255, 0.1);
+    background: color-mix(in srgb, var(--accent-cyan) 15%, transparent);
 }
 .msg-context-menu .delete-ctx {
-    color: #ff4444;
+    color: var(--accent-red);
 }
 .msg-context-menu .delete-ctx:hover {
-    background: rgba(255, 68, 68, 0.1);
+    background: color-mix(in srgb, var(--accent-red) 12%, transparent);
 }
 .event-countdown.upcoming {
     color: var(--accent-green, #00ff41);
@@ -4004,4 +4057,51 @@ body.skufenger-fullscreen .mobile-back-btn {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+select, .input-text {
+    background-color: var(--bg-accent);
+    border: 1px solid var(--border-metal);
+    color: var(--text-main);
+    padding: 8px 12px;
+    font-family: var(--font-main), inherit;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition);
+}
+select:focus, .input-text:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 5px color-mix(in srgb, var(--accent-cyan) 30%, transparent);
+}
+select option {
+    background-color: var(--bg-panel);
+    color: var(--text-main);
+}
+
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="number"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="datetime-local"],
+    select,
+    textarea,
+    .cyber-input,
+    .cyber-textarea,
+    .input-textarea,
+    #chat-input,
+    #contact-search,
+    .sidebar-search input,
+    .sidebar-search-compact input {
+        font-size: 16px !important;
+    }
+}
+
+body.keyboard-open .premium-input-wrapper {
+    padding-bottom: 12px !important;
 }

@@ -227,7 +227,7 @@ class RTCManager {
         style.textContent = `
             .rtc-modal {
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                z-index: 10000; display: flex; flex-direction: column;
+                z-index: 10000000; display: flex; flex-direction: column;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
             .rtc-modal-bg {

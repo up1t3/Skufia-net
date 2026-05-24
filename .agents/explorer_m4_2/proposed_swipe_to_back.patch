@@ -1,0 +1,175 @@
+diff --git a/frontend/chat.js b/frontend/chat.js
+index 1234567..89abcde 100644
+--- a/frontend/chat.js
++++ b/frontend/chat.js
+@@ -101,26 +101,154 @@
+-    // Mobile Swipe Gestures to close sidebar / go back
+-    let touchStartX = 0;
+-    let touchEndX = 0;
+-
+-    document.addEventListener('touchstart', e => {
+-        touchStartX = e.changedTouches[0].screenX;
+-    }, false);
+-
+-    document.addEventListener('touchend', e => {
+-        touchEndX = e.changedTouches[0].screenX;
+-        handleSwipe();
+-    }, false);
+-
+-    function handleSwipe() {
+-        if (window.innerWidth <= 768) {
+-            const swipeDistance = touchEndX - touchStartX;
+-            // Swipe Right (Open sidebar / go back to list)
+-            if (swipeDistance > 50) {
+-                chatLayout.classList.remove('chat-open');
+-            }
+-            // Swipe Left (Open chat) - usually clicking an item does this, but could be added if needed
+-            // if (swipeDistance < -50) {
+-            //     chatLayout.classList.add('chat-open');
+-            // }
+-        }
+-    }
++    // Mobile Swipe Gestures to close sidebar / go back (Milestone 4 Swipe-to-Back)
++    const initSwipeToBack = () => {
++        const chatMain = document.querySelector('.chat-main');
++        const chatLayout = document.querySelector('.chat-layout');
++        const sidebar = document.querySelector('.chat-sidebar');
++        if (!chatMain || !chatLayout) return;
++
++        let startX = 0;
++        let startY = 0;
++        let diffX = 0;
++        let diffY = 0;
++        let isSwiping = false;
++        let isScrolling = false;
++        let startTime = 0;
++        
++        const EDGE_THRESHOLD = 35; // Зона Edge Swipe (35px от левого края)
++        const VELOCITY_THRESHOLD = 0.3; // Порог скорости свайпа (px/ms)
++
++        chatMain.addEventListener('touchstart', (e) => {
++            if (window.innerWidth > 768) return;
++            if (!chatLayout.classList.contains('chat-open')) return;
++
++            // Исключаем интерактивные элементы и поля ввода
++            const target = e.target;
++            if (target.closest('input, textarea, button, select, [role="button"], .cyber-checkbox, .mic-btn, .room-delete-btn')) {
++                return;
++            }
++
++            startX = e.touches[0].clientX;
++            startY = e.touches[0].clientY;
++
++            // Жест должен начинаться только у левого края экрана
++            if (startX > EDGE_THRESHOLD) return;
++
++            isSwiping = false;
++            isScrolling = false;
++            diffX = 0;
++            diffY = 0;
++            startTime = Date.now();
++        }, { passive: true });
++
++        chatMain.addEventListener('touchmove', (e) => {
++            if (window.innerWidth > 768 || isScrolling) return;
++            if (startX > EDGE_THRESHOLD) return;
++
++            const currentX = e.touches[0].clientX;
++            const currentY = e.touches[0].clientY;
++
++            diffX = currentX - startX;
++            diffY = Math.abs(currentY - startY);
++
++            if (!isSwiping && !isScrolling) {
++                // Если вертикальный сдвиг преобладает, это скролл истории сообщений
++                if (diffY > 5 && diffY > diffX) {
++                    isScrolling = true;
++                    return;
++                }
++                // Если горизонтальный сдвиг вправо преобладает, активируем свайп
++                if (diffX > 5 && diffX > diffY) {
++                    isSwiping = true;
++                    chatMain.style.transition = 'none';
++                    if (sidebar) sidebar.style.transition = 'none';
++                }
++            }
++
++            if (isSwiping) {
++                // Отменяем стандартный скролл страницы
++                if (e.cancelable) e.preventDefault();
++
++                const translateX = Math.max(0, diffX);
++                chatMain.style.transform = `translateX(${translateX}px)`;
++
++                // Синхронный параллельный сдвиг сайдбара в полноэкранном PWA-режиме
++                const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
++                if (isFullscreen && sidebar) {
++                    const width = window.innerWidth;
++                    const progress = Math.min(1, translateX / width);
++                    const sidebarTranslateX = -100 + (progress * 100);
++                    sidebar.style.transform = `translateX(${sidebarTranslateX}%)`;
++                }
++            }
++        }, { passive: false });
++
++        chatMain.addEventListener('touchend', (e) => {
++            if (!isSwiping) return;
++
++            isSwiping = false;
++
++            // Восстанавливаем CSS transition для плавного доведения
++            chatMain.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
++            if (sidebar) sidebar.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
++
++            const width = window.innerWidth;
++            const velocity = diffX / (Date.now() - startTime);
++            const shouldClose = diffX > width / 3 || velocity > VELOCITY_THRESHOLD;
++
++            if (shouldClose) {
++                // Доводим сдвиг до конца (100% ширины)
++                chatMain.style.transform = 'translateX(100%)';
++                if (sidebar) sidebar.style.transform = 'translateX(0)';
++
++                // Закрываем чат с интеграцией истории
++                if (typeof window.closeChatMobile === 'function') {
++                    window.closeChatMobile(false);
++                } else {
++                    chatLayout.classList.remove('chat-open');
++                }
++
++                // Полностью очищаем инлайновые стили после окончания анимации
++                setTimeout(() => {
++                    chatMain.style.transform = '';
++                    chatMain.style.transition = '';
++                    if (sidebar) {
++                        sidebar.style.transform = '';
++                        sidebar.style.transition = '';
++                    }
++                }, 250);
++            } else {
++                // Возвращаем чат на место
++                chatMain.style.transform = 'translateX(0)';
++                
++                const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
++                if (isFullscreen && sidebar) {
++                    sidebar.style.transform = 'translateX(-100%)';
++                }
++
++                // Очищаем инлайновые стили после возврата
++                setTimeout(() => {
++                    chatMain.style.transform = '';
++                    chatMain.style.transition = '';
++                    if (sidebar) {
++                        sidebar.style.transform = '';
++                        sidebar.style.transition = '';
++                    }
++                }, 250);
++            }
++        });
++    };
++
++    if (document.readyState === 'loading') {
++        document.addEventListener('DOMContentLoaded', initSwipeToBack);
++    } else {
++        initSwipeToBack();
++    }

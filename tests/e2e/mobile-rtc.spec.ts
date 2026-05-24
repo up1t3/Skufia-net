@@ -1,7 +1,7 @@
 import { test, expect, Page, BrowserContext } from '@playwright/test';
 
-const BASE = process.env.TEST_URL || 'https://skuf-net.ru';
-const APP_URL = `${BASE}/messenger.html`;
+const BASE = '/';
+const APP_URL = '/messenger.html';
 const TS   = Date.now();
 const USER_CALLER = `e2e_caller_${TS}`;
 const USER_CALLEE = `e2e_callee_${TS}`;
@@ -37,12 +37,23 @@ test.describe('Mobile WebRTC Stability & UI Transitions', () => {
 
   // Increase beforeAll timeout to handle slow network/registration
   test.beforeAll(async ({ browser }) => {
+    if (browser.browserType().name() === 'webkit') {
+      test.skip(true, 'Webkit does not support fake media devices for WebRTC');
+      return;
+    }
     test.setTimeout(90_000);
     
-    // Both contexts need camera & mic permissions and fake media streams
-    // This is already configured in playwright.config.ts but we create isolated contexts here
-    contextCaller = await browser.newContext();
-    contextCallee = await browser.newContext();
+    const permissions = ['microphone', 'camera'];
+    contextCaller = await browser.newContext({
+      baseURL: 'https://localhost:8444',
+      ignoreHTTPSErrors: true,
+      permissions
+    });
+    contextCallee = await browser.newContext({
+      baseURL: 'https://localhost:8444',
+      ignoreHTTPSErrors: true,
+      permissions
+    });
 
     pageCaller = await contextCaller.newPage();
     pageCallee = await contextCallee.newPage();
@@ -60,6 +71,9 @@ test.describe('Mobile WebRTC Stability & UI Transitions', () => {
       const pwaBanner = document.getElementById('pwa-update-banner');
       if (pwaBanner) pwaBanner.style.display = 'none';
     }).catch(() => {});
+
+    // Ждем инициализации chat_core
+    await pageCaller.waitForFunction(() => typeof window.openFabHub === 'function', { timeout: 15000 });
 
     await pageCaller.click('.fab-create-btn', { force: true });
     await pageCaller.waitForSelector('#fab-contact-search', { visible: true });

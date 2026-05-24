@@ -92,7 +92,10 @@
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
-        padding: 30px 24px 30px !important; /* Reduced bottom padding for iOS home bar safety */
+        padding-top: 30px !important;
+        padding-left: calc(24px + env(safe-area-inset-left, 0px)) !important;
+        padding-right: calc(24px + env(safe-area-inset-right, 0px)) !important;
+        padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)) !important;
         max-height: 90vh !important;
         overflow-y: auto !important;
         border-bottom: none !important;
@@ -105,7 +108,10 @@
     #auth-overlay.modal, .auth-modal-custom, #auth-overlay.modal.auth-modal-custom {
         align-items: center !important;
         justify-content: center !important;
-        padding: 20px !important;
+        padding-top: calc(20px + env(safe-area-inset-top, 0px)) !important;
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px)) !important;
+        padding-left: calc(20px + env(safe-area-inset-left, 0px)) !important;
+        padding-right: calc(20px + env(safe-area-inset-right, 0px)) !important;
         box-sizing: border-box !important;
         overflow-y: auto !important;
     }
@@ -143,10 +149,10 @@
     font-size: 16px !important;
     font-weight: bold !important;
     text-transform: uppercase !important;
-    background: linear-gradient(90deg, rgba(0,242,255,0.1) 0%, rgba(0,242,255,0.3) 50%, rgba(0,242,255,0.1) 100%) !important;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--accent-cyan) 10%, transparent) 0%, color-mix(in srgb, var(--accent-cyan) 30%, transparent) 50%, color-mix(in srgb, var(--accent-cyan) 10%, transparent) 100%) !important;
     border: 2px solid var(--accent-cyan) !important;
-    box-shadow: 0 0 15px rgba(0, 242, 255, 0.4), inset 0 0 10px rgba(0, 242, 255, 0.2) !important;
-    color: #fff !important;
+    box-shadow: 0 0 15px color-mix(in srgb, var(--accent-cyan) 40%, transparent), inset 0 0 10px color-mix(in srgb, var(--accent-cyan) 20%, transparent) !important;
+    color: var(--text-main) !important;
     text-shadow: 0 0 5px var(--accent-cyan);
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
     display: flex;
@@ -157,9 +163,9 @@
 
 .auth-main-btn:hover, .auth-main-btn:active {
     background: var(--accent-cyan) !important;
-    color: #000 !important;
+    color: var(--bg-dark) !important;
     text-shadow: none !important;
-    box-shadow: 0 0 25px rgba(0, 242, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 0 25px color-mix(in srgb, var(--accent-cyan) 80%, transparent), inset 0 0 15px rgba(255, 255, 255, 0.5) !important;
     transform: scale(1.02) !important;
 }
 
@@ -187,13 +193,13 @@
 }
 
 .save-btn-premium {
-    background: linear-gradient(135deg, var(--accent-cyan), #0078ff) !important;
+    background: linear-gradient(135deg, var(--accent-cyan), color-mix(in srgb, var(--accent-cyan) 70%, #000)) !important;
     border: none !important;
     color: #000 !important;
     font-weight: 800 !important;
     text-transform: uppercase;
     letter-spacing: 1px;
-    box-shadow: 0 8px 20px rgba(0, 242, 255, 0.3) !important;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--accent-cyan) 30%, transparent) !important;
     width: 100% !important;
     padding: 14px !important;
     border-radius: 12px !important;
@@ -208,7 +214,7 @@
 
 .save-btn-premium:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 30px rgba(0, 242, 255, 0.5) !important;
+    box-shadow: 0 12px 30px color-mix(in srgb, var(--accent-cyan) 50%, transparent) !important;
     filter: brightness(1.1);
 }
 
@@ -231,5 +237,30 @@
     font-size: 10px;
     font-weight: 800;
     margin-left: 5px;
+}
+
+.pd-consent-block {
+    background: color-mix(in srgb, var(--accent-cyan) 5%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-cyan) 20%, transparent);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 15px;
+}
+.pd-consent-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.5;
+}
+.pd-consent-checkbox {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: var(--accent-cyan);
 }
 

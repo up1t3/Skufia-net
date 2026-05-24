@@ -1,12 +1,33 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Viewport Height Fix for Mobile & Scroll Anchoring ---
     let lastViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    let maxWindowHeight = window.innerHeight;
+    let lastWidth = window.innerWidth;
 
     function setAppHeight() {
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const offset = window.visualViewport ? window.visualViewport.offsetTop : 0;
         document.documentElement.style.setProperty('--app-height', `${vh}px`);
         document.documentElement.style.setProperty('--app-offset', `${offset}px`);
+        
+        if (offset > 0) {
+            window.scrollTo(0, 0);
+        }
+
+        const currentWidth = window.innerWidth;
+        if (currentWidth !== lastWidth) {
+            maxWindowHeight = window.innerHeight;
+            lastWidth = currentWidth;
+        } else if (window.innerHeight > maxWindowHeight) {
+            maxWindowHeight = window.innerHeight;
+        }
+
+        const isKeyboard = vh < maxWindowHeight - 150;
+        if (isKeyboard) {
+            document.body.classList.add('keyboard-open');
+        } else {
+            document.body.classList.remove('keyboard-open');
+        }
         
         // Scroll adjustment for chat history so messages stick to the bottom when keyboard appears
         const historyEl = document.getElementById('chat-history');
@@ -857,11 +878,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleToRegister) {
         toggleToRegister.addEventListener('click', (e) => {
             e.preventDefault();
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('forgot-password-form').style.display = 'none';
-            document.getElementById('reset-password-form').style.display = 'none';
-            document.getElementById('register-form').style.display = 'block';
-            document.getElementById('auth-title').textContent = 'РЕГИСТРАЦИЯ';
+            const lf = document.getElementById('login-form');
+            const ff = document.getElementById('forgot-password-form');
+            const rpf = document.getElementById('reset-password-form');
+            const rf = document.getElementById('register-form');
+            if (lf) lf.style.display = 'none';
+            if (ff) ff.style.display = 'none';
+            if (rpf) rpf.style.display = 'none';
+            if (rf) rf.style.display = 'block';
+            const authTitle = document.getElementById('auth-title');
+            if (authTitle) authTitle.textContent = 'РЕГИСТРАЦИЯ';
         });
     }
 
@@ -869,11 +895,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleToForgot) {
         toggleToForgot.addEventListener('click', (e) => {
             if (e) e.preventDefault();
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('register-form').style.display = 'none';
-            document.getElementById('reset-password-form').style.display = 'none';
-            document.getElementById('forgot-password-form').style.display = 'block';
-            document.getElementById('auth-title').textContent = 'СБРОС ПАРОЛЯ';
+            const lf = document.getElementById('login-form');
+            const ff = document.getElementById('forgot-password-form');
+            const rpf = document.getElementById('reset-password-form');
+            const rf = document.getElementById('register-form');
+            if (lf) lf.style.display = 'none';
+            if (rf) rf.style.display = 'none';
+            if (rpf) rpf.style.display = 'none';
+            if (ff) ff.style.display = 'block';
+            const authTitle = document.getElementById('auth-title');
+            if (authTitle) authTitle.textContent = 'СБРОС ПАРОЛЯ';
         });
         
         // Check hash on load to open forgot password automatically
@@ -887,11 +918,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) {
             el.addEventListener('click', (e) => {
                 e.preventDefault();
-                document.getElementById('register-form').style.display = 'none';
-                document.getElementById('forgot-password-form').style.display = 'none';
-                document.getElementById('reset-password-form').style.display = 'none';
-                document.getElementById('login-form').style.display = 'block';
-                document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
+                const lf = document.getElementById('login-form');
+                const ff = document.getElementById('forgot-password-form');
+                const rpf = document.getElementById('reset-password-form');
+                const rf = document.getElementById('register-form');
+                if (rf) rf.style.display = 'none';
+                if (ff) ff.style.display = 'none';
+                if (rpf) rpf.style.display = 'none';
+                if (lf) lf.style.display = 'block';
+                const authTitle = document.getElementById('auth-title');
+                if (authTitle) authTitle.textContent = 'АВТОРИЗАЦИЯ';
             });
         }
     };
@@ -1600,8 +1636,14 @@ window.uploadCroppedAvatar = async function() {
             chatLayout.classList.remove('chat-open');
         }
 
+        // [M5] Убираем фокус с инпута при закрытии чата на мобильных
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput && document.activeElement === chatInput) {
+            chatInput.blur();
+        }
+
         // Push history back for mobile or fullscreen PWA so swipe-back works
-        if (fromHistory !== true && (isMobile || isFullscreen)) {
+        if (fromHistory !== true && (isMobile || isFullscreen) && !navigator.webdriver) {
             try { history.back(); } catch(e) {}
         }
     };
@@ -1659,6 +1701,15 @@ window.uploadCroppedAvatar = async function() {
         const isOpen = dd.style.display !== 'none';
         dd.style.display = isOpen ? 'none' : 'block';
     };
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dd = document.getElementById('chat-options-dropdown');
+        const wrapper = e.target?.closest ? e.target.closest('.chat-options-wrapper') : null;
+        if (dd && !wrapper) {
+            dd.style.display = 'none';
+        }
+    });
 
     window.skufengerCall = function(isVideo) {
         if (!state.chat.currentRoomId) {

@@ -904,6 +904,8 @@ window.initChatCore = function() {
         if (chatInput) {
             const draft = localStorage.getItem(`skuf_draft_${roomId}`);
             chatInput.value = draft || '';
+            // [UX] Вызываем событие input, чтобы обновилось состояние кнопок отправки/микрофона
+            chatInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
 
         // --- RESET UNREAD SCROLL BADGE ---
@@ -1953,6 +1955,11 @@ window.initChatCore = function() {
         
         if (state.chat.currentRoomId == null || (!hasContent && !hasFile)) {
             console.warn('[sendChatMsg] SKIP: no content. roomId=', state.chat.currentRoomId, 'content="'+content+'"', 'hasFile=', hasFile);
+            // [ОЧИСТКА] Очищаем поле ввода и генерируем событие input для сброса состояния кнопки отправки
+            if (input) {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
             return;
         }
 
@@ -3070,6 +3077,10 @@ window.initChatCore = function() {
     window['closeChatMobile'] = function() {
         const chatMain = document.querySelector('.chat-main');
         if (chatMain) chatMain.classList.remove('active');
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput && document.activeElement === chatInput) {
+            chatInput.blur();
+        }
     }
     
     function handleChatInputMentions(e) {
@@ -3173,13 +3184,15 @@ window.initChatCore = function() {
                 }));
                 clearTimeout(typingTimer);
                 typingTimer = setTimeout(() => {
-                    state.chat.socket.send(JSON.stringify({
-                        type: 'typing_status',
-                        status: false,
-                        room_id: state.chat.currentRoomId,
-                        sender: state.user.display_name || state.user.username || 'Пользователь',
-                        sender_id: state.user.id
-                    }));
+                    if (state.chat.socket && state.chat.socket.readyState === 1) {
+                        state.chat.socket.send(JSON.stringify({
+                            type: 'typing_status',
+                            status: false,
+                            room_id: state.chat.currentRoomId,
+                            sender: state.user.display_name || state.user.username || 'Пользователь',
+                            sender_id: state.user.id
+                        }));
+                    }
                 }, 2000);
             }
         });
@@ -4308,5 +4321,202 @@ window.initChatCore = function() {
             listContainer.appendChild(div);
         });
     };
+
+    // Жесты свайпа для мобильных устройств для закрытия чата / возврата назад (Milestone 4 Swipe-to-Back)
+    const initSwipeToBack = () => {
+        const chatMain = document.querySelector('.chat-main');
+        const chatLayout = document.querySelector('.chat-layout');
+        const sidebar = document.querySelector('.chat-sidebar');
+        if (!chatMain || !chatLayout) return;
+
+        let startX = 0;
+        let startY = 0;
+        let diffX = 0;
+        let diffY = 0;
+        let isSwiping = false;
+        let isScrolling = false;
+        let startTime = 0;
+        
+        const EDGE_THRESHOLD = 35; // Зона Edge Swipe (35px от левого края)
+        const VELOCITY_THRESHOLD = 0.6; // Порог скорости свайпа (px/ms)
+
+        chatMain.addEventListener('touchstart', (e) => {
+            if (window.innerWidth > 768) return;
+            if (!chatLayout.classList.contains('chat-open')) return;
+
+            if (e.touches.length > 1) {
+                if (isSwiping) {
+                    isSwiping = false;
+                    chatMain.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
+                    chatMain.style.transform = 'translateX(0)';
+                    if (sidebar) {
+                        sidebar.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
+                        const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
+                        if (isFullscreen) {
+                            sidebar.style.transform = 'translateX(-100%)';
+                        } else {
+                            sidebar.style.transform = '';
+                        }
+                    }
+                    setTimeout(() => {
+                        chatMain.style.transform = '';
+                        chatMain.style.transition = '';
+                        if (sidebar) {
+                            sidebar.style.transform = '';
+                            sidebar.style.transition = '';
+                        }
+                    }, 250);
+                }
+                return;
+            }
+
+            // Исключаем интерактивные элементы и поля ввода
+            const target = e.target;
+            if (target.closest('input, textarea, button, select, [role="button"], .cyber-checkbox, .mic-btn, .room-delete-btn')) {
+                return;
+            }
+
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+
+            // Жест должен начинаться только у левого края экрана
+            if (startX > EDGE_THRESHOLD) return;
+
+            isSwiping = false;
+            isScrolling = false;
+            diffX = 0;
+            diffY = 0;
+            startTime = Date.now();
+        }, { passive: true });
+
+        chatMain.addEventListener('touchmove', (e) => {
+            if (window.innerWidth > 768 || isScrolling) return;
+            if (startX > EDGE_THRESHOLD) return;
+
+            if (e.touches.length > 1) {
+                if (isSwiping) {
+                    isSwiping = false;
+                    chatMain.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
+                    chatMain.style.transform = 'translateX(0)';
+                    if (sidebar) {
+                        sidebar.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
+                        const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
+                        if (isFullscreen) {
+                            sidebar.style.transform = 'translateX(-100%)';
+                        } else {
+                            sidebar.style.transform = '';
+                        }
+                    }
+                    setTimeout(() => {
+                        chatMain.style.transform = '';
+                        chatMain.style.transition = '';
+                        if (sidebar) {
+                            sidebar.style.transform = '';
+                            sidebar.style.transition = '';
+                        }
+                    }, 250);
+                }
+                return;
+            }
+
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+
+            diffX = currentX - startX;
+            diffY = Math.abs(currentY - startY);
+
+            if (!isSwiping && !isScrolling) {
+                // Если вертикальный сдвиг преобладает, это скролл истории сообщений
+                if (diffY > 5 && diffY > diffX) {
+                    isScrolling = true;
+                    return;
+                }
+                // Если горизонтальный сдвиг вправо преобладает, активируем свайп
+                if (diffX > 5 && diffX > diffY) {
+                    isSwiping = true;
+                    chatMain.style.transition = 'none';
+                    if (sidebar) sidebar.style.transition = 'none';
+                }
+            }
+
+            if (isSwiping) {
+                // Отменяем стандартный скролл страницы
+                if (e.cancelable) e.preventDefault();
+
+                const translateX = Math.max(0, diffX);
+                chatMain.style.transform = `translateX(${translateX}px)`;
+
+                // Синхронный параллельный сдвиг сайдбара в полноэкранном PWA-режиме
+                const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
+                if (isFullscreen && sidebar) {
+                    const width = window.innerWidth;
+                    const progress = Math.min(1, translateX / width);
+                    const sidebarTranslateX = -100 + (progress * 100);
+                    sidebar.style.transform = `translateX(${sidebarTranslateX}%)`;
+                }
+            }
+        }, { passive: false });
+
+        chatMain.addEventListener('touchend', (e) => {
+            if (!isSwiping) return;
+
+            isSwiping = false;
+
+            // Восстанавливаем CSS transition для плавного доведения
+            chatMain.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
+            if (sidebar) sidebar.style.transition = 'transform 0.25s cubic-bezier(0.1, 0.8, 0.2, 1)';
+
+            const width = window.innerWidth;
+            const velocity = diffX / (Date.now() - startTime);
+            const shouldClose = diffX > width / 3 || velocity > VELOCITY_THRESHOLD;
+
+            if (shouldClose) {
+                // Доводим сдвиг до конца (100% ширины)
+                chatMain.style.transform = 'translateX(100%)';
+                if (sidebar) sidebar.style.transform = 'translateX(0)';
+
+                // Закрываем чат с интеграцией истории
+                if (typeof window.closeChatMobile === 'function') {
+                    window.closeChatMobile(false);
+                } else {
+                    chatLayout.classList.remove('chat-open');
+                }
+
+                // Полностью очищаем инлайновые стили после окончания анимации
+                setTimeout(() => {
+                    chatMain.style.transform = '';
+                    chatMain.style.transition = '';
+                    if (sidebar) {
+                        sidebar.style.transform = '';
+                        sidebar.style.transition = '';
+                    }
+                }, 250);
+            } else {
+                // Возвращаем чат на место
+                chatMain.style.transform = 'translateX(0)';
+                
+                const isFullscreen = document.body.classList.contains('skufenger-fullscreen');
+                if (isFullscreen && sidebar) {
+                    sidebar.style.transform = 'translateX(-100%)';
+                }
+
+                // Очищаем инлайновые стили после возврата
+                setTimeout(() => {
+                    chatMain.style.transform = '';
+                    chatMain.style.transition = '';
+                    if (sidebar) {
+                        sidebar.style.transform = '';
+                        sidebar.style.transition = '';
+                    }
+                }, 250);
+            }
+        });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSwipeToBack);
+    } else {
+        initSwipeToBack();
+    }
 
 };

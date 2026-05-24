@@ -8,6 +8,7 @@ body.chat-app {
     background-color: var(--bg-dark, #0a0e14);
     color: var(--text-main, #e0e6ed);
     font-family: 'JetBrains Mono', 'Courier New', monospace;
+    transition: height 0.1s ease-out;
 }
 
 /* 3-Pane Layout */

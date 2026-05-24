@@ -365,8 +365,8 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                             user = db.query(User).filter(User.id == user_id).first()
                             sender_name = "Аноним"
                             if user:
-                                if user.profile and user.profile.first_name:
-                                    sender_name = user.profile.first_name
+                                if user.profile and user.profile.nickname:
+                                    sender_name = user.profile.nickname
                                 else:
                                     sender_name = user.username
                                     

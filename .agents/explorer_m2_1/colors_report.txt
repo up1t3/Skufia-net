@@ -1,0 +1,258 @@
+
+========================================
+Analyzing file: frontend/style.css
+========================================
+Line  123 | Selector: body | Matches: ['rgba(18, 16, 16, 0)', 'rgba(0, 0, 0, 0.25)'] | Line: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+Line  124 | Selector: body | Matches: ['rgba(255, 0, 0, 0.06)', 'rgba(0, 255, 0, 0.02)', 'rgba(0, 0, 255, 0.06)'] | Line: linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+Line  137 | Selector: ::-webkit-scrollbar-thumb | Matches: ['rgba(255, 255, 255, 0.15)'] | Line: background: rgba(255, 255, 255, 0.15);
+Line  141 | Selector: ::-webkit-scrollbar-thumb:hover | Matches: ['rgba(255, 255, 255, 0.3)'] | Line: background: rgba(255, 255, 255, 0.3);
+Line  150 | Selector: body::after | Matches: ['rgba(18, 16, 16, 0)', 'rgba(0, 0, 0, 0.1)'] | Line: background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%),
+Line  151 | Selector: body::after | Matches: ['rgba(255, 0, 0, 0.03)', 'rgba(0, 255, 0, 0.01)', 'rgba(0, 0, 255, 0.03)'] | Line: linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+Line  226 | Selector: .profile-header | Matches: ['rgba(0, 255, 65, 0.05)'] | Line: background: rgba(0, 255, 65, 0.05);
+Line  324 | Selector: .cyber-input, .cyber-textarea | Matches: ['#000'] | Line: background: #000;
+Line  335 | Selector: .cyber-input:focus, .cyber-textarea:focus | Matches: ['rgba(0, 255, 65, 0.2)'] | Line: box-shadow: 0 0 10px rgba(0, 255, 65, 0.2);
+Line  443 | Selector: .avatar-placeholder | Matches: ['#3a4450'] | Line: background: #3a4450;
+Line  450 | Selector: .system-logs | Matches: ['#05080a'] | Line: background: #05080a;
+Line  490 | Selector: .thread-card:hover | Matches: ['#161d26'] | Line: background: #161d26;
+Line  517 | Selector: .post-item | Matches: ['rgba(255, 255, 255, 0.02)'] | Line: background: rgba(255, 255, 255, 0.02);
+Line  608 | Selector: input | Matches: ['#05080a'] | Line: background: #05080a;
+Line  644 | Selector: .dash-bio-section textarea | Matches: ['#fff'] | Line: color: #fff;
+Line  681 | Selector: .mini-avatar | Matches: ['#000'] | Line: background: #000;
+Line  692 | Selector: .btn-primary:hover | Matches: ['#000'] | Line: color: #000;
+Line  700 | Selector: .chat-container | Matches: ['#0d131a'] | Line: background: #0d131a;
+Line  709 | Selector: .chat-sidebar | Matches: ['#111820'] | Line: background: #111820;
+Line  720 | Selector: .chat-main | Matches: ['#0a0e14'] | Line: background: #0a0e14;
+Line  726 | Selector: .chat-header | Matches: ['#1c232d', '#151b23'] | Line: background: linear-gradient(to bottom, #1c232d, #151b23);
+Line  746 | Selector: .messages-window | Matches: ['#111820', '#0a0e14'] | Line: background-image: radial-gradient(circle at center, #111820 0%, #0a0e14 100%);
+Line  759 | Selector: .message | Matches: ['rgba(0,0,0,0.1)'] | Line: box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+Line  769 | Selector: .message.sent | Matches: ['#fff'] | Line: color: #fff;
+Line  783 | Selector: .system-msg | Matches: ['rgba(0, 0, 0, 0.5)'] | Line: background: rgba(0, 0, 0, 0.5);
+Line  794 | Selector: .chat-input-area | Matches: ['#111820'] | Line: background: #111820;
+Line  838 | Selector: .skeleton-msg | Matches: ['#fff'] | Line: background: linear-gradient(90deg, var(--bg-accent) 25%, color-mix(in srgb, var(--bg-accent) 80%, #fff) 50%, var(--bg-accent) 75%);
+Line  874 | Selector: .contact-item.active | Matches: ['#fff'] | Line: color: #fff;
+Line  879 | Selector: #global-alert-banner | Matches: ['#ff0000'] | Line: background: #ff0000;
+Line  880 | Selector: #global-alert-banner | Matches: ['#fff'] | Line: color: #fff;
+Line  887 | Selector: #global-alert-banner | Matches: ['rgba(255, 0, 0, 0.5)'] | Line: box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+Line  894 | Selector: #global-alert-banner.info | Matches: ['#00aaff'] | Line: background: #00aaff;
+Line  895 | Selector: #global-alert-banner.info | Matches: ['rgba(0, 170, 255, 0.5)'] | Line: box-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
+Line  900 | Selector: #global-alert-banner.warning | Matches: ['#ffaa00'] | Line: background: #ffaa00;
+Line  901 | Selector: #global-alert-banner.warning | Matches: ['#000'] | Line: color: #000;
+Line  902 | Selector: #global-alert-banner.warning | Matches: ['rgba(255, 170, 0, 0.5)'] | Line: box-shadow: 0 0 20px rgba(255, 170, 0, 0.5);
+Line  912 | Selector: @keyframes alert-pulse | Matches: ['#00aaff'] | Line: 0% { background-color: #00aaff; }
+Line  913 | Selector: @keyframes alert-pulse | Matches: ['#0077bb'] | Line: 50% { background-color: #0077bb; }
+Line  914 | Selector: @keyframes alert-pulse | Matches: ['#00aaff'] | Line: 100% { background-color: #00aaff; }
+Line  921 | Selector: body.super-user | Matches: ['#ffd700'] | Line: --accent-cyan: #ffd700;
+Line  922 | Selector: body.super-user | Matches: ['#ffae00'] | Line: --accent-amber: #ffae00;
+Line  923 | Selector: body.super-user | Matches: ['#b8860b'] | Line: --border-metal: #b8860b;
+Line  924 | Selector: body.super-user | Matches: ['#daa520'] | Line: --text-dim: #daa520;
+Line  928 | Selector: body.super-user .logo, body.super-user .view-title | Matches: ['#ffd700'] | Line: color: #ffd700 !important;
+Line  929 | Selector: body.super-user .logo, body.super-user .view-title | Matches: ['rgba(255, 215, 0, 0.6)'] | Line: text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+Line  933 | Selector: body.super-user .nav-btn.active | Matches: ['rgba(255, 215, 0, 0.3)'] | Line: background: rgba(255, 215, 0, 0.3);
+Line  934 | Selector: body.super-user .nav-btn.active | Matches: ['#ffd700'] | Line: color: #ffd700;
+Line  935 | Selector: body.super-user .nav-btn.active | Matches: ['#ffd700'] | Line: border-left: 4px solid #ffd700;
+Line  971 | Selector: .sidebar-header | Matches: ['rgba(0, 0, 0, 0.15)'] | Line: background: rgba(0, 0, 0, 0.15);
+Line 1027 | Selector: .sidebar-search, .sidebar-search-compact | Matches: ['rgba(0, 0, 0, 0.2)'] | Line: background: rgba(0, 0, 0, 0.2);
+Line 1068 | Selector: .fab-create-btn | Matches: ['rgba(0,0,0,0.3)'] | Line: box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+Line 1074 | Selector: .fab-create-btn:hover | Matches: ['rgba(0,0,0,0.4)'] | Line: box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+Line 1086 | Selector: .chat-options-dropdown | Matches: ['rgba(20, 25, 35, 0.97)'] | Line: background: var(--bg-panel, rgba(20, 25, 35, 0.97));
+Line 1089 | Selector: .chat-options-dropdown | Matches: ['rgba(0,0,0,0.5)'] | Line: box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+Line 1140 | Selector: .sidebar-item:hover | Matches: ['rgba(255, 255, 255, 0.06)'] | Line: background: rgba(255, 255, 255, 0.06);
+Line 1144 | Selector: .sidebar-item.active | Matches: ['rgba(255, 255, 255, 0.08)'] | Line: background: rgba(255, 255, 255, 0.08); /* Unified solid subtle dark active state */
+Line 1145 | Selector: .sidebar-item.active | Matches: ['rgba(255, 255, 255, 0.1)'] | Line: border-color: rgba(255, 255, 255, 0.1);
+Line 1169 | Selector: .status-dot | Matches: ['#555'] | Line: background: #555;
+Line 1175 | Selector: .status-dot.online | Matches: ['#10b981'] | Line: background: #10b981;
+Line 1176 | Selector: .status-dot.online | Matches: ['rgba(16, 185, 129, 0.5)'] | Line: box-shadow: 0 0 5px rgba(16, 185, 129, 0.5);
+Line 1220 | Selector: .chat-info | Matches: ['rgba(0, 0, 0, 0.15)'] | Line: background: rgba(0, 0, 0, 0.15);
+Line 1252 | Selector: .header-avatar | Matches: ['#fff'] | Line: color: #fff;
+Line 1253 | Selector: .header-avatar | Matches: ['rgba(0,0,0,0.5)'] | Line: text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+Line 1254 | Selector: .header-avatar | Matches: ['rgba(0,0,0,0.2)'] | Line: box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+Line 1293 | Selector: .menu-action-btn:hover | Matches: ['rgba(0,0,0,0.2)'] | Line: box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+Line 1395 | Selector: .msg-avatar | Matches: ['rgba(0,0,0,0.3)'] | Line: box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+Line 1433 | Selector: .msg-bubble | Matches: ['rgba(0,0,0,0.2)'] | Line: box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+Line 1445 | Selector: .msg-received | Matches: ['rgba(255, 255, 255, 0.06)'] | Line: border: 1px solid rgba(255, 255, 255, 0.06);
+Line 1450 | Selector: .msg-sent | Matches: ['#2b5278'] | Line: background: #2b5278;
+Line 1451 | Selector: .msg-sent | Matches: ['#fff'] | Line: color: #fff;
+Line 1454 | Selector: .msg-sent | Matches: ['rgba(255, 255, 255, 0.06)'] | Line: border: 1px solid rgba(255, 255, 255, 0.06);
+Line 1548 | Selector: .msg-sent .msg-audio-player audio | Matches: ['#7fffff'] | Line: accent-color: #7fffff;
+Line 1553 | Selector: .msg-received .msg-audio-player audio | Matches: ['#00d4ff'] | Line: accent-color: var(--accent-cyan, #00d4ff);
+Line 1560 | Selector: .premium-input-wrapper | Matches: ['rgba(0,0,0,0.1)'] | Line: background: rgba(0,0,0,0.1);
+Line 1561 | Selector: .premium-input-wrapper | Matches: ['rgba(255, 255, 255, 0.05)'] | Line: border-top: 1px solid rgba(255, 255, 255, 0.05);
+Line 1571 | Selector: .chat-capsule | Matches: ['rgba(255,255,255,0.08)'] | Line: border: 1px solid rgba(255,255,255,0.08);
+Line 1577 | Selector: .chat-capsule | Matches: ['rgba(0,0,0,0.15)'] | Line: box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+Line 1582 | Selector: .chat-capsule:focus-within | Matches: ['rgba(255,255,255,0.25)'] | Line: border-color: rgba(255,255,255,0.25);
+Line 1680 | Selector: .cyber-button:hover | Matches: ['#fff'] | Line: color: #fff;
+Line 1739 | Selector: .modal | Matches: ['rgba(0, 0, 0, 0.6)'] | Line: background: rgba(0, 0, 0, 0.6);
+Line 1784 | Selector: #media-preview-modal | Matches: ['rgba(0, 0, 0, 0.75)'] | Line: background: rgba(0, 0, 0, 0.75);
+Line 1812 | Selector: #media-preview-modal .modal-content | Matches: ['#1c1c1e'] | Line: background: #1c1c1e;
+Line 1815 | Selector: #media-preview-modal .modal-content | Matches: ['rgba(255, 255, 255, 0.1)'] | Line: border: 1px solid rgba(255, 255, 255, 0.1);
+Line 1816 | Selector: #media-preview-modal .modal-content | Matches: ['rgba(0, 0, 0, 0.5)', 'rgba(255, 255, 255, 0.1)'] | Line: box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+Line 1823 | Selector: #media-preview-modal .modal-header | Matches: ['rgba(255, 255, 255, 0.1)'] | Line: border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+Line 1824 | Selector: #media-preview-modal .modal-header | Matches: ['rgba(0, 0, 0, 0.3)'] | Line: background: rgba(0, 0, 0, 0.3);
+Line 1831 | Selector: #media-preview-modal .modal-header h2 | Matches: ['#ffffff'] | Line: color: #ffffff;
+Line 1842 | Selector: #media-preview-container | Matches: ['#000000'] | Line: background: #000000;
+Line 1866 | Selector: .media-preview-footer | Matches: ['#1c1c1e'] | Line: background: #1c1c1e;
+Line 1867 | Selector: .media-preview-footer | Matches: ['rgba(255, 255, 255, 0.1)'] | Line: border-top: 1px solid rgba(255, 255, 255, 0.1);
+Line 1875 | Selector: .media-preview-footer .cyber-input | Matches: ['rgba(255, 255, 255, 0.1)'] | Line: background: rgba(255, 255, 255, 0.1);
+Line 1876 | Selector: .media-preview-footer .cyber-input | Matches: ['rgba(255, 255, 255, 0.2)'] | Line: border: 1px solid rgba(255, 255, 255, 0.2);
+Line 1877 | Selector: .media-preview-footer .cyber-input | Matches: ['#ffffff'] | Line: color: #ffffff;
+Line 1888 | Selector: .media-preview-footer .cyber-input::placeholder | Matches: ['rgba(255, 255, 255, 0.5)'] | Line: color: rgba(255, 255, 255, 0.5);
+Line 1897 | Selector: .media-send-btn | Matches: ['#fff'] | Line: color: #fff;
+Line 1930 | Selector: .media-cancel-btn | Matches: ['rgba(0, 0, 0, 0.6)'] | Line: background: rgba(0, 0, 0, 0.6);
+Line 1934 | Selector: .media-cancel-btn | Matches: ['#fff'] | Line: color: #fff;
+Line 1943 | Selector: .media-cancel-btn:hover | Matches: ['rgba(255, 80, 80, 0.5)'] | Line: background: rgba(255, 80, 80, 0.5);
+Line 2014 | Selector: .data-table th | Matches: ['#1c232d', '#111820'] | Line: background: linear-gradient(to bottom, #1c232d, #111820);
+Line 2084 | Selector: .market-card-image-container | Matches: ['#05080a'] | Line: background: #05080a;
+Line 2125 | Selector: .favorite-btn | Matches: ['rgba(255, 255, 255, 0.5)'] | Line: color: rgba(255, 255, 255, 0.5);
+Line 2130 | Selector: .favorite-btn | Matches: ['rgba(0,0,0,0.8)'] | Line: text-shadow: 0 0 5px rgba(0,0,0,0.8);
+Line 2140 | Selector: .views-count | Matches: ['rgba(0, 0, 0, 0.6)'] | Line: background: rgba(0, 0, 0, 0.6);
+Line 2141 | Selector: .views-count | Matches: ['#fff'] | Line: color: #fff;
+Line 2268 | Selector: #auth-overlay | Matches: ['rgba(0, 0, 0, 0.85)'] | Line: background: rgba(0, 0, 0, 0.85);
+Line 2291 | Selector: .input-textarea | Matches: ['rgba(0, 0, 0, 0.5)'] | Line: background: rgba(0, 0, 0, 0.5);
+Line 2353 | Selector: .file-remove-btn | Matches: ['#ff3333'] | Line: border: 1px solid #ff3333;
+Line 2354 | Selector: .file-remove-btn | Matches: ['#ff3333'] | Line: color: #ff3333;
+Line 2365 | Selector: .file-remove-btn:hover | Matches: ['rgba(255, 50, 50, 0.2)'] | Line: background: rgba(255, 50, 50, 0.2);
+Line 2454 | Selector: .reply-preview-block | Matches: ['rgba(0, 0, 0, 0.15)'] | Line: background: rgba(0, 0, 0, 0.15);
+Line 2466 | Selector: .reply-preview-block:hover | Matches: ['rgba(0, 0, 0, 0.3)'] | Line: background: rgba(0, 0, 0, 0.3);
+Line 2469 | Selector: .reply-preview-block:active | Matches: ['rgba(0, 0, 0, 0.4)'] | Line: background: rgba(0, 0, 0, 0.4);
+Line 2491 | Selector: .reply-text-snippet | Matches: ['rgba(255, 255, 255, 0.6)'] | Line: color: rgba(255, 255, 255, 0.6);
+Line 2500 | Selector: .msg.sent .reply-preview-block | Matches: ['rgba(255, 255, 255, 0.5)'] | Line: border-left-color: rgba(255, 255, 255, 0.5);
+Line 2503 | Selector: .msg.sent .reply-sender | Matches: ['rgba(255, 255, 255, 0.85)'] | Line: color: rgba(255, 255, 255, 0.85);
+Line 2506 | Selector: .msg.sent .reply-text-snippet | Matches: ['rgba(255, 255, 255, 0.55)'] | Line: color: rgba(255, 255, 255, 0.55);
+Line 2518 | Selector: .msg-action-btn | Matches: ['rgba(0, 0, 0, 0.6)'] | Line: background: rgba(0, 0, 0, 0.6);
+Line 2526 | Selector: .msg-action-btn | Matches: ['#fff'] | Line: color: #fff;
+Line 2534 | Selector: .msg-action-btn:hover | Matches: ['#000'] | Line: color: #000;
+Line 2547 | Selector: .reply-preview-container | Matches: ['rgba(0, 0, 0, 0.5)'] | Line: background: rgba(0, 0, 0, 0.5);
+Line 2553 | Selector: .reply-preview-container | Matches: ['#ccc'] | Line: color: #ccc;
+Line 2566 | Selector: .reply-preview-container .close-btn | Matches: ['#ff3333'] | Line: color: #ff3333;
+Line 2576 | Selector: .typing-indicator | Matches: ['#0a0e14'] | Line: background: #0a0e14;
+Line 2598 | Selector: .msg-bubble-circle .msg-footer | Matches: ['rgba(0, 0, 0, 0.55)'] | Line: background: rgba(0, 0, 0, 0.55);
+Line 2607 | Selector: .msg-bubble-circle .msg-footer .msg-time | Matches: ['#fff'] | Line: color: #fff !important;
+Line 2609 | Selector: .msg-bubble-circle .msg-footer .msg-time | Matches: ['rgba(0,0,0,0.5)'] | Line: text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+Line 2640 | Selector: .msg-context-menu | Matches: ['rgba(0,0,0,0.6)', 'rgba(255,255,255,0.05)'] | Line: box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+Line 2679 | Selector: .emoji-panel | Matches: ['rgba(255,255,255,0.15)'] | Line: scrollbar-color: rgba(255,255,255,0.15) transparent;
+Line 2695 | Selector: .emoji-panel span:hover | Matches: ['rgba(255, 255, 255, 0.1)'] | Line: background: rgba(255, 255, 255, 0.1);
+Line 2719 | Selector: .rtc-modal | Matches: ['rgba(0, 0, 0, 0.8)'] | Line: background: rgba(0, 0, 0, 0.8);
+Line 2740 | Selector: .rtc-btn | Matches: ['#fff'] | Line: color: #fff;
+Line 2800 | Selector: .chat-folders-tabs | Matches: ['rgba(0, 0, 0, 0.1)'] | Line: background: rgba(0, 0, 0, 0.1);
+Line 2824 | Selector: @media (max-width: 768px) | Matches: ['rgba(0,0,0,0.5)'] | Line: box-shadow: 2px 0 15px rgba(0,0,0,0.5);
+Line 2883 | Selector: .folder-tab | Matches: ['rgba(255, 255, 255, 0.05)'] | Line: background: rgba(255, 255, 255, 0.05);
+Line 2889 | Selector: .folder-tab.active | Matches: ['#fff'] | Line: color: #fff;
+Line 2893 | Selector: .folder-tab:hover:not(.active) | Matches: ['rgba(0, 242, 255, 0.1)'] | Line: background: rgba(0, 242, 255, 0.1);
+Line 2927 | Selector: .ent-card | Matches: ['rgba(0, 0, 0, 0.2)'] | Line: box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+Line 2937 | Selector: .ent-card::before | Matches: ['rgba(0, 242, 255, 0.1)'] | Line: background: linear-gradient(90deg, transparent, rgba(0, 242, 255, 0.1), transparent);
+Line 2956 | Selector: .ent-card .card-icon | Matches: ['rgba(0, 242, 255, 0.5)'] | Line: filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.5));
+Line 3186 | Selector: body.skufenger-fullscreen .msg.sent .msg-bubble | Matches: ['#fff'] | Line: color: #fff;
+Line 3197 | Selector: body.skufenger-fullscreen .msg.received .msg-bubble | Matches: ['rgba(0, 0, 0, 0.15)'] | Line: box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+Line 3262 | Selector: body.skufenger-fullscreen .room-avatar | Matches: ['rgba(0,0,0,0.2)'] | Line: box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+Line 3284 | Selector: body.skufenger-fullscreen .folder-tab.active | Matches: ['#fff'] | Line: color: #fff;
+Line 3297 | Selector: body.skufenger-fullscreen .status-dot.online | Matches: ['#22c55e'] | Line: background: #22c55e;
+Line 3298 | Selector: body.skufenger-fullscreen .status-dot.online | Matches: ['rgba(34, 197, 94, 0.6)'] | Line: box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+Line 3303 | Selector: @keyframes statusPulse | Matches: ['rgba(34, 197, 94, 0.6)'] | Line: 0%, 100% { box-shadow: 0 0 6px rgba(34, 197, 94, 0.6); }
+Line 3304 | Selector: @keyframes statusPulse | Matches: ['rgba(34, 197, 94, 0.9)'] | Line: 50% { box-shadow: 0 0 12px rgba(34, 197, 94, 0.9); }
+Line 3403 | Selector: .lightbox-overlay | Matches: ['rgba(0, 0, 0, 0.9)'] | Line: background: rgba(0, 0, 0, 0.9);
+Line 3450 | Selector: .recording-indicator | Matches: ['#ff3b30'] | Line: background-color: #ff3b30;
+Line 3455 | Selector: @keyframes pulse-record | Matches: ['rgba(255, 59, 48, 0.7)'] | Line: 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.7); }
+Line 3456 | Selector: @keyframes pulse-record | Matches: ['rgba(255, 59, 48, 0)'] | Line: 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 59, 48, 0); }
+Line 3457 | Selector: @keyframes pulse-record | Matches: ['rgba(255, 59, 48, 0)'] | Line: 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+Line 3483 | Selector: .cropper-modal | Matches: ['rgba(0, 0, 0, 0.85)'] | Line: background-color: rgba(0, 0, 0, 0.85);
+Line 3549 | Selector: .cyber-checkbox:checked | Matches: ['rgba(0, 242, 255, 0.1)'] | Line: background-color: rgba(0, 242, 255, 0.1);
+Line 3578 | Selector: .missed-call-msg | Matches: ['rgba(255, 59, 48, 0.08)'] | Line: background: rgba(255, 59, 48, 0.08);
+Line 3579 | Selector: .missed-call-msg | Matches: ['rgba(255, 59, 48, 0.2)'] | Line: border: 1px solid rgba(255, 59, 48, 0.2);
+Line 3587 | Selector: .missed-call-msg | Matches: ['rgba(0,0,0,0.15)'] | Line: box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+Line 3618 | Selector: .event-toolbar .cyber-btn-small | Matches: ['rgba(0, 242, 255, 0.05)'] | Line: background: rgba(0, 242, 255, 0.05);
+Line 3624 | Selector: .event-toolbar .cyber-btn-small.active | Matches: ['rgba(0, 242, 255, 0.2)'] | Line: background: rgba(0, 242, 255, 0.2);
+Line 3627 | Selector: .event-toolbar .cyber-btn-small.active | Matches: ['rgba(0, 242, 255, 0.2)'] | Line: box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+Line 3659 | Selector: .event-card.past::before | Matches: ['#888'] | Line: background: #888;
+Line 3662 | Selector: .event-card.upcoming::before | Matches: ['#00ff41'] | Line: background: var(--accent-green, #00ff41);
+Line 3667 | Selector: .event-card:hover | Matches: ['rgba(0, 242, 255, 0.1)'] | Line: box-shadow: 0 0 20px rgba(0, 242, 255, 0.1);
+Line 3677 | Selector: .event-date-badge | Matches: ['rgba(0, 0, 0, 0.3)'] | Line: background: rgba(0, 0, 0, 0.3);
+Line 3718 | Selector: .msg-context-menu div | Matches: ['#e0e0e0'] | Line: color: #e0e0e0;
+Line 3731 | Selector: .msg-context-menu div:hover | Matches: ['rgba(255, 255, 255, 0.08)'] | Line: background: rgba(255, 255, 255, 0.08);
+Line 3734 | Selector: .msg-context-menu div:active | Matches: ['rgba(0, 242, 255, 0.1)'] | Line: background: rgba(0, 242, 255, 0.1);
+Line 3737 | Selector: .msg-context-menu .delete-ctx | Matches: ['#ff4444'] | Line: color: #ff4444;
+Line 3740 | Selector: .msg-context-menu .delete-ctx:hover | Matches: ['rgba(255, 68, 68, 0.1)'] | Line: background: rgba(255, 68, 68, 0.1);
+Line 3743 | Selector: .event-countdown.upcoming | Matches: ['#00ff41'] | Line: color: var(--accent-green, #00ff41);
+Line 3744 | Selector: .event-countdown.upcoming | Matches: ['rgba(0, 255, 65, 0.1)'] | Line: background: rgba(0, 255, 65, 0.1);
+Line 3747 | Selector: .event-countdown.past | Matches: ['#ff4444'] | Line: color: #ff4444;
+Line 3748 | Selector: .event-countdown.past | Matches: ['rgba(255, 68, 68, 0.1)'] | Line: background: rgba(255, 68, 68, 0.1);
+Line 3800 | Selector: .e2ee-compatibility-indicator.enabled | Matches: ['rgba(0, 255, 65, 0.2)'] | Line: background: rgba(0, 255, 65, 0.2);
+Line 3801 | Selector: .e2ee-compatibility-indicator.enabled | Matches: ['#00ff41'] | Line: color: #00ff41;
+Line 3802 | Selector: .e2ee-compatibility-indicator.enabled | Matches: ['#00ff41'] | Line: border-color: #00ff41;
+Line 3806 | Selector: .e2ee-compatibility-indicator.disabled | Matches: ['rgba(138, 148, 162, 0.2)'] | Line: background: rgba(138, 148, 162, 0.2);
+Line 3807 | Selector: .e2ee-compatibility-indicator.disabled | Matches: ['#8a94a2'] | Line: color: #8a94a2;
+Line 3808 | Selector: .e2ee-compatibility-indicator.disabled | Matches: ['#8a94a2'] | Line: border-color: #8a94a2;
+Line 3812 | Selector: .e2ee-compatibility-indicator.warning | Matches: ['rgba(255, 165, 0, 0.2)'] | Line: background: rgba(255, 165, 0, 0.2);
+Line 3813 | Selector: .e2ee-compatibility-indicator.warning | Matches: ['#ffb700'] | Line: color: #ffb700;
+Line 3814 | Selector: .e2ee-compatibility-indicator.warning | Matches: ['rgba(255, 165, 0, 0.4)'] | Line: border-color: rgba(255, 165, 0, 0.4);
+Line 3833 | Selector: .reaction-chip | Matches: ['rgba(30, 34, 42, 0.6)'] | Line: background: rgba(30, 34, 42, 0.6);
+Line 3834 | Selector: .reaction-chip | Matches: ['rgba(136, 146, 176, 0.2)'] | Line: border: 1px solid rgba(136, 146, 176, 0.2);
+Line 3846 | Selector: .reaction-chip:hover | Matches: ['rgba(45, 50, 60, 0.8)'] | Line: background: rgba(45, 50, 60, 0.8);
+Line 3851 | Selector: .reaction-chip.reacted-by-me | Matches: ['rgba(0, 242, 255, 0.15)'] | Line: background: rgba(0, 242, 255, 0.15);
+Line 3852 | Selector: .reaction-chip.reacted-by-me | Matches: ['rgba(0, 242, 255, 0.4)'] | Line: border-color: rgba(0, 242, 255, 0.4);
+Line 3870 | Selector: .reaction-chip .reaction-avatar-mini | Matches: ['rgba(0, 0, 0, 0.3)'] | Line: box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3);
+Line 3877 | Selector: .reaction-chip .reaction-avatar-mini | Matches: ['#fff'] | Line: color: #fff;
+Line 3899 | Selector: .emoji-picker-container | Matches: ['rgba(0,0,0,0.6)'] | Line: box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+Line 3939 | Selector: .scroll-bottom-btn | Matches: ['rgba(0,0,0,0.3)'] | Line: box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+Line 3953 | Selector: .scroll-unread-badge | Matches: ['#000'] | Line: color: #000;
+Line 3958 | Selector: .scroll-unread-badge | Matches: ['rgba(0,255,255,0.4)'] | Line: box-shadow: 0 2px 4px rgba(0,255,255,0.4);
+Line 3967 | Selector: .reply-preview-container | Matches: ['rgba(0, 242, 255, 0.05)'] | Line: background: rgba(0, 242, 255, 0.05);
+Line 3985 | Selector: .reply-preview-block | Matches: ['rgba(0, 0, 0, 0.2)'] | Line: background: rgba(0, 0, 0, 0.2);
+
+========================================
+Analyzing file: frontend/chat.css
+========================================
+Line    8 | Selector: body.chat-app | Matches: ['#0a0e14'] | Line: background-color: var(--bg-dark, #0a0e14);
+Line    9 | Selector: body.chat-app | Matches: ['#e0e6ed'] | Line: color: var(--text-main, #e0e6ed);
+Line   31 | Selector: .chat-nav | Matches: ['#111820'] | Line: background-color: var(--bg-panel, #111820);
+Line   32 | Selector: .chat-nav | Matches: ['#3a4450'] | Line: border-right: 1px solid var(--border-metal, #3a4450);
+Line   73 | Selector: .nav-links li:hover | Matches: ['#1c232d'] | Line: background-color: var(--bg-accent, #1c232d);
+Line   77 | Selector: .nav-links li.active | Matches: ['#1c232d'] | Line: background-color: var(--bg-accent, #1c232d);
+Line   78 | Selector: .nav-links li.active | Matches: ['#00f2ff'] | Line: color: var(--accent-cyan, #00f2ff);
+Line   79 | Selector: .nav-links li.active | Matches: ['rgba(0, 242, 255, 0.2)'] | Line: box-shadow: 0 0 10px rgba(0, 242, 255, 0.2);
+Line   87 | Selector: .chat-sidebar | Matches: ['#0a0e14'] | Line: background-color: var(--bg-dark, #0a0e14);
+Line   88 | Selector: .chat-sidebar | Matches: ['#3a4450'] | Line: border-right: 1px solid var(--border-metal, #3a4450);
+Line  106 | Selector: .sidebar-header | Matches: ['#3a4450'] | Line: border-bottom: 1px solid var(--border-metal, #3a4450);
+Line  107 | Selector: .sidebar-header | Matches: ['rgba(0, 0, 0, 0.15)'] | Line: background: rgba(0, 0, 0, 0.15);
+Line  133 | Selector: .search-bar input | Matches: ['#111820'] | Line: background-color: var(--bg-panel, #111820);
+Line  134 | Selector: .search-bar input | Matches: ['#3a4450'] | Line: border: 1px solid var(--border-metal, #3a4450);
+Line  140 | Selector: .search-bar input:focus | Matches: ['#00f2ff'] | Line: border-color: var(--accent-cyan, #00f2ff);
+Line  141 | Selector: .search-bar input:focus | Matches: ['rgba(0, 242, 255, 0.3)'] | Line: box-shadow: 0 0 5px rgba(0, 242, 255, 0.3);
+Line  158 | Selector: .chat-item:hover, .chat-item.active | Matches: ['#1c232d'] | Line: background-color: var(--bg-accent, #1c232d);
+Line  165 | Selector: .chat-avatar | Matches: ['#00f2ff'] | Line: background-color: var(--accent-cyan, #00f2ff);
+Line  166 | Selector: .chat-avatar | Matches: ['#0a0e14'] | Line: color: var(--bg-dark, #0a0e14);
+Line  190 | Selector: .chat-last-msg | Matches: ['#8a94a2'] | Line: color: var(--text-dim, #8a94a2);
+Line  202 | Selector: .chat-main | Matches: ['#0a0e14'] | Line: background-color: var(--bg-dark, #0a0e14);
+Line  212 | Selector: .chat-header | Matches: ['#3a4450'] | Line: border-bottom: 1px solid var(--border-metal, #3a4450);
+Line  213 | Selector: .chat-header | Matches: ['#111820'] | Line: background-color: var(--bg-panel, #111820);
+Line  259 | Selector: .chat-messages | Matches: ['rgba(18, 16, 16, 0)', 'rgba(0, 0, 0, 0.25)'] | Line: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+Line  277 | Selector: .message-content | Matches: ['rgba(0,0,0,0.1)'] | Line: box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+Line  291 | Selector: .message.sent .message-content | Matches: ['#fff'] | Line: color: #fff;
+Line  308 | Selector: .message.system .message-content | Matches: ['#ffb800'] | Line: color: var(--accent-amber, #ffb800);
+Line  320 | Selector: .chat-input-area | Matches: ['#111820'] | Line: background-color: var(--bg-panel, #111820);
+Line  321 | Selector: .chat-input-area | Matches: ['#3a4450'] | Line: border-top: 1px solid var(--border-metal, #3a4450);
+Line  341 | Selector: .mic-btn:active | Matches: ['#ffb800'] | Line: color: var(--accent-amber, #ffb800);
+Line  381 | Selector: .recording-overlay | Matches: ['rgba(10, 14, 20, 0.8)'] | Line: background-color: rgba(10, 14, 20, 0.8);
+Line  397 | Selector: .recording-indicator | Matches: ['#ffb800'] | Line: color: var(--accent-amber, #ffb800);
+Line  404 | Selector: .pulse-ring | Matches: ['rgba(255, 184, 0, 0.2)'] | Line: background-color: rgba(255, 184, 0, 0.2);
+Line  405 | Selector: .pulse-ring | Matches: ['#ffb800'] | Line: border: 2px solid var(--accent-amber, #ffb800);
+Line  410 | Selector: @keyframes pulse | Matches: ['rgba(255, 184, 0, 0.7)'] | Line: 0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 184, 0, 0.7); }
+Line  411 | Selector: @keyframes pulse | Matches: ['rgba(255, 184, 0, 0)'] | Line: 70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(255, 184, 0, 0); }
+Line  412 | Selector: @keyframes pulse | Matches: ['rgba(255, 184, 0, 0)'] | Line: 100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255, 184, 0, 0); }
+
+========================================
+Analyzing file: frontend/style-modal.css
+========================================
+Line   11 | Selector: .modal | Matches: ['rgba(0, 0, 0, 0.45)'] | Line: background: rgba(0, 0, 0, 0.45) !important;
+Line  146 | Selector: .auth-main-btn | Matches: ['rgba(0,242,255,0.1)', 'rgba(0,242,255,0.3)', 'rgba(0,242,255,0.1)'] | Line: background: linear-gradient(90deg, rgba(0,242,255,0.1) 0%, rgba(0,242,255,0.3) 50%, rgba(0,242,255,0.1) 100%) !important;
+Line  148 | Selector: .auth-main-btn | Matches: ['rgba(0, 242, 255, 0.4)', 'rgba(0, 242, 255, 0.2)'] | Line: box-shadow: 0 0 15px rgba(0, 242, 255, 0.4), inset 0 0 10px rgba(0, 242, 255, 0.2) !important;
+Line  149 | Selector: .auth-main-btn | Matches: ['#fff'] | Line: color: #fff !important;
+Line  160 | Selector: .auth-main-btn:hover, .auth-main-btn:active | Matches: ['#000'] | Line: color: #000 !important;
+Line  162 | Selector: .auth-main-btn:hover, .auth-main-btn:active | Matches: ['rgba(0, 242, 255, 0.8)', 'rgba(255, 255, 255, 0.5)'] | Line: box-shadow: 0 0 25px rgba(0, 242, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5) !important;
+Line  168 | Selector: .back-btn-premium | Matches: ['rgba(255, 255, 255, 0.03)'] | Line: background: rgba(255, 255, 255, 0.03) !important;
+Line  183 | Selector: .back-btn-premium:hover | Matches: ['rgba(255, 255, 255, 0.08)'] | Line: background: rgba(255, 255, 255, 0.08) !important;
+Line  190 | Selector: .save-btn-premium | Matches: ['#0078ff'] | Line: background: linear-gradient(135deg, var(--accent-cyan), #0078ff) !important;
+Line  192 | Selector: .save-btn-premium | Matches: ['#000'] | Line: color: #000 !important;
+Line  196 | Selector: .save-btn-premium | Matches: ['rgba(0, 242, 255, 0.3)'] | Line: box-shadow: 0 8px 20px rgba(0, 242, 255, 0.3) !important;
+Line  211 | Selector: .save-btn-premium:hover | Matches: ['rgba(0, 242, 255, 0.5)'] | Line: box-shadow: 0 12px 30px rgba(0, 242, 255, 0.5) !important;
+Line  223 | Selector: .pwa-install-block | Matches: ['rgba(255, 255, 255, 0.05)'] | Line: border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+Line  227 | Selector: .pwa-badge | Matches: ['rgba(0, 242, 255, 0.1)'] | Line: background: rgba(0, 242, 255, 0.1);

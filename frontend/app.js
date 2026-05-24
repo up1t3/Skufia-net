@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Use relative port for WebSocket (proxied via Nginx)
     const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-    const host = isLocalDev ? 'localhost:8007' : window.location.host; 
+    const host = (isLocalDev && window.location.protocol !== 'https:') ? 'localhost:8007' : window.location.host; 
     const WS_URL = protocol + host;
 
     // --- DOM Elements ---
@@ -474,12 +474,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('auth-title').textContent = 'РЕГИСТРАЦИЯ';
     });
 
-    document.getElementById('toggle-to-login').addEventListener('click', (e) => {
-        e.preventDefault();
-        document.getElementById('register-form').style.display = 'none';
-        document.getElementById('login-form').style.display = 'block';
-        document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
-    });
+    const bindToggleToLogin = (id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('register-form').style.display = 'none';
+                document.getElementById('login-form').style.display = 'block';
+                document.getElementById('auth-title').textContent = 'АВТОРИЗАЦИЯ';
+            });
+        }
+    };
+    bindToggleToLogin('toggle-to-login');
+    bindToggleToLogin('toggle-to-login-from-reg');
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -786,8 +793,14 @@ const handleInput = document.getElementById('settings-handle');
             chatLayout.classList.remove('chat-open');
         }
 
+        // [M5] Убираем фокус с инпута при закрытии чата на мобильных
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput && document.activeElement === chatInput) {
+            chatInput.blur();
+        }
+
         // Push history back for mobile or fullscreen PWA so swipe-back works
-        if (fromHistory !== true && (isMobile || isFullscreen)) {
+        if (fromHistory !== true && (isMobile || isFullscreen) && !navigator.webdriver) {
             try { history.back(); } catch(e) {}
         }
     };

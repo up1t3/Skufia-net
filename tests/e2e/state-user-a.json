@@ -1,0 +1,26 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "https://localhost:8444",
+      "localStorage": [
+        {
+          "name": "skufia_theme",
+          "value": "telegram"
+        },
+        {
+          "name": "skufia_ios_install_dismissed",
+          "value": "true"
+        },
+        {
+          "name": "skuf_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlMmVfYWxpY2VfMTc3OTY0MTEyODU3NSIsInVzZXJfaWQiOjI0NDAsImV4cCI6MTc4MDI0NTkzNn0.wxS7O6oCNmW47aAylh30WEMs2HW6Unau0fGL0spzDkM"
+        },
+        {
+          "name": "skuf_draft_1182",
+          "value": ""
+        }
+      ]
+    }
+  ]
+}

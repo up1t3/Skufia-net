@@ -1,0 +1,305 @@
+diff --git a/tests/e2e/chat-pipeline.spec.ts b/tests/e2e/chat-pipeline.spec.ts
+index 3cbf5a0..9ab6212 100644
+--- a/tests/e2e/chat-pipeline.spec.ts
++++ b/tests/e2e/chat-pipeline.spec.ts
+@@ -9,11 +9,12 @@ import * as path from 'path';
+ import * as fs from 'fs';
+ 
+ // ─── Config ────────────────────────────────────────────────
+-const BASE = process.env.TEST_URL || 'https://skuf-net.ru';
+-const APP_URL = `${BASE}/messenger.html`;
++const BASE = '/';
++const APP_URL = '/messenger.html';
+ const TS   = Date.now();
+ const USER_A = `e2e_alice_${TS}`;
+ const USER_B = `e2e_bob_${TS}`;
++const USER_C = `e2e_charlie_${TS}`;
+ const PASS   = 'E2ePass99!';
+ 
+ // ─── Helpers ───────────────────────────────────────────────
+@@ -49,6 +50,11 @@ async function openContactByName(page: Page, name: string) {
+   if (await backBtn.isVisible()) await backBtn.click();
+   await page.waitForTimeout(400);
+ 
++  // Open search input first if not visible
++  if (!await page.locator('#contact-search').isVisible()) {
++    await page.click('#sidebar-search-toggle-btn');
++  }
++
+   // Filter by name
+   await page.fill('#contact-search', name);
+   await page.waitForTimeout(400);
+@@ -60,27 +66,90 @@ async function openContactByName(page: Page, name: string) {
+ 
+ /** Alice's logged-in page (registered on first use) */
+ test.beforeAll(async ({ browser }) => {
+-  const page = await browser.newPage();
+-  await page.goto(BASE, { waitUntil: 'networkidle' });
++  const context = await browser.newContext({
++    baseURL: 'https://localhost:8444',
++    ignoreHTTPSErrors: true
++  });
++  const page = await context.newPage();
++  page.on('console', msg => console.log(`[BEFOREALL BROWSER] ${msg.text()}`));
++  page.on('pageerror', err => console.log(`[BEFOREALL BROWSER ERROR] ${err.message}`));
++  await page.goto('/', { waitUntil: 'load' });
+   await register(page, USER_A, PASS);
+   await register(page, USER_B, PASS);
+-  await page.close();
++  await register(page, USER_C, PASS);
++
++  // Войдем под USER_A для создания диалогов с USER_B и USER_C
++  await login(page, USER_A, PASS);
++  await page.goto(APP_URL, { waitUntil: 'load' });
++  await page.waitForSelector('#chat-rooms-list', { state: 'visible', timeout: 15000 });
++
++  // Скроем PWA-баннер, если он перехватывает клики
++  await page.evaluate(() => {
++    const pwaBanner = document.getElementById('pwa-update-banner');
++    if (pwaBanner) pwaBanner.style.display = 'none';
++  }).catch(() => {});
++
++  // Создаем чат с USER_B
++  await page.evaluate(() => (document.querySelector('.fab-create-btn') as HTMLElement)?.click());
++  await page.waitForSelector('#fab-contact-search', { visible: true });
++  await page.fill('#fab-contact-search', USER_B);
++  const contactItemB = page.locator('#fab-contacts-list .sidebar-item', { hasText: USER_B }).first();
++  await contactItemB.waitFor({ state: 'visible', timeout: 15_000 });
++  await contactItemB.click();
++  await page.waitForTimeout(1000);
++
++  // Возвращаемся в сайдбар на мобильном виде, если открылся чат
++  const backBtn = page.locator('.mobile-back-btn');
++  if (await backBtn.isVisible()) {
++    await backBtn.click();
++    await page.waitForTimeout(500);
++  }
++
++  // Создаем чат с USER_C
++  await page.evaluate(() => (document.querySelector('.fab-create-btn') as HTMLElement)?.click());
++  await page.waitForSelector('#fab-contact-search', { visible: true });
++  await page.fill('#fab-contact-search', USER_C);
++  const contactItemC = page.locator('#fab-contacts-list .sidebar-item', { hasText: USER_C }).first();
++  await contactItemC.waitFor({ state: 'visible', timeout: 15_000 });
++  await contactItemC.click();
++  await page.waitForTimeout(1000);
++
++  // Сохраняем состояние сессии для USER_A
++  await context.storageState({ path: 'test-results/state-user-a.json' });
++
++  await context.close();
+ });
+ 
+ // ─── Suite ─────────────────────────────────────────────────
+ 
+ test.describe('Chat Full Pipeline', () => {
+   let page: Page;
++  let context: BrowserContext;
+ 
+   test.beforeEach(async ({ browser }) => {
+-    page = await browser.newPage();
+-    await page.goto(BASE, { waitUntil: 'networkidle' });
+-    await login(page, USER_A, PASS);
+-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
++    context = await browser.newContext({
++      baseURL: 'https://localhost:8444',
++      ignoreHTTPSErrors: true,
++      storageState: 'test-results/state-user-a.json'
++    });
++    await context.addInitScript((password) => {
++      sessionStorage.setItem('skuf_session_pw', password);
++    }, PASS);
++    page = await context.newPage();
++    page.on('console', msg => console.log(`[TEST BROWSER] ${msg.text()}`));
++    page.on('pageerror', err => console.log(`[TEST BROWSER ERROR] ${err.message}`));
++    await page.goto(APP_URL, { waitUntil: 'load' });
++    await page.waitForSelector('#chat-rooms-list', { state: 'visible', timeout: 15000 });
++    // Скроем PWA-баннер, если он перехватывает клики
++    await page.evaluate(() => {
++      const pwaBanner = document.getElementById('pwa-update-banner');
++      if (pwaBanner) pwaBanner.style.display = 'none';
++    }).catch(() => {});
++    await page.waitForTimeout(500);
+   });
+ 
+   test.afterEach(async () => {
+-    await page.close();
++    await context.close();
+   });
+ 
+   // ── 1. Login & App Entry ──────────────────────────────────
+@@ -117,10 +186,11 @@ test.describe('Chat Full Pipeline', () => {
+     await openFirstChat(page);
+     const countBefore = await page.locator('.msg-bubble').count();
+     await page.fill('#chat-input', '   ');
+-    await page.click('#send-chat-btn');
++    await page.keyboard.press('Enter');
+     await page.waitForTimeout(800);
+     const countAfter = await page.locator('.msg-bubble').count();
+     expect(countAfter).toBe(countBefore); // no new message
++    await expect(page.locator('#send-chat-btn')).toBeHidden();
+   });
+ 
+   // ── 4. File Attachment ────────────────────────────────────
+@@ -137,16 +207,21 @@ test.describe('Chat Full Pipeline', () => {
+     );
+     fs.writeFileSync(tmpFile, pngBytes);
+ 
+-    const [fileChooser] = await Promise.all([
+-      page.waitForEvent('filechooser'),
+-      page.click('#chat-attach-btn'),
+-    ]);
+-    await fileChooser.setFiles(tmpFile);
++    // Open attach menu
++    await page.click('#chat-attach-btn');
++    await page.waitForSelector('#attach-menu-popup', { state: 'visible', timeout: 3000 });
++
++    // Directly set files on the input field
++    await page.setInputFiles('#chat-file-input', tmpFile);
+     await page.waitForTimeout(500);
+ 
+-    // Preview or file-name element should appear
+-    const preview = page.locator('#chat-file-preview, #chat-file-name');
+-    await expect(preview.first()).toBeVisible({ timeout: 5_000 });
++    // Preview modal should appear
++    const preview = page.locator('#media-preview-modal');
++    await expect(preview).toBeVisible({ timeout: 5_000 });
++
++    // Close preview modal
++    await page.locator('#media-preview-modal .media-cancel-btn').click();
++    await expect(preview).toBeHidden({ timeout: 3_000 });
+   });
+ 
+   test('TC-04b Dangerous file extension is rejected', async () => {
+@@ -160,11 +235,8 @@ test.describe('Chat Full Pipeline', () => {
+       if (r.url().includes('/chat/upload')) uploadStatus = r.status();
+     });
+ 
+-    const [fc] = await Promise.all([
+-      page.waitForEvent('filechooser'),
+-      page.click('#chat-attach-btn'),
+-    ]);
+-    await fc.setFiles(tmpExe);
++    // Directly set files on the input field
++    await page.setInputFiles('#chat-file-input', tmpExe);
+     await page.waitForTimeout(2_000);
+     // Either blocked client-side (no upload request) or server returned 4xx
+     if (uploadStatus > 0) {
+@@ -189,12 +261,12 @@ test.describe('Chat Full Pipeline', () => {
+   });
+ 
+   // ── 6. Voice Recording ────────────────────────────────────
+-  test('TC-06 Mic button starts recording state on mousedown', async () => {
++  test('TC-06 Mic button starts recording state on click', async () => {
+     await openFirstChat(page);
+     const mic = page.locator('#voice-record-btn');
+     await expect(mic).toBeVisible();
+ 
+-    await mic.dispatchEvent('mousedown');
++    await mic.click();
+     await page.waitForTimeout(300);
+     // Should have recording indicator (class or aria state)
+     const classes = await mic.getAttribute('class') ?? '';
+@@ -204,7 +276,7 @@ test.describe('Chat Full Pipeline', () => {
+     // If recording class not set, check no JS error was thrown
+     expect(hasRecording).toBeTruthy();
+ 
+-    await mic.dispatchEvent('mouseup');
++    await mic.click({ force: true });
+     await page.waitForTimeout(300);
+   });
+ 
+@@ -212,9 +284,9 @@ test.describe('Chat Full Pipeline', () => {
+     await openFirstChat(page);
+     const mic = page.locator('#voice-record-btn');
+ 
+-    await mic.dispatchEvent('touchstart');
++    await mic.click();
+     await page.waitForTimeout(500);
+-    await mic.dispatchEvent('touchend');
++    await mic.click({ force: true });
+     await page.waitForTimeout(500);
+     // Should not throw — check no critical error overlay
+     await expect(page.locator('.fatal-error, #crash-overlay')).not.toBeVisible();
+@@ -343,6 +415,9 @@ test.describe('Chat Full Pipeline', () => {
+ 
+   // ── 13. Contact Search Filter ─────────────────────────────
+   test('TC-13 Contact search filters sidebar list', async () => {
++    if (!await page.locator('#contact-search').isVisible()) {
++      await page.click('#sidebar-search-toggle-btn');
++    }
+     const search = page.locator('#contact-search');
+     await expect(search).toBeVisible();
+     await search.fill('zzznomatch_xyz');
+@@ -354,6 +429,9 @@ test.describe('Chat Full Pipeline', () => {
+   });
+ 
+   test('TC-13b Clear search restores list', async () => {
++    if (!await page.locator('#contact-search').isVisible()) {
++      await page.click('#sidebar-search-toggle-btn');
++    }
+     await page.fill('#contact-search', 'zzz');
+     await page.waitForTimeout(400);
+     await page.fill('#contact-search', '');
+@@ -367,20 +445,38 @@ test.describe('Chat Full Pipeline', () => {
+ 
+ // ─── Mobile Viewport Suite ─────────────────────────────────
+ test.describe('Chat Pipeline — Mobile 390×844', () => {
+-  test.use({ viewport: { width: 390, height: 844 } });
++  let page: Page;
++  let context: BrowserContext;
++
++  test.beforeEach(async ({ browser }) => {
++    context = await browser.newContext({
++      baseURL: 'https://localhost:8444',
++      ignoreHTTPSErrors: true,
++      viewport: { width: 390, height: 844 },
++      storageState: 'test-results/state-user-a.json'
++    });
++    await context.addInitScript((password) => {
++      sessionStorage.setItem('skuf_session_pw', password);
++    }, PASS);
++    page = await context.newPage();
++    page.on('console', msg => console.log(`[MOBILE TEST BROWSER] ${msg.text()}`));
++    page.on('pageerror', err => console.log(`[MOBILE TEST BROWSER ERROR] ${err.message}`));
++  });
++
++  test.afterEach(async () => {
++    await context.close();
++  });
+ 
+-  test('M-01 Mobile back button is visible after opening chat', async ({ page }) => {
+-    await page.goto(BASE, { waitUntil: 'networkidle' });
+-    await login(page, USER_A, PASS);
+-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
++  test('M-01 Mobile back button is visible after opening chat', async () => {
++    await page.goto(APP_URL, { waitUntil: 'load' });
++    await page.waitForSelector('#chat-rooms-list', { state: 'visible', timeout: 15000 });
+     await openFirstChat(page);
+     await expect(page.locator('.mobile-back-btn')).toBeVisible();
+   });
+ 
+-  test('M-02 Mobile back button closes chat and shows sidebar', async ({ page }) => {
+-    await page.goto(BASE, { waitUntil: 'networkidle' });
+-    await login(page, USER_A, PASS);
+-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
++  test('M-02 Mobile back button closes chat and shows sidebar', async () => {
++    await page.goto(APP_URL, { waitUntil: 'load' });
++    await page.waitForSelector('#chat-rooms-list', { state: 'visible', timeout: 15000 });
+     await openFirstChat(page);
+     await page.locator('.mobile-back-btn').click();
+     await page.waitForTimeout(500);
+@@ -388,10 +484,9 @@ test.describe('Chat Pipeline — Mobile 390×844', () => {
+     await expect(page.locator('.chat-sidebar')).toBeVisible();
+   });
+ 
+-  test('M-03 Three-dots opens and stopPropagation works', async ({ page }) => {
+-    await page.goto(BASE, { waitUntil: 'networkidle' });
+-    await login(page, USER_A, PASS);
+-    await page.goto(APP_URL, { waitUntil: 'networkidle' });
++  test('M-03 Three-dots opens and stopPropagation works', async () => {
++    await page.goto(APP_URL, { waitUntil: 'load' });
++    await page.waitForSelector('#chat-rooms-list', { state: 'visible', timeout: 15000 });
+     await openFirstChat(page);
+     await page.click('#btn-chat-options');
+     await page.waitForTimeout(200);

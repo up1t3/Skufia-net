@@ -10,7 +10,8 @@ export default defineConfig({
   expect: { timeout: 10_000 },
 
   use: {
-    baseURL: 'http://localhost:8008',
+    baseURL: 'https://localhost:8444',
+    ignoreHTTPSErrors: true,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -27,6 +28,7 @@ export default defineConfig({
             '--use-fake-ui-for-media-stream',
             '--use-fake-device-for-media-stream',
             '--no-sandbox',
+            '--ignore-certificate-errors',
           ],
         },
       },
@@ -35,6 +37,7 @@ export default defineConfig({
       name: 'Mobile Safari (iPhone 14)',
       use: { 
         ...devices['iPhone 14'],
+        permissions: [],
       },
     },
     {
@@ -46,6 +49,7 @@ export default defineConfig({
             '--use-fake-ui-for-media-stream',
             '--use-fake-device-for-media-stream',
             '--no-sandbox',
+            '--ignore-certificate-errors',
           ],
         },
       },

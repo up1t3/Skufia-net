@@ -100,9 +100,9 @@
                 <div id="reg-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
 
                 <!-- ФЗ-152: Personal Data Consent -->
-                <div style="background: rgba(0,242,255,0.05); border: 1px solid rgba(0,242,255,0.2); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
-                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 12px; color: var(--text-dim); line-height: 1.5;">
-                        <input type="checkbox" id="reg-pd-consent" style="width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; cursor: pointer; accent-color: var(--accent-cyan);" onchange="document.getElementById('reg-submit-btn').disabled = !this.checked;">
+                <div class="pd-consent-block">
+                    <label class="pd-consent-label">
+                        <input type="checkbox" id="reg-pd-consent" class="pd-consent-checkbox" onchange="document.getElementById('reg-submit-btn').disabled = !this.checked;">
                         <span>Я даю согласие на обработку моих персональных данных в соответствии с 
                             <strong style="color: var(--accent-cyan);">Федеральным законом № 152-ФЗ</strong>
                             «О персональных данных». Данные используются исключительно для обеспечения работы платформы Skufia-Net и не передаются третьим лицам.
@@ -112,7 +112,7 @@
 
                 <button type="submit" id="reg-submit-btn" class="cyber-btn primary-btn auth-main-btn" disabled style="opacity: 0.5; cursor: not-allowed; transition: opacity 0.3s;">АКТИВИРОВАТЬ АККАУНТ</button>
                 <div style="text-align: center; margin-top: 15px; font-size: 13px;">
-                    Уже есть ID? <a href="#" id="toggle-to-login" style="color: var(--accent-cyan); text-decoration: none;">Авторизация</a>
+                    Уже есть ID? <a href="#" id="toggle-to-login-from-reg" style="color: var(--accent-cyan); text-decoration: none;">Авторизация</a>
                 </div>
             </form>
         </div>
