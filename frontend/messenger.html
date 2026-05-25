@@ -44,7 +44,7 @@
                 <div id="login-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
                 <button type="submit" class="cyber-btn primary-btn auth-main-btn">ВОЙТИ В СЕТЬ</button>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; font-size: 13px;">
-                    <a href="messenger.html#forgot" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Забыли пароль?</a>
+                    <a href="#" id="toggle-to-forgot" style="color: var(--text-dim); text-decoration: none; transition: 0.2s;">Забыли пароль?</a>
                     <span>Нет доступа? <a href="#" id="toggle-to-register" style="color: var(--accent-cyan); text-decoration: none;">Получить ID</a></span>
                 </div>
             </form>
@@ -100,9 +100,51 @@
 
                 <button type="submit" id="reg-submit-btn" class="cyber-btn primary-btn auth-main-btn" disabled style="opacity: 0.5; cursor: not-allowed; transition: opacity 0.3s;">АКТИВИРОВАТЬ АККАУНТ</button>
                 <div style="text-align: center; margin-top: 15px; font-size: 13px;">
-                    Уже есть ID? <a href="#" id="toggle-to-login" style="color: var(--accent-cyan); text-decoration: none;">Авторизация</a>
+                    Уже есть ID? <a href="#" id="toggle-to-login-from-reg" style="color: var(--accent-cyan); text-decoration: none;">Авторизация</a>
                 </div>
             </form>
+
+            <!-- Forgot Password Form (hidden by default) -->
+            <form id="forgot-password-form" style="display: none;">
+                <p style="color: var(--text-dim); margin-bottom: 15px; font-size: 14px; text-align: center;">
+                    Укажите позывной или email. Код восстановления будет отправлен.
+                </p>
+                <div class="form-group">
+                    <label>ПОЗЫВНОЙ ИЛИ EMAIL</label>
+                    <input type="text" id="forgot-username" required>
+                </div>
+                <div id="forgot-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
+                <div id="forgot-success" class="error-msg" style="color: #00ff41; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
+                <button type="submit" id="forgot-submit-btn" class="cyber-btn primary-btn auth-main-btn">ОТПРАВИТЬ КОД</button>
+                <div style="text-align: center; margin-top: 15px; font-size: 13px;">
+                    <a href="#" id="toggle-to-login-from-forgot" style="color: var(--text-dim); text-decoration: none;">Вернуться к входу</a>
+                </div>
+            </form>
+
+            <!-- Reset Password Form (hidden by default) -->
+            <form id="reset-password-form" style="display: none;">
+                <div style="background: rgba(255, 51, 51, 0.1); border: 1px solid rgba(255, 51, 51, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+                    <p style="color: #ff3333; font-size: 12px; margin: 0; text-align: center;">
+                        <strong>ВНИМАНИЕ:</strong> Сброс пароля уничтожит ваши E2E ключи шифрования. История секретных чатов станет недоступной.
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label>КОД ВОССТАНОВЛЕНИЯ</label>
+                    <input type="text" id="reset-code" required style="letter-spacing: 2px; text-align: center;">
+                </div>
+                <div class="form-group">
+                    <label>НОВЫЙ ПАРОЛЬ</label>
+                    <div style="position: relative; margin-bottom: 25px; display: flex; align-items: center;">
+                        <input type="password" id="reset-new-password" required style="width: 100%; height: 48px; padding: 0 40px 0 15px; margin: 0; box-sizing: border-box;">
+                        <button type="button" class="password-toggle" onclick="const input = document.getElementById('reset-new-password'); input.type = input.type === 'password' ? 'text' : 'password'; this.textContent = input.type === 'password' ? '👁️' : '🔒';" style="position: absolute; right: 0; top: 0; bottom: 0; width: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; font-size: 16px; cursor: pointer; color: var(--text-main); opacity: 0.7;">👁️</button>
+                    </div>
+                </div>
+                <div id="reset-error" class="error-msg" style="color: #ff3333; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
+                <div id="reset-success" class="error-msg" style="color: #00ff41; margin-bottom: 15px; font-weight: 500; text-align: center;"></div>
+                <button type="submit" id="reset-submit-btn" class="cyber-btn primary-btn auth-main-btn" style="background: rgba(255, 51, 51, 0.1); border-color: var(--accent-red); color: var(--accent-red);">СБРОСИТЬ ПАРОЛЬ</button>
+                <div style="text-align: center; margin-top: 15px; font-size: 13px;">
+                    <a href="#" id="toggle-to-login-from-reset" style="color: var(--text-dim); text-decoration: none;">Вернуться к входу</a>
+                </div>
         </div>
     </div>
     
